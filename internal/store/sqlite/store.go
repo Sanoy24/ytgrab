@@ -55,6 +55,21 @@ func Open(ctx context.Context, path string) (*Store, error) {
 
 func (store *Store) Close() error { return store.db.Close() }
 
+func (store *Store) GetSetting(ctx context.Context, key string) (string, bool, error) {
+	var value string
+	err := store.db.QueryRowContext(ctx, "SELECT value FROM settings WHERE key=?", key).Scan(&value)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	return value, err == nil, err
+}
+
+func (store *Store) PutSetting(ctx context.Context, key, value string) error {
+	_, err := store.db.ExecContext(ctx,
+		"INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", key, value)
+	return err
+}
+
 func migrate(ctx context.Context, db *sql.DB) error {
 	var current int
 	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&current); err != nil {

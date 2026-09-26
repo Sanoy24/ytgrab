@@ -37,7 +37,8 @@ This file is the source of truth for project progress. Update it after every ite
 
 - [x] ~~Build URL submission form with client-side validation and video/audio preset choice (UI against fixtures).~~
 - [ ] Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.
-- [ ] Add output-folder settings.
+- [x] ~~Add persisted output-folder settings, API, and page controls.~~
+- [ ] Verify output-folder controls in a live browser session.
 - [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
 - [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
 - [ ] Add on-demand format inspection and controlled playlist downloads.
@@ -50,6 +51,19 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Output-folder API and page controls
+
+- Result: Added a page field for the output folder, fixture/live client methods, and HTTP contract tests; restored SSE subscriptions in the merged live client, which had regressed to polling-only. Updated source-run and web contract docs.
+- Verification: `go test ./... -count=1` passes. A built local server returned the initial folder, accepted a `PUT /api/settings`, returned the saved folder on a subsequent GET and after a process restart, and served the page containing the form. `node --check` and `git diff --check` passed.
+- Limitation: The browser-testing skill found no browser session, so visual and interactive UI behavior remains unchecked. The settings smoke server used isolated ignored data/output directories.
+- Next: Run browser verification when available; test real partial-file resume and complete remaining inspection/playlist work.
+
+### 2026-09-26 — Persisted output-folder backend
+
+- Result: Added a versioned SQLite settings table, a synchronized output-folder manager, and `GET`/`PUT /api/settings`. New jobs read the current folder once at process start, so changing it cannot move a running download mid-stream. The setter requires an existing writable absolute directory.
+- Verification: `go test ./...` passes, including persistence and invalid-folder tests. The UI and HTTP settings contract have not yet been tested, so the checklist remains open.
+- Next: Add API contract coverage and the page controls, then run an HTTP and browser pass if a browser is available.
 
 ### 2026-09-26 — Post-merge checklist repair
 

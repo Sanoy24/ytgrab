@@ -32,9 +32,9 @@ Fixture scenarios are selected with a query parameter:
 | `/?fixture=loading`  | Loading skeletons that never resolve                                                               |
 | `/?api=live`         | Same as `/`; calls the real `/api/...` routes                                                      |
 
-## Proposed API shapes
+## API shapes
 
-The UI expects these shapes. They are a proposal for integration; the backend owner decides the final contract, and `api.js`/`app.js` will be adjusted to match.
+The Go backend and UI use these shapes.
 
 `GET /api/jobs` returns `{ "jobs": [Job] }` (a bare array is also accepted). `POST /api/jobs` accepts `{ "url": string, "preset": Preset }` and returns the created `Job`.
 
@@ -83,7 +83,7 @@ Errors: non-2xx responses with `{ "error": { "code": string, "message": string }
 The live client polls `GET /api/jobs` every 2 seconds for queue/history changes and opens `GET /api/jobs/{id}/events` for each running job. The SSE route sends a job snapshot when connected and after each persisted update, then closes when the job reaches a terminal state.
 The tools panel lists every dependency with a short version (`ffmpeg version 8.0.1-full_build…` shows as `8.0.1`), its message when it carries advice, and the report's `note`. It opens automatically when a required tool is missing; the header pill toggles it.
 
-Until per-job SSE exists, the HTTP client polls `GET /api/jobs` every 2 seconds. If the server answers a job route with 404 or 405 and no JSON error, the UI shows "Downloads aren't available yet" and stops polling.
+`GET /api/settings` returns `{ "downloads_dir": string }`; `PUT /api/settings` accepts the same shape. The folder must already exist, be writable, and be an absolute path. Changing it affects jobs that start afterward. If the server answers a job route with 404 or 405 and no JSON error, the UI shows "Downloads aren't available yet" and stops polling.
 
 ## Client-side URL checks
 

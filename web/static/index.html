@@ -63,6 +63,13 @@
           <button type="submit" class="btn btn-primary" id="submit">Add to queue</button>
         </div>
       </form>
+      <form id="folder-form" class="folder-form" novalidate>
+        <label for="downloads-dir" class="field-label">Output folder</label>
+        <p class="hint">Use an existing writable folder on this computer. New downloads use it immediately.</p>
+        <input id="downloads-dir" name="downloads_dir" type="text" autocomplete="off" spellcheck="false" required>
+        <p class="field-error" id="folder-error" role="alert" hidden></p>
+        <button type="submit" class="btn btn-small" id="folder-save">Save folder</button>
+      </form>
     </section>
 
     <section class="panel" aria-labelledby="queue-title">

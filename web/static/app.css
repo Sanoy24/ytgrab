@@ -178,7 +178,7 @@ h1, h2, h3, p { margin: 0; }
 /* Form */
 .field-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
 .url-row { display: flex; gap: 8px; }
-input[type="url"] {
+input[type="url"], input[type="text"] {
   flex: 1;
   min-width: 0;
   font: inherit;
@@ -188,7 +188,7 @@ input[type="url"] {
   border-radius: 8px;
   padding: 10px 12px;
 }
-input[type="url"][aria-invalid="true"] { border-color: var(--err); }
+input[aria-invalid="true"] { border-color: var(--err); }
 .hint { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
 .field-error { color: var(--err); font-size: 0.875rem; margin-top: 6px; }
 
@@ -217,6 +217,8 @@ input[type="url"][aria-invalid="true"] { border-color: var(--err); }
 .preset small { display: block; color: var(--muted); font-size: 0.8rem; }
 
 .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.folder-form { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 16px; }
+.folder-form input { width: 100%; margin: 8px 0; }
 
 /* Buttons */
 .btn {

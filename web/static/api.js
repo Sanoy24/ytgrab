@@ -27,6 +27,14 @@ class FixtureClient {
     this.nextId = 100;
     this.listeners = new Set();
     this.timer = null;
+    this.downloadsDir = 'C:\\Users\\me\\Downloads\\ytgrab';
+  }
+
+  async settings() { return { downloads_dir: this.downloadsDir }; }
+  async saveSettings({ downloads_dir }) {
+    if (!downloads_dir.trim()) throw new ApiError('invalid_directory', 'Choose an existing folder.');
+    this.downloadsDir = downloads_dir;
+    return this.settings();
   }
 
   async health() {
@@ -164,6 +172,12 @@ class HttpClient {
   health() {
     return this.request('GET', '/api/system/health');
   }
+  settings() {
+    return this.request('GET', '/api/settings');
+  }
+  saveSettings(body) {
+    return this.request('PUT', '/api/settings', body);
+  }
   listJobs() {
     return this.request('GET', '/api/jobs').then((r) => r.jobs ?? r);
   }
@@ -177,18 +191,51 @@ class HttpClient {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/retry`);
   }
 
-  // Per-job SSE lands with the download engine; poll the list until then.
-  // Polling stops if the server has no job routes, instead of repeating 404s.
+  // Poll for queue/history changes; stream persisted progress for active jobs.
   subscribe(onChange) {
     let timer;
-    const poll = () =>
-      this.listJobs()
-        .then(onChange, (err) => err)
-        .then((err) => {
-          if (err?.code !== 'not_available') timer = setTimeout(poll, 2000);
-        });
+    let closed = false;
+    let jobs = [];
+    const sources = new Map();
+    const syncSources = () => {
+      if (typeof EventSource === 'undefined') return;
+      const running = new Set(jobs.filter((job) =>
+        ['inspecting', 'downloading', 'processing'].includes(job.state)).map((job) => job.id));
+      for (const [id, source] of sources) {
+        if (!running.has(id)) (source.close(), sources.delete(id));
+      }
+      for (const id of running) {
+        if (sources.has(id)) continue;
+        const source = new EventSource(`/api/jobs/${encodeURIComponent(id)}/events`);
+        sources.set(id, source);
+        source.onmessage = (event) => {
+          if (closed) return;
+          try {
+            const job = JSON.parse(event.data);
+            jobs = jobs.map((current) => current.id === job.id ? job : current);
+            onChange([...jobs]);
+            if (!isActive(job.state)) (source.close(), sources.delete(id));
+          } catch { /* The next poll refreshes the snapshot. */ }
+        };
+        source.onerror = () => (source.close(), sources.delete(id));
+      }
+    };
+    const poll = () => this.listJobs().then((snapshot) => {
+      if (closed) return;
+      jobs = snapshot;
+      onChange([...jobs]);
+      syncSources();
+      timer = setTimeout(poll, 2000);
+    }, (err) => {
+      if (!closed && err?.code !== 'not_available') timer = setTimeout(poll, 2000);
+    });
     timer = setTimeout(poll, 2000);
-    return () => clearTimeout(timer);
+    return () => {
+      closed = true;
+      clearTimeout(timer);
+      for (const source of sources.values()) source.close();
+      sources.clear();
+    };
   }
 
   async request(method, path, body) {

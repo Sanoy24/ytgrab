@@ -11,7 +11,7 @@ import (
 
 // NewHandler wires the foundation API. More routes can be added as milestones
 // are implemented without changing the health response contract.
-func NewHandler(check func(context.Context) deps.Report, jobs JobStore, controller JobController) http.Handler {
+func NewHandler(check func(context.Context) deps.Report, jobs JobStore, controller JobController, settings ...Settings) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/system/health", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -27,6 +27,9 @@ func NewHandler(check func(context.Context) deps.Report, jobs JobStore, controll
 	mux.Handle("/", http.FileServer(http.FS(web.Static())))
 	if jobs != nil {
 		addJobRoutes(mux, jobs, controller)
+	}
+	if len(settings) != 0 && settings[0] != nil {
+		addSettingsRoutes(mux, settings[0])
 	}
 	return protectLocalAPI(mux)
 }

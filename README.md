@@ -2,7 +2,7 @@
 
 A local application for downloading videos and audio you are authorized to save. Go provides the browser interface, durable queue, and process control; `yt-dlp` handles downloads and `ffmpeg` handles merging and conversion.
 
-The app is runnable, but it is still under development. Single-video downloads, five presets, cancellation, retries, progress, and persistent history are implemented. Settings, format inspection, playlists, packaging, and cross-platform verification remain in progress.
+The app is runnable, but it is still under development. Single-video downloads, five presets, cancellation, retries, progress, persistent history, and output-folder settings are implemented. Format inspection, playlists, packaging, and cross-platform verification remain in progress.
 
 ## Run locally
 
@@ -14,7 +14,7 @@ From the repository root:
 go run ./cmd/ytgrab
 ```
 
-Open `http://127.0.0.1:8787/`. The server binds only to loopback. By default, the SQLite database lives in the user configuration directory under `ytgrab`, and completed files go to `Downloads/ytgrab`. Set `YTGRAB_DATA_DIR` and `YTGRAB_DOWNLOAD_DIR` before starting the app to choose other locations; `YTGRAB_LISTEN_ADDR` can select another loopback IP and port. Changes to these environment variables require a restart.
+Open `http://127.0.0.1:8787/`. The server binds only to loopback. By default, the SQLite database lives in the user configuration directory under `ytgrab`, and completed files go to `Downloads/ytgrab`. Change the output folder in the page to any existing writable absolute folder; this affects jobs that start afterward and persists across restarts. Set `YTGRAB_DATA_DIR` and `YTGRAB_DOWNLOAD_DIR` before starting the app to choose initial locations; a saved output-folder setting takes precedence over `YTGRAB_DOWNLOAD_DIR`. `YTGRAB_LISTEN_ADDR` can select another loopback IP and port.
 
 The app accepts one YouTube video per job, not playlists. It passes the URL as a single argument to `yt-dlp`, retains normal `.part` files for possible resume, and never routes media bytes through the browser server. Do not close the app while jobs are running unless you are willing to retry them after restart.
 

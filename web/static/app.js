@@ -469,6 +469,40 @@ function setUrlError(message) {
   input.setAttribute('aria-invalid', message ? 'true' : 'false');
 }
 
+function setFolderError(message) {
+  const input = $('#downloads-dir');
+  const out = $('#folder-error');
+  out.textContent = message;
+  out.hidden = !message;
+  input.setAttribute('aria-invalid', message ? 'true' : 'false');
+}
+
+async function loadSettings() {
+  try {
+    const settings = await client.settings();
+    $('#downloads-dir').value = settings.downloads_dir;
+  } catch (err) {
+    setFolderError(err.message);
+  }
+}
+
+async function saveSettings(e) {
+  e.preventDefault();
+  const input = $('#downloads-dir');
+  const button = $('#folder-save');
+  button.disabled = true;
+  setFolderError('');
+  try {
+    const settings = await client.saveSettings({ downloads_dir: input.value });
+    input.value = settings.downloads_dir;
+    toast('Output folder saved for new downloads.');
+  } catch (err) {
+    setFolderError(err.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function onSubmit(e) {
   e.preventDefault();
   const input = $('#url');
@@ -501,6 +535,8 @@ async function onSubmit(e) {
 function init() {
   $('#fixture-note').hidden = !client.isFixture;
   $('#add-form').addEventListener('submit', onSubmit);
+  $('#folder-form').addEventListener('submit', saveSettings);
+  $('#downloads-dir').addEventListener('input', () => setFolderError(''));
   $('#url').addEventListener('input', () => {
     if ($('#url').getAttribute('aria-invalid') === 'true') setUrlError('');
   });
@@ -541,6 +577,7 @@ function init() {
   });
 
   loadHealth();
+  loadSettings();
   loadJobs();
 }
 

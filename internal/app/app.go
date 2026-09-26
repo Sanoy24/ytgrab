@@ -15,6 +15,7 @@ import (
 	"ytgrab/internal/config"
 	"ytgrab/internal/downloader/ytdlp"
 	"ytgrab/internal/queue"
+	"ytgrab/internal/settings"
 	sqlitestore "ytgrab/internal/store/sqlite"
 )
 
@@ -31,21 +32,25 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	if _, err := store.Recover(ctx); err != nil {
 		return fmt.Errorf("recover interrupted jobs: %w", err)
 	}
-	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg}, 2)
+	appSettings, err := settings.New(ctx, store, cfg.DownloadsDir)
+	if err != nil {
+		return err
+	}
+	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg, DownloadsDir: appSettings.DownloadsDir}, 2)
 	jobQueue.Start(ctx)
 	defer jobQueue.Stop()
 	listener, err := net.Listen("tcp", cfg.ListenAddress)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", cfg.ListenAddress, err)
 	}
-	return serve(ctx, cfg, output, listener, store, jobQueue)
+	return serve(ctx, cfg, output, listener, store, jobQueue, appSettings)
 }
 
-func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController) error {
+func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController, settings ...api.Settings) error {
 	server := &http.Server{
 		Handler: api.NewHandler(func(requestCtx context.Context) deps.Report {
 			return deps.Check(requestCtx, cfg)
-		}, store, controller),
+		}, store, controller, settings...),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}

@@ -43,22 +43,29 @@ type Error struct {
 
 func (err *Error) Error() string { return err.Message }
 
-type Downloader struct{ Config config.Config }
+type Downloader struct {
+	Config       config.Config
+	DownloadsDir func() string
+}
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
-	path, err := deps.Find(downloader.Config, "yt-dlp")
+	cfg := downloader.Config
+	if downloader.DownloadsDir != nil {
+		cfg.DownloadsDir = downloader.DownloadsDir()
+	}
+	path, err := deps.Find(cfg, "yt-dlp")
 	if err != nil {
 		return Result{}, &Error{Code: "dependency_missing", Message: "Install yt-dlp and add it to PATH or the tools directory."}
 	}
-	if err := os.MkdirAll(downloader.Config.DownloadsDir, 0700); err != nil {
+	if err := os.MkdirAll(cfg.DownloadsDir, 0700); err != nil {
 		return Result{}, fmt.Errorf("create download directory: %w", err)
 	}
-	args := buildArgs(job, downloader.Config)
-	if ffmpeg, err := deps.Find(downloader.Config, "ffmpeg"); err == nil {
+	args := buildArgs(job, cfg)
+	if ffmpeg, err := deps.Find(cfg, "ffmpeg"); err == nil {
 		args = append([]string{"--ffmpeg-location", filepath.Dir(ffmpeg)}, args...)
 	}
-	if _, err := deps.Find(downloader.Config, "deno"); err != nil {
-		if _, err := deps.Find(downloader.Config, "node"); err == nil {
+	if _, err := deps.Find(cfg, "deno"); err != nil {
+		if _, err := deps.Find(cfg, "node"); err == nil {
 			args = append([]string{"--js-runtimes", "node"}, args...)
 		}
 	}
@@ -136,7 +143,7 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	if result.OutputPath == "" {
 		return Result{}, &Error{Code: "download_failed", Message: "yt-dlp finished without reporting an output file."}
 	}
-	confirmed, err := confirmOutput(downloader.Config.DownloadsDir, result.OutputPath)
+	confirmed, err := confirmOutput(cfg.DownloadsDir, result.OutputPath)
 	if err != nil {
 		return Result{}, &Error{Code: "download_failed", Message: "The completed output file could not be confirmed."}
 	}
