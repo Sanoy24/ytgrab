@@ -15,6 +15,8 @@ const defaultListenAddress = "127.0.0.1:8787"
 type Config struct {
 	ListenAddress   string
 	ToolsDir        string
+	DataDir         string
+	DownloadsDir    string
 	ShutdownTimeout time.Duration
 }
 
@@ -33,13 +35,43 @@ func Load() (Config, error) {
 		}
 		toolsDir = absolute
 	}
+	userConfigDir, err := os.UserConfigDir()
+	if err != nil {
+		return Config{}, fmt.Errorf("find user config directory: %w", err)
+	}
+	userHomeDir, err := os.UserHomeDir()
+	if err != nil {
+		return Config{}, fmt.Errorf("find user home directory: %w", err)
+	}
+	dataDir, err := directory("YTGRAB_DATA_DIR", filepath.Join(userConfigDir, "ytgrab"))
+	if err != nil {
+		return Config{}, err
+	}
+	downloadsDir, err := directory("YTGRAB_DOWNLOAD_DIR", filepath.Join(userHomeDir, "Downloads", "ytgrab"))
+	if err != nil {
+		return Config{}, err
+	}
 
 	cfg := Config{
 		ListenAddress:   address,
 		ToolsDir:        toolsDir,
+		DataDir:         dataDir,
+		DownloadsDir:    downloadsDir,
 		ShutdownTimeout: 5 * time.Second,
 	}
 	return cfg, cfg.Validate()
+}
+
+func directory(variable string, fallback string) (string, error) {
+	value := os.Getenv(variable)
+	if value == "" {
+		value = fallback
+	}
+	absolute, err := filepath.Abs(value)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", variable, err)
+	}
+	return absolute, nil
 }
 
 // Validate prevents accidental exposure of the single-user HTTP server.
@@ -58,6 +90,9 @@ func (cfg Config) Validate() error {
 	}
 	if cfg.ShutdownTimeout <= 0 {
 		return fmt.Errorf("shutdown timeout must be positive")
+	}
+	if cfg.DataDir == "" || cfg.DownloadsDir == "" {
+		return fmt.Errorf("data and download directories must be configured")
 	}
 	return nil
 }

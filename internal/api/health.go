@@ -6,11 +6,12 @@ import (
 	"net/http"
 
 	"ytgrab/internal/app/deps"
+	"ytgrab/web"
 )
 
 // NewHandler wires the foundation API. More routes can be added as milestones
 // are implemented without changing the health response contract.
-func NewHandler(check func(context.Context) deps.Report) http.Handler {
+func NewHandler(check func(context.Context) deps.Report, jobs JobStore, controller JobController) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/system/health", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -23,5 +24,9 @@ func NewHandler(check func(context.Context) deps.Report) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		_ = json.NewEncoder(w).Encode(check(r.Context()))
 	})
-	return mux
+	mux.Handle("/", http.FileServer(http.FS(web.Static())))
+	if jobs != nil {
+		addJobRoutes(mux, jobs, controller)
+	}
+	return protectLocalAPI(mux)
 }

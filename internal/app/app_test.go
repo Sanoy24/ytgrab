@@ -21,7 +21,7 @@ func TestServerStopsAfterContextCancellation(t *testing.T) {
 	cfg := config.Config{ShutdownTimeout: 2 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())
 	finished := make(chan error, 1)
-	go func() { finished <- serve(ctx, cfg, io.Discard, listener) }()
+	go func() { finished <- serve(ctx, cfg, io.Discard, listener, nil, nil) }()
 
 	client := &http.Client{Timeout: 2 * time.Second}
 	response, err := client.Get("http://" + listener.Addr().String() + "/api/system/health")

@@ -40,7 +40,7 @@ internal/store/sqlite/   Job and settings persistence
 internal/api/            HTTP routes and SSE
 internal/process/        Cross-platform child-process control
 web/static/              Static, client-rendered UI (HTML, CSS, ES modules; no build step)
-migrations/              Versioned SQLite schema
+internal/store/sqlite/migrations/ Versioned SQLite schema embedded in the Go binary
 ```
 
 The UI is a static page that renders from the JSON API, so the Go server only needs to embed and serve `web/static/`; server-side templates are not planned. Proposed JSON shapes for integration are in `web/README.md`.
@@ -66,6 +66,8 @@ Store at least the job ID, original URL, optional extracted video ID, requested 
 
 Use SQLite with WAL mode, migrations, short transactions, and a single-writer-friendly update pattern. Never place secrets in logs or ordinary job records. Cookies and authenticated downloads are deferred beyond the first release.
 
+The current job table indexes ID, state, video ID, and creation time, with a JSON payload for the full job snapshot. A partial unique index prevents two active jobs for the same video. Repository updates compare the prior state atomically. Startup recovery converts interrupted active jobs to `failed` with an `interrupted` error, while queued jobs remain queued.
+
 ## Files and process safety
 
 - Keep download bytes out of Go memory. Let `yt-dlp` write directly to disk and retain its normal `.part` files for resume.
@@ -81,7 +83,7 @@ Use SQLite with WAL mode, migrations, short transactions, and a single-writer-fr
 - Queue excess jobs rather than spawning unlimited processes.
 - Stream stdout/stderr incrementally; bound retained log output and keep only useful diagnostic context.
 - Prefer remuxing/stream copy when possible. Audio conversion or video transcoding should be explicit because it consumes substantial CPU.
-- Reuse `yt-dlp` retry/resume behavior, then add application-level retries only for classified transient failures.
+- Reuse `yt-dlp` retry/resume behavior. For a classified network failure, the local scheduler may retry the same job up to three total attempts with short backoff. It first persists `failed`; a restart or explicit user retry can resume from yt-dlp's partial file without an in-memory timer.
 - Keep metadata inspection and playlist expansion rate limited. Do not assume higher concurrency improves throughput against YouTube limits.
 
 These are initial defaults, not performance claims. Measure throughput, CPU, memory, disk activity, and failure rate with representative downloads before tuning.
@@ -103,6 +105,8 @@ These are initial defaults, not performance claims. Measure throughput, CPU, mem
 Use bounded request bodies, stable JSON error codes, and context-aware shutdown. A playlist URL should require explicit user confirmation and a maximum item count before creating multiple jobs.
 
 The foundation health route returns `200` with `status` (`ready` or `degraded`), `checked_at`, a `dependencies` array, and a `note` explaining the limit of executable checks. Each dependency includes `name`, `required`, `available`, and an actionable `message`; available tools also include `path` and `version`. `degraded` means a required executable is missing or could not be run, while the local UI remains accessible for diagnostics. The server accepts `YTGRAB_LISTEN_ADDR` (loopback IP and port only, default `127.0.0.1:8787`) and `YTGRAB_TOOLS_DIR` (optional preferred binary directory). Deno is checked first, then Node; when Node is selected, the future downloader adapter must pass `--js-runtimes node` to yt-dlp.
+
+The job API now uses the JSON shape in `web/README.md`: `{ "jobs": [...] }` for lists, one job for create/detail/actions, and `{ "error": { "code", "message" } }` for failures. The server validates a single YouTube video URL and one of the five UI presets. It accepts `YTGRAB_DATA_DIR` for the SQLite database and `YTGRAB_DOWNLOAD_DIR` for output, defaulting to a user config directory and `Downloads/ytgrab` respectively.
 
 ## Dependency and release strategy
 

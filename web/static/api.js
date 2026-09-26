@@ -1,7 +1,7 @@
 // Data clients. The UI talks only to this interface:
 //   health(), listJobs(), createJob({url, preset}), cancelJob(id), retryJob(id), subscribe(onChange)
-// The fixture client is the default until the Go API is available; the HTTP client
-// follows the planned routes in ARCHITECTURE.md and has not been tested against a server.
+// The live HTTP client is the default. Add ?fixture=default|empty|error|degraded|loading
+// to preview UI states without the backend.
 
 import * as fx from "./fixtures.js";
 
@@ -13,8 +13,8 @@ export class ApiError extends Error {
 }
 
 export function createClient(params = new URLSearchParams(location.search)) {
-  if (params.get("api") === "live") return new HttpClient();
-  return new FixtureClient(params.get("fixture") || "default");
+  if (params.has("fixture")) return new FixtureClient(params.get("fixture") || "default");
+  return new HttpClient();
 }
 
 // Scenarios: default | empty | error | degraded | loading
@@ -140,10 +140,47 @@ class HttpClient {
   cancelJob(id) { return this.request("POST", `/api/jobs/${encodeURIComponent(id)}/cancel`); }
   retryJob(id) { return this.request("POST", `/api/jobs/${encodeURIComponent(id)}/retry`); }
 
-  // Per-job SSE lands with the download engine; poll the list until then.
+  // Poll for queue/history changes and use one SSE connection per running job
+  // for faster progress updates. Queued jobs do not consume a connection.
   subscribe(onChange) {
-    const timer = setInterval(() => this.listJobs().then(onChange, () => {}), 2000);
-    return () => clearInterval(timer);
+    const sources = new Map();
+    let jobs = [];
+    let closed = false;
+    const syncSources = () => {
+      if (typeof EventSource === "undefined") return;
+      const running = new Set(jobs.filter((j) => ["inspecting", "downloading", "processing"].includes(j.state)).map((j) => j.id));
+      for (const [id, source] of sources) {
+        if (!running.has(id)) source.close(), sources.delete(id);
+      }
+      for (const id of running) {
+        if (sources.has(id)) continue;
+        const source = new EventSource(`/api/jobs/${encodeURIComponent(id)}/events`);
+        sources.set(id, source);
+        source.onmessage = (event) => {
+          if (closed) return;
+          try {
+            const job = JSON.parse(event.data);
+            jobs = jobs.map((current) => current.id === job.id ? job : current);
+            onChange([...jobs]);
+            if (!isActive(job.state)) source.close(), sources.delete(id);
+          } catch { /* The next poll will refresh the snapshot. */ }
+        };
+        source.onerror = () => { source.close(); sources.delete(id); };
+      }
+    };
+    const refresh = () => this.listJobs().then((snapshot) => {
+      if (closed) return;
+      jobs = snapshot;
+      onChange([...jobs]);
+      syncSources();
+    }, () => {});
+    const timer = setInterval(refresh, 2000);
+    return () => {
+      closed = true;
+      clearInterval(timer);
+      for (const source of sources.values()) source.close();
+      sources.clear();
+    };
   }
 
   async request(method, path, body) {
