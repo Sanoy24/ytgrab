@@ -38,7 +38,7 @@ This file is the source of truth for project progress. Update it after every ite
 
 - [x] ~~Return sentence-case output-folder validation errors.~~
 - [x] ~~Build URL submission form with client-side validation and video/audio preset choice (UI against fixtures).~~
-- [ ] Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.
+- [x] ~~Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.~~
 - [x] ~~Add persisted output-folder settings, API, and page controls.~~
 - [ ] Verify output-folder controls in a live browser session.
 - [x] ~~Add the output-folder setting to the UI against `GET`/`PUT /api/settings`.~~
@@ -46,7 +46,7 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
 - [x] ~~Build the format picker UI: inspect on paste, grouped video/audio choices, preset fallback (against fixtures).~~
 - [x] ~~Add `GET /api/inspect` and server-validated format-based job creation.~~
-- [ ] Verify the format picker end to end in a live browser.
+- [x] ~~Verify the format picker end to end in a live browser.~~
 - [ ] Add controlled playlist downloads.
 
 ### 5. Release readiness
@@ -57,6 +57,13 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Claude: fix broken page on master, live format downloads
+
+- Result: On branch `agent/claude-inspect-expiry` (from `master` at `ea5b079`). **Fixed a page-breaking bug on `master`:** merging both agents' output-folder UIs left two top-level `loadSettings` functions in `web/static/app.js`, which browsers reject in ES modules (`Identifier 'loadSettings' has already been declared`), so no script ran. Removed the unwired duplicate form, functions, client methods, and CSS, keeping the tested `#output-dir` UI. The page's inspection cache now expires after 9 minutes (server: 10), and an `inspection_required` response triggers one re-check and retry with the same choice. YouTube `-drc` audio copies are hidden when the original exists (a real video went from 8 to 5 audio rows). Added the `expired` fixture and documented a module-aware syntax check in `web/README.md`.
+- Verification: `go test ./...` passed on `master`. A `.mjs` copy of `master`'s `app.js` fails `node --check` with the duplicate-declaration error; all four branch modules pass. No duplicate element IDs or references to missing elements. Fixture `expired`: submit was rejected, the page re-checked, retried, and added "Video · 720p" with no console errors. Live, with a `master` build (temp data/download dirs) behind a scratch proxy serving this branch: health "Tools ready", output folder shown, pasting `watch?v=jNQXAC9IVRw` listed "Me at the zoo", 2 video rows (240p, 144p) and 5 audio rows plus MP3. Picking AAC 130 kbps downloaded `Me at the zoo [jNQXAC9IVRw].m4a` (309,156 bytes) in about 6 s; picking 144p went Downloading → Processing → Done and wrote a 446,848-byte `.mkv`. Temp files were removed afterwards.
+- Blocker/notes: `master` serves a non-working page until this branch is merged. H.264 picks merge with Opus audio into `.mkv`; `web/README.md` suggests preferring M4A audio for `avc1` video to get `.mp4` (a Go change). Live output-folder saving was verified earlier against Codex's pre-commit API, not re-run on the committed code.
+- Next: Merge this branch promptly. Then move queue progress from list polling to per-job SSE, and re-verify output-folder saving on `master`.
 
 ### 2026-09-26 — Inspection and exact-format backend
 

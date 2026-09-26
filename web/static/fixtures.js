@@ -186,5 +186,6 @@ export const inspection = {
     a('250', 'webm', 'opus', 70.1, 10.8),
     a('249', 'webm', 'opus', 50.3, 7.9),
     a('139', 'm4a', 'mp4a.40.5', 48.8, 8.1),
+    a('251-drc', 'webm', 'opus', 136.9, 20.6),
   ],
 };

@@ -217,8 +217,6 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .preset small { display: block; color: var(--muted); font-size: 0.8rem; }
 
 .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.folder-form { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 16px; }
-.folder-form input { width: 100%; margin: 8px 0; }
 
 /* Buttons */
 .btn {

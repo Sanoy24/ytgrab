@@ -18,7 +18,7 @@ export function createClient(params = new URLSearchParams(location.search)) {
   return new HttpClient();
 }
 
-// Scenarios: default | empty | error | degraded | loading | blocked (format check fails)
+// Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check)
 class FixtureClient {
   isFixture = true;
 
@@ -29,14 +29,6 @@ class FixtureClient {
     this.downloadsDir = String.raw`C:\Users\me\Downloads\ytgrab`;
     this.listeners = new Set();
     this.timer = null;
-    this.downloadsDir = 'C:\\Users\\me\\Downloads\\ytgrab';
-  }
-
-  async settings() { return { downloads_dir: this.downloadsDir }; }
-  async saveSettings({ downloads_dir }) {
-    if (!downloads_dir.trim()) throw new ApiError('invalid_directory', 'Choose an existing folder.');
-    this.downloadsDir = downloads_dir;
-    return this.settings();
   }
 
   async health() {
@@ -76,6 +68,14 @@ class FixtureClient {
     await delay(400);
     if (this.scenario === 'error')
       throw new ApiError('unreachable', 'Could not reach the local server.');
+    // Simulates the server forgetting an inspection: the first format job is rejected.
+    if (this.scenario === 'expired' && format && !this.expiredOnce) {
+      this.expiredOnce = true;
+      throw new ApiError(
+        'inspection_required',
+        'Check available formats again before adding this download.',
+      );
+    }
     if (this.jobs.some((j) => j.url === url && isActive(j.state))) {
       throw new ApiError('duplicate_job', 'This link is already in the queue.');
     }
@@ -206,12 +206,6 @@ class HttpClient {
 
   health() {
     return this.request('GET', '/api/system/health');
-  }
-  settings() {
-    return this.request('GET', '/api/settings');
-  }
-  saveSettings(body) {
-    return this.request('PUT', '/api/settings', body);
   }
   listJobs() {
     return this.request('GET', '/api/jobs').then((r) => r.jobs ?? r);

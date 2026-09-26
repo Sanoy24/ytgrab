@@ -470,40 +470,6 @@ function setUrlError(message) {
   input.setAttribute('aria-invalid', message ? 'true' : 'false');
 }
 
-function setFolderError(message) {
-  const input = $('#downloads-dir');
-  const out = $('#folder-error');
-  out.textContent = message;
-  out.hidden = !message;
-  input.setAttribute('aria-invalid', message ? 'true' : 'false');
-}
-
-async function loadSettings() {
-  try {
-    const settings = await client.settings();
-    $('#downloads-dir').value = settings.downloads_dir;
-  } catch (err) {
-    setFolderError(err.message);
-  }
-}
-
-async function saveSettings(e) {
-  e.preventDefault();
-  const input = $('#downloads-dir');
-  const button = $('#folder-save');
-  button.disabled = true;
-  setFolderError('');
-  try {
-    const settings = await client.saveSettings({ downloads_dir: input.value });
-    input.value = settings.downloads_dir;
-    toast('Output folder saved for new downloads.');
-  } catch (err) {
-    setFolderError(err.message);
-  } finally {
-    button.disabled = false;
-  }
-}
-
 async function onSubmit(e) {
   e.preventDefault();
   const input = $('#url');
@@ -520,7 +486,22 @@ async function onSubmit(e) {
   button.disabled = true;
   button.textContent = 'Adding…';
   try {
-    await client.createJob({ url: result.url, ...body });
+    try {
+      await client.createJob({ url: result.url, ...body });
+    } catch (err) {
+      // The server's inspection expired: check again and retry once with the same choice.
+      if (err.code !== 'inspection_required' || !body.format) throw err;
+      inspections.delete(result.url);
+      inspectedUrl = '';
+      const grouped = await inspect(result.url);
+      const choice = `${body.format.kind}:${body.format.id}`;
+      if (!grouped || selectedChoice() !== choice) {
+        throw Object.assign(new Error('Formats changed since the last check. Choose one and add again.'), {
+          code: 'inspection_required',
+        });
+      }
+      await client.createJob({ url: result.url, ...body });
+    }
     if (!client.isFixture) jobs = await client.listJobs();
     input.value = '';
     resetFormats();
@@ -539,7 +520,10 @@ async function onSubmit(e) {
 
 // Formats are fetched as soon as a valid video link is entered. The quick presets stay
 // usable meanwhile and remain the fallback when inspection fails.
-const inspections = new Map(); // url -> grouped formats (per page session)
+// url -> { grouped, at }. The server trusts an inspection for 10 minutes when creating a
+// format job; expiring sooner here avoids offering choices it would reject.
+const inspections = new Map();
+const INSPECTION_TTL_MS = 9 * 60_000;
 let inspectedUrl = '';
 let inspectCtl = null;
 let inspectTimer;
@@ -586,23 +570,36 @@ function scheduleInspect(immediate = false) {
   inspectTimer = setTimeout(() => inspect(result.url), immediate ? 0 : 500);
 }
 
+function cachedInspection(url) {
+  const entry = inspections.get(url);
+  if (entry && Date.now() - entry.at < INSPECTION_TTL_MS) return entry.grouped;
+  inspections.delete(url);
+  return null;
+}
+
+// Resolves to the grouped formats, or null when inspection failed or was superseded.
 async function inspect(url) {
   inspectCtl?.abort();
   const ctl = (inspectCtl = new AbortController());
   inspectedUrl = url;
 
-  const cached = inspections.get(url);
-  if (cached) return showFormats(cached, selectedChoice());
+  const cached = cachedInspection(url);
+  if (cached) {
+    showFormats(cached, selectedChoice());
+    return cached;
+  }
 
   setInspectStatus(el('span', { className: 'spinner' }), 'Checking available formats…');
   try {
     const info = await client.inspect(url, { signal: ctl.signal });
     const grouped = { ...groupFormats(info), title: info.title, duration: info.duration_seconds };
-    inspections.set(url, grouped);
-    if (!ctl.signal.aborted) showFormats(grouped, selectedChoice());
+    inspections.set(url, { grouped, at: Date.now() });
+    if (ctl.signal.aborted) return null;
+    showFormats(grouped, selectedChoice());
+    return grouped;
   } catch (err) {
-    if (err.name === 'AbortError' || ctl.signal.aborted) return;
-    if (err.code === 'not_available') return setInspectStatus(); // server without inspection
+    if (err.name === 'AbortError' || ctl.signal.aborted) return null;
+    if (err.code === 'not_available') return setInspectStatus(), null; // server without inspection
     const parts = [
       el('span', {
         className: 'inspect-error',
@@ -763,7 +760,7 @@ function init() {
     scheduleInspect(e.inputType === 'insertFromPaste');
   });
   $('#use-presets').addEventListener('click', () => {
-    const grouped = inspections.get(inspectedUrl);
+    const grouped = cachedInspection(inspectedUrl);
     showPresets();
     const back = el('button', {
       type: 'button',
