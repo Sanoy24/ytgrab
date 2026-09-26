@@ -42,7 +42,7 @@ export const jobs = [
     preset: "video-1080",
     state: "downloading",
     attempt: 1,
-    progress: { downloaded_bytes: 187_000_000, total_bytes: 412_000_000, speed_bps: 6_400_000, eta_seconds: 35 },
+    progress: { downloaded_bytes: 187_000_000, total_bytes: 412_000_000, speed_bps: 6_400_000, eta_seconds: 35, stream: 'video' },
     output_path: null,
     error: null,
     created_at: ago(2),
@@ -188,4 +188,18 @@ export const inspection = {
     a('139', 'm4a', 'mp4a.40.5', 48.8, 8.1),
     a('251-drc', 'webm', 'opus', 136.9, 20.6),
   ],
+};
+
+// GET /api/playlist sample: a course with one private video; 12 of 14 listed.
+export const playlist = {
+  id: 'PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb',
+  title: 'Go in practice — full course',
+  total: 14,
+  truncated: false,
+  unavailable: 2,
+  entries: Array.from({ length: 12 }, (_, i) => ({
+    video_id: `course${String(i + 1).padStart(5, '0')}`,
+    title: `Lesson ${i + 1}: ${['Setup', 'Types', 'Interfaces', 'Errors', 'Goroutines', 'Channels', 'Context', 'Testing', 'HTTP', 'SQLite', 'Packaging', 'Wrap-up'][i]}`,
+    duration_seconds: 420 + i * 37,
+  })),
 };

@@ -30,9 +30,11 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Integrate `yt-dlp` for a single video with safe arguments and confirmed output paths.~~
 - [x] ~~Parse structured progress and expose it through SSE.~~
 - [x] ~~Implement process-tree cancellation and verify it on Windows.~~
-- [ ] Verify process-tree cancellation on Unix.
+- [x] ~~Verify process-tree cancellation on Unix.~~
 - [x] ~~Add a bounded worker queue and transient network-error retry handling.~~
-- [ ] Verify resume from yt-dlp partial files after interruption and retry.
+- [x] ~~Verify resume from yt-dlp partial files after interruption and retry.~~
+- [x] ~~Name output files by quality so a second pick of the same video is not reported as already downloaded.~~
+- [x] ~~Pair picked video with audio of the same container (H.264 + AAC stays MP4).~~
 
 ### 4. Usable local interface
 
@@ -40,23 +42,57 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Build URL submission form with client-side validation and video/audio preset choice (UI against fixtures).~~
 - [x] ~~Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.~~
 - [x] ~~Add persisted output-folder settings, API, and page controls.~~
-- [ ] Verify output-folder controls in a live browser session.
+- [x] ~~Verify output-folder controls in a live browser session.~~
 - [x] ~~Add the output-folder setting to the UI against `GET`/`PUT /api/settings`.~~
 - [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
-- [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
+- [x] ~~Connect the queue/history views to the live API and SSE progress, and verify end to end.~~
+- [x] ~~Label the video and audio parts of a merged download's progress.~~
 - [x] ~~Build the format picker UI: inspect on paste, grouped video/audio choices, preset fallback (against fixtures).~~
 - [x] ~~Add `GET /api/inspect` and server-validated format-based job creation.~~
 - [x] ~~Verify the format picker end to end in a live browser.~~
-- [ ] Add controlled playlist downloads.
+- [x] ~~Add controlled playlist downloads (review list, 50-item cap, explicit count confirmation, Mix refusal).~~
 
 ### 5. Release readiness
 
-- [ ] Test end-to-end downloading, shutdown/recovery, cancellation, and resume.
+- [x] ~~Test end-to-end downloading, crash recovery, cancellation, and resume on Windows.~~
+- [x] ~~Verify graceful shutdown (SIGINT) with an active download and an open progress stream (Linux; Windows Ctrl+C uses the same code path).~~
 - [x] ~~Document source-run setup, required external tools, basic usage, and dependency diagnostics.~~
-- [ ] Document packaged installation and broader troubleshooting after release verification.
-- [ ] Package and verify a local release on the supported operating systems.
+- [x] ~~Document packaged installation and broader troubleshooting after release verification.~~
+- [x] ~~Add a packaging script with checksum-verified yt-dlp, manifest, and per-file checksums.~~
+- [x] ~~Package and verify the Windows x64 release (fresh extract: checksums, manifest, start script, tool discovery, health, page).~~
+- [x] ~~Package the Linux x64 release and verify it runs and serves the page (WSL2 Ubuntu).~~
+- [ ] Complete a real YouTube download through the packaged Windows build (blocked by YouTube rate limiting during this session).
+- [ ] Verify the macOS archives on a Mac (built, not run).
 
 ## Iteration log
+
+### 2026-09-26 — Claude: release packaging, user guide, tool-check fix
+
+- Result: Added `scripts/package.ps1` (tests, trimmed version-stamped builds, yt-dlp bundled only if it matches the official `SHA2-256SUMS`, `manifest.json`, per-file `SHA256SUMS`, archive `.sha256`; zips built with `tar -a` because Windows PowerShell's `Compress-Archive` writes backslash entry names), `packaging/Start YTGrab.cmd` (CRLF, enforced by `.gitattributes`), `--open` and `--version` flags, a startup line with version and "Press Ctrl+C to stop.", and `docs/USER_GUIDE.md` (install, usage, playlists, settings, troubleshooting), shipped as the archive README. **Fixed tools flapping to "missing":** the dependency version check timed out at 3 s, and the Windows `yt-dlp.exe` takes about 3.0 s per run; the limit is now 15 s and successful checks are cached per file path, size, and modification time. Updated `README.md` and the release strategy in `ARCHITECTURE.md`; `dist/` is ignored.
+- Verification: `go test ./...` and `go vet ./...` pass, including new tests for the browser command, the version-check timeout, and the cache (the test binary acts as a fake tool; one run for two checks, a second run after the file's time changes). Built `1.0.0-rc1` for Windows, Linux, and macOS (arm64/amd64). Windows zip (rebuilt as `rc2` after the fix): `sha256sum -c` passes for the archive and every file; the manifest records yt-dlp 2026.08.19 with the official hash; `ytgrab.exe --version` prints the version; run from a fresh extract with no tools variable, it found `tools\yt-dlp.exe` beside itself, and the first health check (3.4 s) reported it available, then 0.06 s from cache (with `rc1` it was reported unavailable after a timeout); the page and scripts load. Linux archive in WSL2: checksums pass, `--version`, page 200, health reports missing tools, SIGINT exits cleanly. A real download through the Windows release returned `blocked` because YouTube was rate-limiting this network.
+- Blocker/notes: `Start YTGrab.cmd`/`--open` were not launched here (they would open the desktop browser); the command is unit-tested. macOS archives are built but not run. The Unix archives don't keep the executable bit; the guide says to `chmod +x`.
+- Next: When YouTube allows, run one download through the packaged Windows build; merge `claude/finish`.
+
+### 2026-09-26 — Claude: graceful shutdown fix, Unix verification
+
+- Result: **Fixed shutdown hanging on open progress streams:** `server.Shutdown` waited for SSE handlers, which only end when their request context does, so with a browser tab open Ctrl+C took the full 5 s timeout and exited 1 with `shutdown: context deadline exceeded`. Request contexts now derive from a base context cancelled via `RegisterOnShutdown`. Added `internal/app/shutdown_test.go`.
+- Verification: The new test failed before the fix (`serve returned shutdown: context deadline exceeded` after 3 s) and passes after; `go test ./...` and `go vet ./...` pass. In WSL2 Ubuntu (Linux 6.18) with cross-compiled binaries and a fake `yt-dlp` shell script that prints progress and holds a `sleep` child: the fake ran in its own process group with its child, and Cancel left no fake or `sleep` process; the cross-compiled `internal/process` and `internal/queue` test suites pass on Linux; SIGINT with an active download and an open `curl -N` event stream exited 0 in 0.03 s (before the fix: exit 1 after 5.02 s), left no child processes, and after restart the job was `failed`/`interrupted`.
+- Blocker/notes: Windows Ctrl+C was not sent directly (no simple way from this harness); it goes through the same `signal.NotifyContext` path verified on Linux.
+- Next: Packaging script and a verified Windows release zip, then install and troubleshooting docs.
+
+### 2026-09-26 — Claude: controlled playlist downloads
+
+- Result: Added `domain.ParsePlaylistURL` (canonical `/playlist?list=` URL, Mixes refused), `MaxPlaylistItems = 50`, `VideoURL`, and `ValidVideoID`. `Inspector.ListPlaylist` runs one `--flat-playlist --dump-single-json --playlist-items 1:51` request through the shared throttle (extracted as `throttle`, with a shared bounded `runJSON`), skips private/deleted placeholders, and reports `truncated`/`unavailable`. New routes `GET /api/playlist` and `POST /api/playlist/jobs` validate all IDs before creating any job, build URLs server-side, and skip duplicates. Listed and inspected titles are remembered so new jobs show titles while queued. "The playlist does not exist" is now `video_unavailable` with a playlist message. The page shows a review list with select-all, notes for skipped/truncated entries, and an "Add N videos" button; video links with `list=` offer the whole playlist. Documented in `ARCHITECTURE.md` and `web/README.md`.
+- Verification: `go test ./...` and `go vet ./...` pass, with new tests for URL parsing (including Mixes and injected characters), flat-listing parsing and the 50 cap, listing arguments, the API contract (nothing created on bad input, >50 rejected, preset required, duplicates skipped, canonical URLs, titles applied), title memory, and the missing-playlist classification. Fixture run in Chromium: Add before loading only opened the review; 12 entries with a "2 private or deleted" note; unticking updated the button to "Add 10 videos" with an indeterminate select-all; submit created jobs and reset the form; Mix refused; the whole-playlist offer switched modes; editing the link left playlist mode. Live against a branch build: `/api/playlist` listed Blender Studio's "Project Gold" (7 entries) in 4.4 s and "Blender Studio Logs" (31, not truncated); a Mix returned `mix_playlist`; in the Go-served page, choosing 2 of 7 as M4A created 2 jobs with the right IDs. Those downloads failed with `blocked` because YouTube was rate-limiting this network at the time.
+- Blocker/notes: A successful live playlist download still needs a quieter network moment; the single-video download path it uses is already verified.
+- Next: Graceful shutdown and Unix checks (WSL), packaging, and install/troubleshooting docs.
+
+### 2026-09-26 — Claude: live end-to-end pass, quality file names, MP4 pairing
+
+- Result: On branch `claude/finish` (now working on backend and frontend). Picked video is paired with same-container audio (`ID+ba[ext=m4a]/ID+ba/ID` for MP4, `[ext=webm]` for WebM) and merges with `mp4/webm/mkv`; the inspected container travels in `FormatSelection.ext`, and audio labels include bitrate. **Fixed a wrong-file bug found live:** every quality of a video shared one file name, so after downloading 480p, a 1080p job finished instantly and pointed at the 480p file; names now include `%(height)sp` for video and `%(abr).0fk` for M4A/audio picks. Progress events carry `stream` (video/audio) from `%(info.vcodec)j`, and the page labels the part and shows plain "Starting…" before bytes arrive. The live client refreshes every 2 s while work is active and 10 s when idle, refreshes immediately after add/cancel/retry, guards against overlapping polls, and caps progress streams at 4.
+- Verification: `go test ./...` and `go vet ./...` pass; new tests cover the audio pairing, output names, and stream parsing; all web modules pass a `.mjs` syntax check. Live on Windows with a branch build (temp data dir, repo `tools/`): saved an output folder (bad path rejected with the sentence-case message) and it persisted across restart; Big Buck Bunny inspection took 7 s and listed 8 resolutions; a 480p H.264 pick streamed progress every 1–2 s; Cancel at 84% stopped both yt-dlp processes and kept a 23.9 MB `.part`; Retry resumed at 86%, fetched audio, merged, and ffprobe shows H.264 + AAC in `.mp4` (38.8 MB, 634 s); force-killing ytgrab during a 473 MB 1440p download also ended yt-dlp (the `.part` stopped at 10.1 MB); after restart the job was `interrupted` and Retry resumed at 14 MB. The file-name bug was observed before the fix (1080p job done, file was 480p per ffprobe); the fix is covered by unit tests but not yet re-run live because YouTube began rate-limiting this network.
+- Blocker/notes: yt-dlp exits on a broken pipe when ytgrab dies, which covers downloads; during a silent ffmpeg merge it may outlive ytgrab. Graceful Ctrl+C shutdown with an active download is not yet verified.
+- Next: Controlled playlist downloads, then graceful-shutdown and Unix checks (WSL), packaging, and install/troubleshooting docs.
 
 ### 2026-09-26 — Claude: fix broken page on master, live format downloads
 

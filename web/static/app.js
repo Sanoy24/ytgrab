@@ -64,22 +64,23 @@ export function validateUrl(raw) {
     (host === 'youtu.be' && u.pathname.length > 1) ||
     u.searchParams.has('v') ||
     /^\/(shorts|live|embed)\/[^/]+/.test(u.pathname);
+  const listId = u.searchParams.get('list') || '';
+  const isMix = listId.startsWith('RD');
+  const playlistUrl = /^[A-Za-z0-9_-]{10,64}$/.test(listId) && !isMix ? u.toString() : '';
   if (!hasVideo) {
-    if (u.searchParams.has('list')) {
+    if (playlistUrl) return { playlistUrl };
+    if (isMix) {
       return {
-        error:
-          "Playlist links aren't supported yet. Open one video from the playlist and copy its link.",
+        error: "YouTube Mixes can't be downloaded as a playlist. Open one video and copy its link.",
       };
     }
     return {
       error:
-        "This link doesn't point to a single video. Open the video and copy the link from the address bar.",
+        "This link doesn't point to a video or playlist. Open the video and copy the link from the address bar.",
     };
   }
-  const note = u.searchParams.has('list')
-    ? 'Only this video will be downloaded, not the whole playlist.'
-    : '';
-  return { url: u.toString(), note };
+  const note = listId ? 'Only this video will be downloaded, not the whole playlist.' : '';
+  return { url: u.toString(), note, playlistUrl };
 }
 
 // ---------- formatting ----------
@@ -170,15 +171,22 @@ function renderProgress(el, job) {
   if (box.hidden) return;
 
   const p = job.progress || {};
+  // Merged downloads fetch video, then audio; naming the part keeps the second 0% from
+  // looking like a restart.
+  const part = { video: 'Video', audio: 'Audio' }[p.stream] || '';
   const label = jobTitle(job);
   bar.setAttribute('aria-label', `Progress for ${label}`);
   if (job.state === 'processing') {
     bar.removeAttribute('value'); // indeterminate
     text.textContent = 'Merging and finishing up…';
+  } else if (!p.downloaded_bytes && p.total_bytes == null) {
+    bar.removeAttribute('value');
+    text.textContent = 'Starting…';
   } else if (job.state === 'inspecting' || p.total_bytes == null) {
     bar.removeAttribute('value');
     text.textContent = [
-      p.downloaded_bytes ? `${formatBytes(p.downloaded_bytes)} downloaded` : 'Starting…',
+      part,
+      `${formatBytes(p.downloaded_bytes)} downloaded`,
       p.speed_bps ? `${formatBytes(p.speed_bps)}/s` : '',
       'size unknown',
     ]
@@ -188,6 +196,7 @@ function renderProgress(el, job) {
     const pct = Math.min(100, (p.downloaded_bytes / p.total_bytes) * 100);
     bar.value = pct;
     text.textContent = [
+      part,
       `${Math.floor(pct)}%`,
       `${formatBytes(p.downloaded_bytes)} of ${formatBytes(p.total_bytes)}`,
       p.speed_bps ? `${formatBytes(p.speed_bps)}/s` : '',
@@ -472,8 +481,17 @@ function setUrlError(message) {
 
 async function onSubmit(e) {
   e.preventDefault();
+  if (playlist) {
+    if (playlist.list) submitPlaylist();
+    return;
+  }
   const input = $('#url');
   const result = validateUrl(input.value);
+  if (!result.error && !result.url) {
+    // Never queue a playlist without showing what it contains first.
+    enterPlaylist(result.playlistUrl);
+    return;
+  }
   if (result.error) {
     setUrlError(result.error);
     input.focus();
@@ -551,6 +569,7 @@ function showPresets(checkedValue) {
 }
 
 function resetFormats() {
+  exitPlaylist();
   clearTimeout(inspectTimer);
   inspectCtl?.abort();
   inspectCtl = null;
@@ -563,9 +582,14 @@ function scheduleInspect(immediate = false) {
   clearTimeout(inspectTimer);
   const result = validateUrl($('#url').value);
   if (result.error) {
-    if (inspectedUrl) resetFormats();
+    if (inspectedUrl || playlist) resetFormats();
     return;
   }
+  if (!result.url) {
+    inspectTimer = setTimeout(() => enterPlaylist(result.playlistUrl), immediate ? 0 : 500);
+    return;
+  }
+  if (playlist) exitPlaylist();
   if (result.url === inspectedUrl) return;
   inspectTimer = setTimeout(() => inspect(result.url), immediate ? 0 : 500);
 }
@@ -678,10 +702,135 @@ function showFormats(grouped, previous) {
   ]
     .filter(Boolean)
     .join(' · ');
-  setInspectStatus(
+  const parts = [
     el('strong', { className: 'inspect-title', textContent: grouped.title || 'Video' }),
     el('small', { textContent: meta }),
+  ];
+  const { playlistUrl } = validateUrl($('#url').value);
+  if (playlistUrl) {
+    const whole = el('button', { type: 'button', className: 'btn-link', textContent: 'Download the whole playlist instead' });
+    whole.addEventListener('click', () => enterPlaylist(playlistUrl));
+    parts.push(el('br'), whole);
+  }
+  setInspectStatus(...parts);
+}
+
+// ---------- playlists ----------
+
+// A playlist link lists its videos for review; nothing is queued until the user presses
+// the Add button, whose label states how many videos it will add.
+let playlist = null; // { url, list }
+let playlistCtl = null;
+
+function playlistIds() {
+  return [...document.querySelectorAll('#playlist-items input:checked')].map((i) => i.value);
+}
+
+function updatePlaylistCount() {
+  const button = $('#submit');
+  if (!playlist?.list) {
+    button.textContent = 'Add to queue';
+    button.disabled = false;
+    return;
+  }
+  const n = playlistIds().length;
+  const total = playlist.list.entries.length;
+  button.textContent = n === 1 ? 'Add 1 video' : `Add ${n} videos`;
+  button.disabled = n === 0;
+  const all = $('#playlist-all');
+  all.checked = n === total;
+  all.indeterminate = n > 0 && n < total;
+}
+
+async function enterPlaylist(url) {
+  if (playlist?.url === url) return;
+  clearTimeout(inspectTimer);
+  inspectCtl?.abort();
+  inspectedUrl = '';
+  setInspectStatus();
+  showPresets(selectedChoice());
+  playlistCtl?.abort();
+  const ctl = (playlistCtl = new AbortController());
+  playlist = { url, list: null };
+  $('#playlist').hidden = false;
+  $('#playlist-title').replaceChildren(el('span', { className: 'spinner' }), 'Reading playlist…');
+  $('#playlist-meta').textContent = '';
+  $('#playlist-items').replaceChildren();
+  $('#playlist-note').hidden = true;
+  $('#playlist-all').parentElement.hidden = true;
+  $('#submit').disabled = true;
+  try {
+    const list = await client.listPlaylist(url, { signal: ctl.signal });
+    if (ctl.signal.aborted) return;
+    playlist.list = list;
+    renderPlaylist(list);
+  } catch (err) {
+    if (err.name === 'AbortError' || ctl.signal.aborted) return;
+    $('#playlist-title').textContent = "Couldn't read this playlist";
+    $('#playlist-meta').textContent = err.message;
+    $('#submit').disabled = true;
+  }
+}
+
+function renderPlaylist(list) {
+  $('#playlist-title').textContent = list.title || 'Playlist';
+  const n = list.entries.length;
+  const shown =
+    list.truncated && list.total ? `first ${n} of ${list.total} videos` : `${n} video${n === 1 ? '' : 's'}`;
+  $('#playlist-meta').textContent = shown.charAt(0).toUpperCase() + shown.slice(1);
+  const notes = [];
+  if (list.truncated) notes.push(`Up to 50 videos can be added at once.`);
+  if (list.unavailable) {
+    notes.push(`${list.unavailable} private or deleted video${list.unavailable === 1 ? ' is' : 's are'} skipped.`);
+  }
+  $('#playlist-note').textContent = notes.join(' ');
+  $('#playlist-note').hidden = !notes.length;
+  $('#playlist-all').parentElement.hidden = false;
+  $('#playlist-items').replaceChildren(
+    ...list.entries.map((entry) =>
+      el(
+        'li',
+        {},
+        el(
+          'label',
+          {},
+          el('input', { type: 'checkbox', value: entry.video_id, checked: true }),
+          el('span', { textContent: entry.title || entry.video_id }),
+          el('small', { textContent: formatDuration(entry.duration_seconds) }),
+        ),
+      ),
+    ),
   );
+  updatePlaylistCount();
+}
+
+function exitPlaylist() {
+  playlistCtl?.abort();
+  playlistCtl = null;
+  playlist = null;
+  $('#playlist').hidden = true;
+  updatePlaylistCount();
+}
+
+async function submitPlaylist() {
+  const ids = playlistIds();
+  const preset = selectedChoice().replace(/^preset:/, '');
+  const button = $('#submit');
+  button.disabled = true;
+  button.textContent = 'Adding…';
+  try {
+    const result = await client.createPlaylistJobs({ video_ids: ids, preset });
+    if (!client.isFixture) jobs = await client.listJobs();
+    const added = result.jobs.length;
+    const skipped = result.skipped ? ` ${result.skipped} already in the queue.` : '';
+    toast(`Added ${added} video${added === 1 ? '' : 's'}.${skipped}`);
+    $('#url').value = '';
+    resetFormats();
+    render();
+  } catch (err) {
+    toast(err.message, true);
+    updatePlaylistCount();
+  }
 }
 
 // ---------- output folder ----------
@@ -758,6 +907,11 @@ function init() {
   $('#url').addEventListener('input', (e) => {
     if ($('#url').getAttribute('aria-invalid') === 'true') setUrlError('');
     scheduleInspect(e.inputType === 'insertFromPaste');
+  });
+  $('#playlist-items').addEventListener('change', updatePlaylistCount);
+  $('#playlist-all').addEventListener('change', (e) => {
+    for (const box of document.querySelectorAll('#playlist-items input')) box.checked = e.target.checked;
+    updatePlaylistCount();
   });
   $('#use-presets').addEventListener('click', () => {
     const grouped = cachedInspection(inspectedUrl);

@@ -96,6 +96,22 @@ The tools panel lists every dependency with a short version (`ffmpeg version 8.0
 
 `GET /api/settings` returns `{ "downloads_dir": string }`; `PUT /api/settings` accepts the same shape. The folder must already exist, be writable, and be an absolute path. Changing it affects jobs that start afterward. If the server answers a job route with 404 or 405 and no JSON error, the UI shows "Downloads aren't available yet" and stops polling.
 
+## Playlists
+
+A playlist link (`/playlist?list=…`) opens a review list instead of the format picker: the playlist title, up to 50 entries with durations, all ticked, and a note for private or deleted entries and for playlists longer than 50. The quick presets apply to every video; the Add button reads "Add N videos" and is the confirmation. Pressing Add before the list loads only opens the review. A video link that also carries `list=` downloads just that video and offers "Download the whole playlist instead". Editing the link leaves playlist mode. Mix links (`list=RD…`) are refused.
+
+```jsonc
+// GET /api/playlist?url=...
+{ "id": "PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2", "title": "Project Gold",
+  "entries": [{ "video_id": "nV_awXI9XJY", "title": "…", "duration_seconds": 261 }],
+  "total": 7, "truncated": false, "unavailable": 0 }
+
+// POST /api/playlist/jobs   ->  201 { "jobs": [Job], "skipped": 1 }
+{ "video_ids": ["nV_awXI9XJY", "M788vUWI2Rk"], "preset": "audio-m4a" }
+```
+
+Errors: `invalid_url`, `mix_playlist`, `video_unavailable` ("This playlist is unavailable or private."), `blocked`, `invalid_request` (bad or more than 50 IDs; nothing is created), `invalid_preset`. Duplicates and videos already queued count as `skipped`. Jobs get the listed title right away.
+
 ## Output folder
 
 The New download panel shows the current output folder from `GET /api/settings` (`{ "downloads_dir": "..." }`) with a Change button. Saving sends `PUT /api/settings` with the same field and shows the server's `invalid_directory` message under the input. The section stays hidden if the settings route is missing or the server is unreachable. Fixture mode keeps the folder in memory and only checks that the path looks absolute.

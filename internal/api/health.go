@@ -34,6 +34,9 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 	}
 	if inspector != nil {
 		addInspectRoute(mux, inspector)
+		if lister, ok := inspector.(PlaylistLister); ok && jobs != nil {
+			addPlaylistRoutes(mux, lister, jobs, controller)
+		}
 	}
 	if len(settings) != 0 && settings[0] != nil {
 		addSettingsRoutes(mux, settings[0])

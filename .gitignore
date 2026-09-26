@@ -7,3 +7,6 @@ tools/
 *.db
 *.db-shm
 *.db-wal
+
+# Release output from scripts/package.ps1.
+dist/

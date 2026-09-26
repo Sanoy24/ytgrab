@@ -56,9 +56,22 @@
             <button type="button" class="btn btn-ghost" id="paste" hidden>Paste</button>
           </div>
           <p class="hint" id="url-hint">
-            Paste a YouTube video link. Playlists will be supported later.
+            Paste a YouTube video or playlist link.
           </p>
           <p class="field-error" id="url-error" role="alert" hidden></p>
+
+          <fieldset class="playlist" id="playlist" hidden>
+            <legend class="field-label">Playlist videos</legend>
+            <div class="playlist-head">
+              <strong class="inspect-title" id="playlist-title"></strong>
+              <small id="playlist-meta"></small>
+            </div>
+            <label class="playlist-all">
+              <input type="checkbox" id="playlist-all" checked /> Select all
+            </label>
+            <ul class="playlist-items" id="playlist-items"></ul>
+            <p class="hint" id="playlist-note" hidden></p>
+          </fieldset>
 
           <fieldset class="presets">
             <legend class="field-label">Format</legend>

@@ -54,8 +54,24 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
+	// Progress streams run until their request context ends. Cancel request contexts
+	// when shutdown starts, or an open browser tab would hold shutdown to its timeout.
+	requests, cancelRequests := context.WithCancel(context.Background())
+	defer cancelRequests()
+	server.BaseContext = func(net.Listener) context.Context { return requests }
+	server.RegisterOnShutdown(cancelRequests)
 
-	_, _ = fmt.Fprintf(output, "YTGrab listening on http://%s\n", listener.Addr())
+	url := fmt.Sprintf("http://%s/", listener.Addr())
+	version := cfg.Version
+	if version == "" {
+		version = "dev"
+	}
+	_, _ = fmt.Fprintf(output, "YTGrab %s listening on %s\nPress Ctrl+C to stop.\n", version, url)
+	if cfg.OpenBrowser {
+		if err := openBrowser(url); err != nil {
+			_, _ = fmt.Fprintf(output, "Could not open a browser (%v); open %s manually.\n", err, url)
+		}
+	}
 	served := make(chan error, 1)
 	go func() { served <- server.Serve(listener) }()
 
