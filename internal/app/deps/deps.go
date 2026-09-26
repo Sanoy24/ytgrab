@@ -148,6 +148,10 @@ func searchDirs(cfg config.Config) []string {
 	if cwd, err := os.Getwd(); err == nil {
 		dirs = append(dirs, filepath.Join(cwd, "tools"))
 	}
+	// winget links newly installed tools here; this process's PATH may predate them.
+	if local := os.Getenv("LOCALAPPDATA"); runtime.GOOS == "windows" && local != "" {
+		dirs = append(dirs, filepath.Join(local, "Microsoft", "WinGet", "Links"))
+	}
 	return dirs
 }
 

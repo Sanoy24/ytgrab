@@ -114,6 +114,8 @@ Errors: `invalid_url`, `mix_playlist`, `video_unavailable` ("This playlist is un
 
 ## Output folder
 
+`GET /api/settings` returns `{ downloads_dir, configured, default_dir, can_pick }`. While `configured` is false, a card at the top of New download asks for a folder and Add is refused until one is chosen: **Choose folder…** calls `POST /api/settings/pick-folder`, which opens the operating system's folder window on this computer and returns the new settings, `{ ...settings, cancelled: true }`, or `picker_unavailable` (the page then shows the typed-path form); **Use …** calls `POST /api/settings/use-default`. Afterwards **Change…** opens the window again and **Type a path** shows the form. Fixture modes: `?fixture=first-run` (first pick is cancelled, the second succeeds) and `?fixture=no-picker`.
+
 The New download panel shows the current output folder from `GET /api/settings` (`{ "downloads_dir": "..." }`) with a Change button. Saving sends `PUT /api/settings` with the same field and shows the server's `invalid_directory` message under the input. The section stays hidden if the settings route is missing or the server is unreachable. Fixture mode keeps the folder in memory and only checks that the path looks absolute.
 
 ## Backend behavior from UI testing

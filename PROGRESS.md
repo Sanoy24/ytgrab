@@ -47,6 +47,8 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
 - [x] ~~Connect the queue/history views to the live API and SSE progress, and verify end to end.~~
 - [x] ~~Label the video and audio parts of a merged download's progress.~~
+- [x] ~~Require a download folder on first run and choose it with the operating system's folder window.~~
+- [x] ~~Add `ytgrab doctor` and `ytgrab setup` for one-step tool installation.~~
 - [x] ~~Build the format picker UI: inspect on paste, grouped video/audio choices, preset fallback (against fixtures).~~
 - [x] ~~Add `GET /api/inspect` and server-validated format-based job creation.~~
 - [x] ~~Verify the format picker end to end in a live browser.~~
@@ -65,6 +67,13 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Verify the macOS archives on a Mac (built, not run).
 
 ## Iteration log
+
+### 2026-09-27 — Claude: folder window, first-run folder choice, doctor and setup
+
+- Result: On branch `claude/setup-and-picker` (stacked on `claude/finish`). The page now asks for a download folder before the first download: **Choose folder…** opens the operating system's folder window through the server (`internal/picker`: Explorer's `IFileOpenDialog` via PowerShell on Windows, `choose folder` on macOS, zenity/kdialog on Linux), **Use Downloads\ytgrab** creates the suggested folder, and typing a path remains a fallback. Later, **Change…** opens the same window. Settings expose `configured`, `default_dir`, `can_pick`; new routes `POST /api/settings/pick-folder` (one window at a time; cancel is not an error) and `/use-default`. Added `RequireLoopbackHost` so a DNS-rebinding page can't reach the API or open windows. New CLI: `ytgrab doctor` (tools with short versions, data folder, download folder, port) and `ytgrab setup [--yes] [--update-ytdlp]` (official yt-dlp download with SHA-256 verification into `tools/`; FFmpeg and Deno through winget or Homebrew after asking; printed commands on Linux; re-checks afterwards). Tool search includes WinGet's `Links` folder. `Start YTGrab.cmd` runs `doctor` and offers `setup` when something is missing. Updated the user guide, README, and ARCHITECTURE.
+- Verification: `go test ./...` and `go vet ./...` pass, with new tests for first-run settings, the pick/cancel/unavailable/use-default routes, the loopback Host check, picker commands (initial folder only via environment, zenity/kdialog choice, cancel), the checksum-verified yt-dlp download (mismatch leaves nothing behind), and setup prompts (Windows runs winget only for accepted items and prints the command for declined ones; Linux runs nothing). Real Windows folder window, driven by UI automation: opened in about 3–4 s and returned a folder; Esc returned "cancelled". From the Go-served page with a fresh data folder: the first-run card showed, **Choose folder…** read "Waiting for folder window…", the real window opened, and the chosen folder was saved (`configured: true`). `ytgrab doctor` on this machine: all tools found, download folder not chosen, port free. `ytgrab setup` in an empty folder downloaded yt-dlp 2026.08.19 from GitHub, verified its checksum, and the re-check passed. Fixture runs covered first-run blocking of Add, cancel, pick, Change…, and the no-picker fallback.
+- Blocker/notes: The macOS and Linux folder windows are unit-tested but not run. `Start YTGrab.cmd` was not double-clicked here because it opens the desktop browser. My earlier `--version` test had created an empty `%AppData%\ytgrab\jobs.db` (no settings, no jobs); the app creates the same file on first start.
+- Next: Merge `claude/finish`, then this branch; build a release and try one real download when YouTube allows.
 
 ### 2026-09-26 — Claude: release packaging, user guide, tool-check fix
 
