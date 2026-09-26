@@ -21,10 +21,9 @@ const STATE_LABELS = {
   cancelled: 'Cancelled',
 };
 
+// Extra guidance appended to server error messages; only where the server's text lacks it.
 const ERROR_HINTS = {
   video_unavailable: 'Check that the video is public and the link is correct.',
-  network: 'Check your connection, then retry.',
-  dependency_missing: 'Install the missing tool shown at the top of the page, then retry.',
 };
 
 const YT_HOSTS = new Set([
@@ -498,8 +497,76 @@ async function onSubmit(e) {
   }
 }
 
+// ---------- output folder ----------
+
+let downloadsDir = '';
+
+// The section stays hidden when the server has no settings route or can't be reached;
+// the health banner already reports an unreachable server.
+async function loadSettings() {
+  try {
+    const s = await client.getSettings();
+    downloadsDir = s.downloads_dir;
+    $('#dir-path').textContent = downloadsDir;
+    $('#output-dir').hidden = false;
+  } catch {
+    $('#output-dir').hidden = true;
+  }
+}
+
+function setDirEditing(editing) {
+  $('#dir-view').hidden = editing;
+  $('#dir-form').hidden = !editing;
+  setDirError('');
+  if (editing) {
+    $('#dir-input').value = downloadsDir;
+    $('#dir-input').select();
+    $('#dir-input').focus();
+  } else {
+    $('#dir-edit').focus();
+  }
+}
+
+function setDirError(message) {
+  $('#dir-error').textContent = message;
+  $('#dir-error').hidden = !message;
+  $('#dir-input').setAttribute('aria-invalid', message ? 'true' : 'false');
+}
+
+async function onDirSubmit(e) {
+  e.preventDefault();
+  const value = $('#dir-input').value.trim();
+  if (!value) {
+    setDirError('Enter a folder path.');
+    return;
+  }
+  if (value === downloadsDir) {
+    setDirEditing(false);
+    return;
+  }
+  const save = $('#dir-save');
+  save.disabled = true;
+  try {
+    const s = await client.updateSettings({ downloads_dir: value });
+    downloadsDir = s.downloads_dir;
+    $('#dir-path').textContent = downloadsDir;
+    setDirEditing(false);
+    toast('Output folder saved. New downloads will go there.');
+  } catch (err) {
+    setDirError(err.message);
+  } finally {
+    save.disabled = false;
+  }
+}
+
 function init() {
   $('#fixture-note').hidden = !client.isFixture;
+  $('#dir-edit').addEventListener('click', () => setDirEditing(true));
+  $('#dir-cancel').addEventListener('click', () => setDirEditing(false));
+  $('#dir-form').addEventListener('submit', onDirSubmit);
+  $('#dir-form').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setDirEditing(false);
+  });
   $('#add-form').addEventListener('submit', onSubmit);
   $('#url').addEventListener('input', () => {
     if ($('#url').getAttribute('aria-invalid') === 'true') setUrlError('');
@@ -541,6 +608,7 @@ function init() {
   });
 
   loadHealth();
+  loadSettings();
   loadJobs();
 }
 

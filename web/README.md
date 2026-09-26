@@ -85,6 +85,15 @@ The tools panel lists every dependency with a short version (`ffmpeg version 8.0
 
 Until per-job SSE exists, the HTTP client polls `GET /api/jobs` every 2 seconds. If the server answers a job route with 404 or 405 and no JSON error, the UI shows "Downloads aren't available yet" and stops polling.
 
+## Output folder
+
+The New download panel shows the current output folder from `GET /api/settings` (`{ "downloads_dir": "..." }`) with a Change button. Saving sends `PUT /api/settings` with the same field and shows the server's `invalid_directory` message under the input. The section stays hidden if the settings route is missing or the server is unreachable. Fixture mode keeps the folder in memory and only checks that the path looks absolute.
+
+## Backend proposals from UI testing
+
+- **Classify YouTube bot checks.** When YouTube answers `HTTP Error 429` or "Sign in to confirm you're not a bot", yt-dlp fails and the job currently gets `download_failed` with "Check that yt-dlp is up to date", which misleads. A distinct code (for example `blocked`) with a message such as "YouTube is limiting requests from this network. Wait a while, then retry." would be accurate. Cookie support stays deferred.
+- **Sentence-case validation messages.** `invalid_directory` returns the raw Go error text ("choose an existing, writable absolute folder"); the UI shows server messages verbatim.
+
 ## Client-side URL checks
 
 These are for fast feedback only; the server must validate again. Accepted: `http(s)` links on `youtube.com`, `www.`/`m.`/`music.youtube.com`, and `youtu.be` that identify one video (`watch?v=`, `youtu.be/<id>`, `/shorts/`, `/live/`, `/embed/`). A missing scheme gets `https://`. Playlist-only links are rejected with guidance; a video link that also carries `list=` is accepted with a note that only the video will be downloaded.

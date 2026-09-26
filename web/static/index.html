@@ -63,6 +63,25 @@
           <button type="submit" class="btn btn-primary" id="submit">Add to queue</button>
         </div>
       </form>
+
+      <div class="output-dir" id="output-dir" hidden>
+        <div class="output-dir-view" id="dir-view">
+          <span class="field-label">Save to</span>
+          <code class="output-dir-path" id="dir-path"></code>
+          <button type="button" class="btn btn-small" id="dir-edit">Change</button>
+        </div>
+        <form class="output-dir-edit" id="dir-form" novalidate hidden>
+          <label for="dir-input" class="field-label">Output folder</label>
+          <input id="dir-input" type="text" autocomplete="off" spellcheck="false"
+                 aria-describedby="dir-hint dir-error" required>
+          <p class="hint" id="dir-hint">Full path to an existing folder, for example <code>D:\Videos</code>. Applies to downloads that start after saving.</p>
+          <p class="field-error" id="dir-error" role="alert" hidden></p>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-small btn-primary" id="dir-save">Save</button>
+            <button type="button" class="btn btn-small" id="dir-cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
     </section>
 
     <section class="panel" aria-labelledby="queue-title">

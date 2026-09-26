@@ -1,5 +1,6 @@
 // Data clients. The UI talks only to this interface:
-//   health(), listJobs(), createJob({url, preset}), cancelJob(id), retryJob(id), subscribe(onChange)
+//   health(), listJobs(), createJob({url, preset}), cancelJob(id), retryJob(id), subscribe(onChange),
+//   getSettings(), updateSettings({downloads_dir})
 // The live HTTP client is the default. Add ?fixture=default|empty|error|degraded|loading
 // to preview UI states without the backend.
 
@@ -25,6 +26,7 @@ class FixtureClient {
     this.scenario = scenario;
     this.jobs = scenario === 'empty' ? [] : structuredClone(fx.jobs);
     this.nextId = 100;
+    this.downloadsDir = String.raw`C:\Users\me\Downloads\ytgrab`;
     this.listeners = new Set();
     this.timer = null;
   }
@@ -91,6 +93,23 @@ class FixtureClient {
       }
       Object.assign(j, { state: 'queued', attempt: j.attempt + 1, error: null, progress: null });
     });
+  }
+
+  async getSettings() {
+    await delay(200);
+    if (this.scenario === 'error')
+      throw new ApiError('unreachable', 'Could not reach the local server.');
+    return { downloads_dir: this.downloadsDir };
+  }
+
+  async updateSettings({ downloads_dir }) {
+    await delay(300);
+    // Loosely mirrors the server rule: an absolute path to an existing, writable folder.
+    if (!/^([a-z]:[\\/]|\\\\|\/)/i.test(downloads_dir)) {
+      throw new ApiError('invalid_directory', String.raw`Use a full folder path, such as D:\Videos.`);
+    }
+    this.downloadsDir = downloads_dir;
+    return { downloads_dir };
   }
 
   update(id, fn) {
@@ -175,6 +194,12 @@ class HttpClient {
   }
   retryJob(id) {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/retry`);
+  }
+  getSettings() {
+    return this.request('GET', '/api/settings');
+  }
+  updateSettings(body) {
+    return this.request('PUT', '/api/settings', body);
   }
 
   // Per-job SSE lands with the download engine; poll the list until then.

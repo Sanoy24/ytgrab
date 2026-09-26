@@ -380,3 +380,25 @@ input[type="url"][aria-invalid="true"] { border-color: var(--err); }
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
 }
 .toast[data-kind="error"] { background: var(--err); color: #fff; }
+
+/* Output folder */
+.output-dir { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.output-dir-view { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.output-dir-view .field-label { margin: 0; }
+.output-dir-path {
+  flex: 1 1 12em;
+  min-width: 0;
+  font: 0.8rem ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--muted);
+}
+.output-dir-edit input {
+  width: 100%;
+  font: 0.875rem ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.output-dir-edit input[aria-invalid="true"] { border-color: var(--err); }
+.output-dir-edit .form-actions { margin-top: 8px; }

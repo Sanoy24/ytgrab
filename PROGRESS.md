@@ -38,6 +38,7 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Build URL submission form with client-side validation and video/audio preset choice (UI against fixtures).~~
 - [ ] Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.
 - [ ] Add output-folder settings.
+- [x] ~~Add the output-folder setting to the UI against `GET`/`PUT /api/settings`.~~
 - [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
 - [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
 - [ ] Add on-demand format inspection and controlled playlist downloads.
@@ -50,6 +51,13 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Claude: merged-app check and output-folder UI
+
+- Result: Checked the merged `master`: `app.js`/`api.js` differ from `agent/claude-ui-health` only by Prettier formatting, and the Go job API matches the JSON shapes in `web/README.md`. On branch `agent/claude-post-merge`, added an output-folder row to the New download panel (view, Change, Save/Cancel, Escape to cancel, inline server errors), settings methods in both data clients, and removed UI error hints that repeated the server's own advice. Recorded two backend proposals in `web/README.md`: a distinct error code for YouTube bot checks and sentence-case validation messages.
+- Verification: `go test ./...` passed on merged `master`. Ran the merged app with temp data/download dirs and used the Go-served page at 127.0.0.1:8799: health showed "Tools ready"; submitting `watch?v=jNQXAC9IVRw` (audio M4A) showed the job downloading, then failed in history with Retry. A `yt-dlp --simulate` run showed the cause: YouTube returned HTTP 429 and "Sign in to confirm you're not a bot" for this network. For settings, ran a temp build of Codex's uncommitted settings API behind a scratch proxy serving this branch's UI: the folder loaded, a relative path and a missing drive were rejected with the server's message, saving an existing folder updated the page and `GET /api/settings`, and Escape cancelled an edit. Fixture mode at 375px showed the inline error with no horizontal overflow. `node --check` passes. No Go files were edited.
+- Blocker/notes: Real downloads cannot be verified from this network until YouTube stops rate-limiting it. The settings API was tested from Codex's uncommitted working tree; re-check after it is committed. Temporary preview files and servers were removed.
+- Next: After Codex commits settings, merge this branch and re-check the Go-served page. Then switch active jobs from list polling to the per-job SSE stream (`/api/jobs/{id}/events`).
 
 ### 2026-09-26 — Post-merge checklist repair
 
