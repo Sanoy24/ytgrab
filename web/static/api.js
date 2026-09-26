@@ -1,6 +1,7 @@
 // Data clients. The UI talks only to this interface:
 //   health(), listJobs(), createJob({url, preset}), cancelJob(id), retryJob(id), subscribe(onChange),
-//   getSettings(), updateSettings({downloads_dir}), inspect(url, {signal})
+//   getSettings(), updateSettings({downloads_dir}), inspect(url, {signal}),
+//   listPlaylist(url, {signal}), createPlaylistJobs({video_ids, preset})
 // The live HTTP client is the default. Add ?fixture=default|empty|error|degraded|loading
 // to preview UI states without the backend.
 
@@ -62,6 +63,43 @@ class FixtureClient {
     if (url.includes('xxxxxxxxxxx'))
       throw new ApiError('video_unavailable', 'This video is unavailable or private.');
     return structuredClone(fx.inspection);
+  }
+
+  async listPlaylist(url, { signal } = {}) {
+    await delay(1200, signal);
+    if (this.scenario === 'error')
+      throw new ApiError('unreachable', 'Could not reach the local server.');
+    if (this.scenario === 'blocked') {
+      throw new ApiError(
+        'blocked',
+        'YouTube is limiting requests from this network. Wait a while, then retry.',
+      );
+    }
+    return structuredClone(fx.playlist);
+  }
+
+  async createPlaylistJobs({ video_ids, preset }) {
+    await delay(500);
+    const created = [];
+    let skipped = 0;
+    for (const id of new Set(video_ids)) {
+      const url = `https://www.youtube.com/watch?v=${id}`;
+      if (this.jobs.some((j) => j.url === url && isActive(j.state))) {
+        skipped++;
+        continue;
+      }
+      const entry = fx.playlist.entries.find((e) => e.video_id === id);
+      const at = new Date().toISOString();
+      const job = {
+        id: `job_${this.nextId++}`, url, video_id: id, title: entry?.title ?? null, preset, format: null,
+        state: 'queued', attempt: 1, progress: null, output_path: null, error: null, created_at: at, updated_at: at,
+      };
+      this.jobs.unshift(job);
+      created.push(job);
+    }
+    skipped += video_ids.length - new Set(video_ids).size;
+    this.emit();
+    return { jobs: structuredClone(created), skipped };
   }
 
   async createJob({ url, preset, format }) {
@@ -215,6 +253,12 @@ class HttpClient {
   }
   inspect(url, { signal } = {}) {
     return this.request('GET', `/api/inspect?url=${encodeURIComponent(url)}`, undefined, signal);
+  }
+  listPlaylist(url, { signal } = {}) {
+    return this.request('GET', `/api/playlist?url=${encodeURIComponent(url)}`, undefined, signal);
+  }
+  createPlaylistJobs(body) {
+    return this.request('POST', '/api/playlist/jobs', body).then(this.afterChange);
   }
   cancelJob(id) {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/cancel`).then(this.afterChange);

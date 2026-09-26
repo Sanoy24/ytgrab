@@ -99,10 +99,12 @@ These are initial defaults, not performance claims. Measure throughput, CPU, mem
 | `POST` | `/api/jobs/{id}/retry` | Retry a failed or cancelled job |
 | `GET` | `/api/jobs/{id}/events` | Stream progress with SSE |
 | `GET` | `/api/inspect?url=...` | List a video's formats, grouped into video and audio (called when a link is entered) |
+| `GET` | `/api/playlist?url=...` | List up to 50 playlist entries for review (flat listing, no per-video requests) |
+| `POST` | `/api/playlist/jobs` | Create one preset job per confirmed video ID |
 | `GET`, `PUT` | `/api/settings` | Read or update local settings |
 | `GET` | `/api/system/health` | Dependency and application status |
 
-Use bounded request bodies, stable JSON error codes, and context-aware shutdown. A playlist URL should require explicit user confirmation and a maximum item count before creating multiple jobs.
+Use bounded request bodies, stable JSON error codes, and context-aware shutdown. A playlist URL requires explicit user confirmation and a maximum item count before creating multiple jobs: the page lists the entries (at most 50, from one `--flat-playlist` request that shares the inspection throttle), the user picks videos and a preset, and the button states the count. The server validates every video ID before creating any job, builds each URL itself, and skips videos already queued. YouTube Mixes (`RD…` lists) are refused because they are generated endlessly.
 
 The foundation health route returns `200` with `status` (`ready` or `degraded`), `checked_at`, a `dependencies` array, and a `note` explaining the limit of executable checks. Each dependency includes `name`, `required`, `available`, and an actionable `message`; available tools also include `path` and `version`. `degraded` means a required executable is missing or could not be run, while the local UI remains accessible for diagnostics. The server accepts `YTGRAB_LISTEN_ADDR` (loopback IP and port only, default `127.0.0.1:8787`) and `YTGRAB_TOOLS_DIR` (optional preferred binary directory). Deno is checked first, then Node; when Node is selected, the future downloader adapter must pass `--js-runtimes node` to yt-dlp.
 

@@ -25,23 +25,6 @@ func addInspectRoute(mux *http.ServeMux, inspector Inspector) {
 			writeError(w, http.StatusBadRequest, "invalid_url", err.Error())
 			return
 		}
-		var toolError *ytdlp.Error
-		if errors.As(err, &toolError) {
-			status := http.StatusBadGateway
-			switch toolError.Code {
-			case "video_unavailable":
-				status = http.StatusUnprocessableEntity
-			case "blocked":
-				status = http.StatusTooManyRequests
-			case "dependency_missing":
-				status = http.StatusServiceUnavailable
-			}
-			writeError(w, status, toolError.Code, toolError.Message)
-			return
-		}
-		if r.Context().Err() != nil {
-			return
-		}
-		writeError(w, http.StatusBadGateway, "network", "Could not inspect formats. Check your connection and retry.")
+		writeToolError(w, r, err, "Could not inspect formats. Check your connection and retry.")
 	})
 }

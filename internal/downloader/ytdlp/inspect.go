@@ -48,12 +48,13 @@ type Inspector struct {
 	Config config.Config
 	mu     sync.Mutex
 	cache  map[string]cachedInspection
+	titles map[string]string // video ID -> title from recent playlist listings
 	gate   chan struct{}
 	last   time.Time
 }
 
 func NewInspector(cfg config.Config) *Inspector {
-	return &Inspector{Config: cfg, cache: make(map[string]cachedInspection), gate: make(chan struct{}, 1)}
+	return &Inspector{Config: cfg, cache: make(map[string]cachedInspection), titles: make(map[string]string), gate: make(chan struct{}, 1)}
 }
 
 func (inspector *Inspector) Inspect(ctx context.Context, rawURL string) (Inspection, error) {
@@ -67,29 +68,17 @@ func (inspector *Inspector) Inspect(ctx context.Context, rawURL string) (Inspect
 		return cached.result, nil
 	}
 	inspector.mu.Unlock()
-	select {
-	case inspector.gate <- struct{}{}:
-	case <-ctx.Done():
-		return Inspection{}, ctx.Err()
+	release, err := inspector.throttle(ctx)
+	if err != nil {
+		return Inspection{}, err
 	}
-	defer func() { <-inspector.gate }()
+	defer release()
 	inspector.mu.Lock()
 	if cached, ok := inspector.cache[videoID]; ok && time.Now().Before(cached.expires) {
 		inspector.mu.Unlock()
 		return cached.result, nil
 	}
-	wait := time.Until(inspector.last.Add(2 * time.Second))
-	inspector.last = time.Now().Add(max(wait, 0))
 	inspector.mu.Unlock()
-	if wait > 0 {
-		timer := time.NewTimer(wait)
-		defer timer.Stop()
-		select {
-		case <-timer.C:
-		case <-ctx.Done():
-			return Inspection{}, ctx.Err()
-		}
-	}
 	result, err := inspector.extract(ctx, url, videoID)
 	if err != nil {
 		return Inspection{}, err
@@ -139,6 +128,32 @@ func (inspector *Inspector) Select(videoID string, kind string, id string) (doma
 	return domain.FormatSelection{}, false
 }
 
+// throttle admits one YouTube metadata request at a time, at least two seconds apart,
+// shared by format inspection and playlist listing.
+func (inspector *Inspector) throttle(ctx context.Context) (func(), error) {
+	select {
+	case inspector.gate <- struct{}{}:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	release := func() { <-inspector.gate }
+	inspector.mu.Lock()
+	wait := time.Until(inspector.last.Add(2 * time.Second))
+	inspector.last = time.Now().Add(max(wait, 0))
+	inspector.mu.Unlock()
+	if wait > 0 {
+		timer := time.NewTimer(wait)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			release()
+			return nil, ctx.Err()
+		}
+	}
+	return release, nil
+}
+
 type limitedBuffer struct {
 	bytes.Buffer
 	limit int
@@ -156,14 +171,22 @@ func (inspector *Inspector) extract(ctx context.Context, url string, videoID str
 	if err != nil {
 		return Inspection{}, &Error{Code: "dependency_missing", Message: "Install yt-dlp and add it to PATH or the tools directory."}
 	}
-	args := []string{"--ignore-config", "--no-playlist", "--skip-download", "--dump-json"}
+	args := []string{"--ignore-config", "--no-playlist", "--skip-download", "--dump-json", "--", url}
+	output, err := inspector.runJSON(ctx, path, args, 25*time.Second)
+	if err != nil {
+		return Inspection{}, err
+	}
+	return parseInspection(output, videoID)
+}
+
+// runJSON runs yt-dlp for machine-readable metadata with a timeout and bounded output.
+func (inspector *Inspector) runJSON(ctx context.Context, path string, args []string, timeout time.Duration) ([]byte, error) {
 	if _, err := deps.Find(inspector.Config, "deno"); err != nil {
 		if _, err := deps.Find(inspector.Config, "node"); err == nil {
-			args = append(args, "--js-runtimes", "node")
+			args = append([]string{"--js-runtimes", "node"}, args...)
 		}
 	}
-	args = append(args, "--", url)
-	runCtx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.Command(path, args...)
 	output := &limitedBuffer{limit: 16 << 20}
@@ -171,17 +194,17 @@ func (inspector *Inspector) extract(ctx context.Context, url string, videoID str
 	cmd.Stdout, cmd.Stderr = output, diagnostic
 	stop, err := process.Start(runCtx, cmd)
 	if err != nil {
-		return Inspection{}, fmt.Errorf("start inspection: %w", err)
+		return nil, fmt.Errorf("start yt-dlp: %w", err)
 	}
 	err = cmd.Wait()
 	stop()
 	if runCtx.Err() != nil {
-		return Inspection{}, runCtx.Err()
+		return nil, runCtx.Err()
 	}
 	if err != nil {
-		return Inspection{}, classifyFailure(diagnostic.String())
+		return nil, classifyFailure(diagnostic.String())
 	}
-	return parseInspection(output.Bytes(), videoID)
+	return output.Bytes(), nil
 }
 
 func parseInspection(data []byte, expectedID string) (Inspection, error) {

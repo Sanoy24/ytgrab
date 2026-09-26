@@ -49,3 +49,40 @@ func TestRetryTransition(t *testing.T) {
 		t.Fatal("queued job should not transition directly to completed")
 	}
 }
+
+func TestParsePlaylistURL(t *testing.T) {
+	const list = "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb"
+	for _, raw := range []string{
+		"https://www.youtube.com/playlist?list=" + list,
+		"https://youtube.com/watch?v=dQw4w9WgXcQ&list=" + list + "&index=3",
+		"https://music.youtube.com/playlist?list=" + list,
+	} {
+		canonical, id, err := ParsePlaylistURL(raw)
+		if err != nil || id != list || canonical != "https://www.youtube.com/playlist?list="+list {
+			t.Errorf("ParsePlaylistURL(%q) = %q, %q, %v", raw, canonical, id, err)
+		}
+	}
+	for _, raw := range []string{
+		"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+		"https://www.youtube.com/playlist?list=short",
+		"https://www.youtube.com/playlist?list=" + list + "%22%3B",
+		"https://evil.example/playlist?list=" + list,
+	} {
+		if _, _, err := ParsePlaylistURL(raw); err == nil {
+			t.Errorf("ParsePlaylistURL(%q) unexpectedly succeeded", raw)
+		}
+	}
+	if _, _, err := ParsePlaylistURL("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ"); err != ErrMixPlaylist {
+		t.Errorf("mix playlist error = %v", err)
+	}
+}
+
+func TestPlaylistJobsUseCanonicalVideoURLs(t *testing.T) {
+	job, err := NewJob(VideoURL("dQw4w9WgXcQ"), AudioM4A)
+	if err != nil || job.URL != "https://www.youtube.com/watch?v=dQw4w9WgXcQ" || job.VideoID != "dQw4w9WgXcQ" {
+		t.Fatalf("job = %+v, %v", job, err)
+	}
+	if ValidVideoID("dQw4w9WgXcQ&x") || !ValidVideoID("dQw4w9WgXcQ") {
+		t.Fatal("video ID validation is wrong")
+	}
+}

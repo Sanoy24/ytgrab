@@ -164,6 +164,48 @@ func ParseVideoURL(raw string) (string, string, error) {
 	return parsed.String(), videoID, nil
 }
 
+// MaxPlaylistItems bounds how many jobs one playlist confirmation can create.
+const MaxPlaylistItems = 50
+
+var ErrInvalidPlaylistURL = errors.New("Enter a YouTube playlist link.")
+var ErrMixPlaylist = errors.New("YouTube Mixes are generated endlessly and can't be downloaded as a playlist. Open a single video instead.")
+var playlistIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{10,64}$`)
+
+// ParsePlaylistURL accepts a YouTube link carrying a list parameter and returns the
+// canonical playlist URL, so yt-dlp lists the playlist rather than one video.
+func ParsePlaylistURL(raw string) (string, string, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" || len(value) > 2048 {
+		return "", "", ErrInvalidPlaylistURL
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.User != nil || parsed.Port() != "" {
+		return "", "", ErrInvalidPlaylistURL
+	}
+	switch strings.ToLower(parsed.Hostname()) {
+	case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com":
+	default:
+		return "", "", ErrInvalidPlaylistURL
+	}
+	listID := parsed.Query().Get("list")
+	if !playlistIDPattern.MatchString(listID) {
+		return "", "", ErrInvalidPlaylistURL
+	}
+	if strings.HasPrefix(listID, "RD") {
+		return "", "", ErrMixPlaylist
+	}
+	return "https://www.youtube.com/playlist?list=" + listID, listID, nil
+}
+
+// VideoURL builds the canonical watch URL for a validated video ID.
+func VideoURL(videoID string) string {
+	return "https://www.youtube.com/watch?v=" + videoID
+}
+
+func ValidVideoID(videoID string) bool {
+	return videoIDPattern.MatchString(videoID)
+}
+
 func (state State) Active() bool {
 	switch state {
 	case Queued, Inspecting, Downloading, Processing:

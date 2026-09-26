@@ -189,3 +189,17 @@ export const inspection = {
     a('251-drc', 'webm', 'opus', 136.9, 20.6),
   ],
 };
+
+// GET /api/playlist sample: a course with one private video; 12 of 14 listed.
+export const playlist = {
+  id: 'PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb',
+  title: 'Go in practice — full course',
+  total: 14,
+  truncated: false,
+  unavailable: 2,
+  entries: Array.from({ length: 12 }, (_, i) => ({
+    video_id: `course${String(i + 1).padStart(5, '0')}`,
+    title: `Lesson ${i + 1}: ${['Setup', 'Types', 'Interfaces', 'Errors', 'Goroutines', 'Channels', 'Context', 'Testing', 'HTTP', 'SQLite', 'Packaging', 'Wrap-up'][i]}`,
+    duration_seconds: 420 + i * 37,
+  })),
+};

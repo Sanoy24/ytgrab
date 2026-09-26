@@ -310,7 +310,7 @@ func classifyFailure(stderr string) error {
 	switch {
 	case strings.Contains(lower, "http error 429"), strings.Contains(lower, "sign in to confirm you're not a bot"), strings.Contains(lower, "sign in to confirm you’re not a bot"), strings.Contains(lower, "too many requests"):
 		return &Error{Code: "blocked", Message: "YouTube is limiting requests from this network. Wait a while, then retry."}
-	case strings.Contains(lower, "private video"), strings.Contains(lower, "video unavailable"), strings.Contains(lower, "not available"):
+	case strings.Contains(lower, "private video"), strings.Contains(lower, "video unavailable"), strings.Contains(lower, "not available"), strings.Contains(lower, "does not exist"):
 		return &Error{Code: "video_unavailable", Message: "This video is unavailable or private."}
 	case strings.Contains(lower, "ffmpeg not found"), strings.Contains(lower, "ffprobe not found"):
 		return &Error{Code: "dependency_missing", Message: "Install ffmpeg and ffprobe, then retry."}

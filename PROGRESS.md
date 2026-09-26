@@ -50,7 +50,7 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Build the format picker UI: inspect on paste, grouped video/audio choices, preset fallback (against fixtures).~~
 - [x] ~~Add `GET /api/inspect` and server-validated format-based job creation.~~
 - [x] ~~Verify the format picker end to end in a live browser.~~
-- [ ] Add controlled playlist downloads.
+- [x] ~~Add controlled playlist downloads (review list, 50-item cap, explicit count confirmation, Mix refusal).~~
 
 ### 5. Release readiness
 
@@ -61,6 +61,13 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Claude: controlled playlist downloads
+
+- Result: Added `domain.ParsePlaylistURL` (canonical `/playlist?list=` URL, Mixes refused), `MaxPlaylistItems = 50`, `VideoURL`, and `ValidVideoID`. `Inspector.ListPlaylist` runs one `--flat-playlist --dump-single-json --playlist-items 1:51` request through the shared throttle (extracted as `throttle`, with a shared bounded `runJSON`), skips private/deleted placeholders, and reports `truncated`/`unavailable`. New routes `GET /api/playlist` and `POST /api/playlist/jobs` validate all IDs before creating any job, build URLs server-side, and skip duplicates. Listed and inspected titles are remembered so new jobs show titles while queued. "The playlist does not exist" is now `video_unavailable` with a playlist message. The page shows a review list with select-all, notes for skipped/truncated entries, and an "Add N videos" button; video links with `list=` offer the whole playlist. Documented in `ARCHITECTURE.md` and `web/README.md`.
+- Verification: `go test ./...` and `go vet ./...` pass, with new tests for URL parsing (including Mixes and injected characters), flat-listing parsing and the 50 cap, listing arguments, the API contract (nothing created on bad input, >50 rejected, preset required, duplicates skipped, canonical URLs, titles applied), title memory, and the missing-playlist classification. Fixture run in Chromium: Add before loading only opened the review; 12 entries with a "2 private or deleted" note; unticking updated the button to "Add 10 videos" with an indeterminate select-all; submit created jobs and reset the form; Mix refused; the whole-playlist offer switched modes; editing the link left playlist mode. Live against a branch build: `/api/playlist` listed Blender Studio's "Project Gold" (7 entries) in 4.4 s and "Blender Studio Logs" (31, not truncated); a Mix returned `mix_playlist`; in the Go-served page, choosing 2 of 7 as M4A created 2 jobs with the right IDs. Those downloads failed with `blocked` because YouTube was rate-limiting this network at the time.
+- Blocker/notes: A successful live playlist download still needs a quieter network moment; the single-video download path it uses is already verified.
+- Next: Graceful shutdown and Unix checks (WSL), packaging, and install/troubleshooting docs.
 
 ### 2026-09-26 — Claude: live end-to-end pass, quality file names, MP4 pairing
 

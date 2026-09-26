@@ -103,6 +103,7 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 			writeError(w, http.StatusInternalServerError, "internal", "Could not create the download.")
 			return
 		}
+		applyCachedTitle(inspector, &job)
 		if err := store.Create(r.Context(), job); err != nil {
 			if errors.Is(err, sqlitestore.ErrDuplicate) {
 				writeError(w, http.StatusConflict, "duplicate_job", "This video is already in the queue.")
