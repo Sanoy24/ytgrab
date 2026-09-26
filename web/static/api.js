@@ -19,7 +19,7 @@ export function createClient(params = new URLSearchParams(location.search)) {
   return new HttpClient();
 }
 
-// Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check)
+// Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check) | first-run (no folder chosen) | no-picker (no folder window)
 class FixtureClient {
   isFixture = true;
 
@@ -157,21 +157,51 @@ class FixtureClient {
     });
   }
 
+  settingsBody() {
+    return {
+      downloads_dir: this.downloadsDir,
+      configured: this.configured ?? this.scenario !== 'first-run',
+      default_dir: String.raw`C:\Users\me\Downloads\ytgrab`,
+      can_pick: this.scenario !== 'no-picker',
+    };
+  }
+
   async getSettings() {
     await delay(200);
     if (this.scenario === 'error')
       throw new ApiError('unreachable', 'Could not reach the local server.');
-    return { downloads_dir: this.downloadsDir };
+    return this.settingsBody();
   }
 
   async updateSettings({ downloads_dir }) {
     await delay(300);
     // Loosely mirrors the server rule: an absolute path to an existing, writable folder.
     if (!/^([a-z]:[\\/]|\\\\|\/)/i.test(downloads_dir)) {
-      throw new ApiError('invalid_directory', String.raw`Use a full folder path, such as D:\Videos.`);
+      throw new ApiError('invalid_directory', 'Choose an existing, writable absolute folder.');
     }
     this.downloadsDir = downloads_dir;
-    return { downloads_dir };
+    this.configured = true;
+    return this.settingsBody();
+  }
+
+  // Simulates the desktop folder window: the first pick is cancelled, later ones succeed.
+  async pickFolder() {
+    await delay(1500);
+    if (this.scenario === 'no-picker') {
+      throw new ApiError('picker_unavailable', 'No folder window is available here. Type the folder path instead.');
+    }
+    this.picks = (this.picks ?? 0) + 1;
+    if (this.picks === 1 && this.scenario === 'first-run') return { ...this.settingsBody(), cancelled: true };
+    this.downloadsDir = String.raw`D:\Videos\YouTube`;
+    this.configured = true;
+    return this.settingsBody();
+  }
+
+  async useDefaultFolder() {
+    await delay(300);
+    this.downloadsDir = String.raw`C:\Users\me\Downloads\ytgrab`;
+    this.configured = true;
+    return this.settingsBody();
   }
 
   update(id, fn) {
@@ -278,6 +308,13 @@ class HttpClient {
   }
   updateSettings(body) {
     return this.request('PUT', '/api/settings', body);
+  }
+  // Opens the operating system's folder window on this computer; resolves when it closes.
+  pickFolder() {
+    return this.request('POST', '/api/settings/pick-folder');
+  }
+  useDefaultFolder() {
+    return this.request('POST', '/api/settings/use-default');
   }
 
   // Poll for queue/history changes; stream persisted progress for active jobs.

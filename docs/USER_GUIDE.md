@@ -5,24 +5,30 @@ YTGrab downloads YouTube videos and audio you are allowed to save, from a page i
 ## Install (Windows release)
 
 1. Unzip `ytgrab-<version>-windows-amd64.zip` into a folder you keep, for example `C:\Apps\YTGrab`. Don't run it from inside the zip.
-2. Install ffmpeg, which merges video with audio and converts MP3:
-   ```powershell
-   winget install Gyan.FFmpeg
-   ```
-3. Install a JavaScript runtime, which YouTube extraction needs for many videos (either one):
-   ```powershell
-   winget install DenoLand.Deno
-   winget install OpenJS.NodeJS.LTS
-   ```
-4. Double-click **Start YTGrab.cmd**. A console window shows the address and your browser opens `http://127.0.0.1:8787/`. Keep the window open while you use the app; close it or press Ctrl+C to stop.
+2. Double-click **Start YTGrab.cmd**. The first time, it runs a quick check. If something is missing, it runs setup, which asks before each step:
+   - **yt-dlp**: downloaded from its official GitHub release and installed only if its checksum matches. A checked copy is already in the `tools` folder.
+   - **FFmpeg** (merges video and audio, converts MP3) and **Deno** (runs YouTube's JavaScript checks): installed with `winget`.
+3. Your browser opens `http://127.0.0.1:8787/`. Choose where downloads should go: **Choose folder…** opens the normal Windows folder window, or use the suggested `Downloads\ytgrab`.
 
-`yt-dlp.exe` is included in the `tools` folder and was checked against the official yt-dlp checksums when the release was built (see `manifest.json`). Open a new console window after installing tools so YTGrab sees the updated `PATH`.
+Keep the console window open while you use the app; close it or press Ctrl+C to stop. Next time, **Start YTGrab.cmd** opens the app straight away.
 
-The header pill shows **Tools ready** when everything is found. Click it to see each tool, its version, and advice for anything missing.
+### Check or repair the setup
+
+From the YTGrab folder:
+
+```powershell
+.\ytgrab.exe doctor           # what's installed, the data and download folders, the port
+.\ytgrab.exe setup            # install what's missing, asking first
+.\ytgrab.exe setup --update-ytdlp   # get the latest yt-dlp when YouTube downloads start failing
+```
+
+`doctor` exits with code 1 when something required is missing. `setup --yes` answers yes to every question.
+
+The header pill in the page shows **Tools ready** when everything is found. Click it for each tool's version and advice.
 
 ### Linux and macOS
 
-Release archives for Linux and macOS contain only the `ytgrab` program. Install `yt-dlp`, `ffmpeg`, and Deno or Node with your package manager (for example `brew install yt-dlp ffmpeg deno`), make the program executable with `chmod +x ytgrab`, and run `./ytgrab --open`. You can also put tools in a `tools` folder next to `ytgrab`.
+Release archives for Linux and macOS contain only the `ytgrab` program. Make it executable with `chmod +x ytgrab`, then run `./ytgrab setup`: it downloads the official yt-dlp into a `tools` folder next to the program, installs FFmpeg and Deno with Homebrew on macOS, and prints the package-manager commands on Linux (they need `sudo`). Start the app with `./ytgrab --open`. The folder window uses `choose folder` on macOS and `zenity` or `kdialog` on Linux; without either, type the folder path.
 
 ## Download a video
 
@@ -48,8 +54,8 @@ Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists up to 50 v
 
 ## Settings and data
 
-- **Save to** (under the form) sets the output folder: any existing folder you can write to, given as a full path. It applies to downloads that start afterwards and is remembered.
-- The default output folder is `Downloads\ytgrab` in your user folder.
+- The first time, the page asks where to save downloads; nothing is downloaded until you choose. **Change…** next to **Save to** opens the folder window again, and **Type a path** lets you enter a full path instead. The folder applies to downloads that start afterwards and is remembered.
+- The suggested folder is `Downloads\ytgrab` in your user folder; it is created when you pick it.
 - The job history is stored in `%AppData%\ytgrab\jobs.db` on Windows (`~/.config/ytgrab` on Linux, `~/Library/Application Support/ytgrab` on macOS).
 
 Optional environment variables, set before starting:
@@ -61,15 +67,16 @@ Optional environment variables, set before starting:
 | `YTGRAB_DATA_DIR` | Folder for the job database. |
 | `YTGRAB_DOWNLOAD_DIR` | Initial output folder when none has been saved in the page. |
 
-Command-line flags: `--open` opens the browser after starting; `--version` prints the version.
+Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and `ytgrab setup` are described under Install; `ytgrab --version` prints the version.
 
 ## Troubleshooting
 
 | What you see | What to do |
 | --- | --- |
-| **Tools missing** in the header | Click it. Install what it lists (see Install), then restart YTGrab from a new window. |
+| **Tools missing** in the header | Run `ytgrab.exe setup` in the YTGrab folder (or double-click **Start YTGrab.cmd** again), then reload the page. |
+| The folder window doesn't appear | It may be behind other windows; check the taskbar. Without a folder window (some Linux desktops), use **Type a path**. |
 | "YouTube is limiting requests from this network. Wait a while, then retry." | YouTube is rate-limiting or asking for a bot check. Wait (often 15–60 minutes) and press Retry. Avoid checking many links quickly. Signed-in downloads (cookies) are not supported in this version. |
-| "yt-dlp could not download this video. Check that yt-dlp is up to date and retry." | YouTube changes often. Update yt-dlp: `tools\yt-dlp.exe -U` in the YTGrab folder (or your package manager), then Retry. |
+| "yt-dlp could not download this video. Check that yt-dlp is up to date and retry." | YouTube changes often. Update yt-dlp: `ytgrab.exe setup --update-ytdlp` in the YTGrab folder, then Retry. |
 | "This video is unavailable or private." | The video is private, removed, age- or region-restricted. Check the link in a browser. |
 | "Couldn't load formats" | The same causes as above; the quick presets still work. |
 | Video saved as `.mkv` or `.webm` | Best quality often uses VP9 or AV1 video, which isn't stored in MP4. Pick an H.264 row or **Up to 1080p** for `.mp4`. |

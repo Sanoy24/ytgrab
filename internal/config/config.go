@@ -13,10 +13,13 @@ const defaultListenAddress = "127.0.0.1:8787"
 
 // Config contains the settings needed to start the local application.
 type Config struct {
-	ListenAddress   string
-	ToolsDir        string
-	DataDir         string
-	DownloadsDir    string
+	ListenAddress string
+	ToolsDir      string
+	DataDir       string
+	DownloadsDir  string
+	// DownloadsDirSet reports that YTGRAB_DOWNLOAD_DIR was given, which counts as the
+	// user's choice of output folder.
+	DownloadsDirSet bool
 	ShutdownTimeout time.Duration
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
@@ -60,6 +63,7 @@ func Load() (Config, error) {
 		ToolsDir:        toolsDir,
 		DataDir:         dataDir,
 		DownloadsDir:    downloadsDir,
+		DownloadsDirSet: os.Getenv("YTGRAB_DOWNLOAD_DIR") != "",
 		ShutdownTimeout: 5 * time.Second,
 	}
 	return cfg, cfg.Validate()

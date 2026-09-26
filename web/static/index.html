@@ -39,6 +39,18 @@
     <main class="wrap layout">
       <section class="panel add" aria-labelledby="add-title">
         <h2 id="add-title">New download</h2>
+        <div class="setup-folder" id="setup-folder" role="region" aria-labelledby="setup-title" hidden>
+          <strong id="setup-title">Choose where to save downloads</strong>
+          <p class="hint">Pick a folder once. You can change it any time.</p>
+          <div class="setup-actions">
+            <button type="button" class="btn btn-primary" id="setup-pick">Choose folder…</button>
+            <button type="button" class="btn" id="setup-default">
+              Use <span class="setup-default-path" id="setup-default-path"></span>
+            </button>
+          </div>
+          <button type="button" class="btn-link" id="setup-type">Type a folder path instead</button>
+          <p class="field-error" id="setup-error" role="alert" hidden></p>
+        </div>
         <form id="add-form" novalidate>
           <label for="url" class="field-label">Video link</label>
           <div class="url-row">
@@ -139,7 +151,8 @@
           <div class="output-dir-view" id="dir-view">
             <span class="field-label">Save to</span>
             <code class="output-dir-path" id="dir-path"></code>
-            <button type="button" class="btn btn-small" id="dir-edit">Change</button>
+            <button type="button" class="btn btn-small" id="dir-edit">Change…</button>
+            <button type="button" class="btn-link" id="dir-type">Type a path</button>
           </div>
           <form class="output-dir-edit" id="dir-form" novalidate hidden>
             <label for="dir-input" class="field-label">Output folder</label>
