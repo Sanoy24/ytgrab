@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ytgrab</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%23c4302b'/%3E%3Cpath d='M6 4.5v7l5.5-3.5z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <h1 class="brand">ytgrab <span class="brand-sub">local downloader</span></h1>
+      <button type="button" class="health" id="health" aria-describedby="health-detail" hidden>
+        <span class="dot" aria-hidden="true"></span><span id="health-label">Checking tools…</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="banner" id="health-detail" role="status" hidden></div>
+    <div class="banner banner-info" id="fixture-note" hidden>
+      Showing sample data. The download server is not connected yet.
+    </div>
+  </div>
+
+  <main class="wrap layout">
+    <section class="panel add" aria-labelledby="add-title">
+      <h2 id="add-title">New download</h2>
+      <form id="add-form" novalidate>
+        <label for="url" class="field-label">Video link</label>
+        <div class="url-row">
+          <input id="url" name="url" type="url" inputmode="url" autocomplete="off" spellcheck="false"
+                 placeholder="https://www.youtube.com/watch?v=…" aria-describedby="url-hint url-error" required>
+          <button type="button" class="btn btn-ghost" id="paste" hidden>Paste</button>
+        </div>
+        <p class="hint" id="url-hint">Paste a YouTube video link. Playlists will be supported later.</p>
+        <p class="field-error" id="url-error" role="alert" hidden></p>
+
+        <fieldset class="presets">
+          <legend class="field-label">Format</legend>
+          <div class="preset-group" role="presentation">
+            <span class="preset-group-title">Video</span>
+            <label class="preset"><input type="radio" name="preset" value="video-best" checked>
+              <span><strong>Best quality</strong><small>Highest available, merged to MP4/MKV</small></span></label>
+            <label class="preset"><input type="radio" name="preset" value="video-1080">
+              <span><strong>Up to 1080p</strong><small>Good balance of size and quality</small></span></label>
+            <label class="preset"><input type="radio" name="preset" value="video-720">
+              <span><strong>Up to 720p</strong><small>Smaller files</small></span></label>
+          </div>
+          <div class="preset-group" role="presentation">
+            <span class="preset-group-title">Audio only</span>
+            <label class="preset"><input type="radio" name="preset" value="audio-m4a">
+              <span><strong>M4A</strong><small>Original audio, no re-encoding</small></span></label>
+            <label class="preset"><input type="radio" name="preset" value="audio-mp3">
+              <span><strong>MP3</strong><small>Converted with ffmpeg; uses more CPU</small></span></label>
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="submit">Add to queue</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="queue-title">
+      <div class="panel-head">
+        <h2 id="queue-title">Queue <span class="count" id="queue-count"></span></h2>
+      </div>
+      <div id="queue" aria-live="polite" aria-busy="true"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="history-title">
+      <div class="panel-head">
+        <h2 id="history-title">History <span class="count" id="history-count"></span></h2>
+        <div class="filters" role="group" aria-label="Filter history">
+          <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="chip" data-filter="completed" aria-pressed="false">Completed</button>
+          <button type="button" class="chip" data-filter="problems" aria-pressed="false">Failed / cancelled</button>
+        </div>
+      </div>
+      <div id="history" aria-busy="true"></div>
+    </section>
+  </main>
+
+  <div class="toast-region" id="toast" role="status" aria-live="polite"></div>
+
+  <template id="job-template">
+    <article class="job">
+      <div class="job-main">
+        <div class="job-title-row">
+          <h3 class="job-title"></h3>
+          <span class="badge"></span>
+        </div>
+        <p class="job-meta"></p>
+        <div class="job-progress" hidden>
+          <progress max="100"></progress>
+          <p class="job-progress-text"></p>
+        </div>
+        <p class="job-path" hidden></p>
+        <p class="job-error" hidden></p>
+      </div>
+      <div class="job-actions"></div>
+    </article>
+  </template>
+</body>
+</html>

@@ -39,10 +39,11 @@ internal/queue/          Scheduling, concurrency, retry, cancellation
 internal/store/sqlite/   Job and settings persistence
 internal/api/            HTTP routes and SSE
 internal/process/        Cross-platform child-process control
-web/templates/           Server-rendered pages
-web/static/              Small browser assets
+web/static/              Static, client-rendered UI (HTML, CSS, ES modules; no build step)
 migrations/              Versioned SQLite schema
 ```
+
+The UI is a static page that renders from the JSON API, so the Go server only needs to embed and serve `web/static/`; server-side templates are not planned. Proposed JSON shapes for integration are in `web/README.md`.
 
 Keep the initial implementation simple. Add a package only when its boundary is useful; this layout is a target, not a requirement to create empty directories.
 
