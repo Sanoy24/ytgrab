@@ -39,7 +39,12 @@ export function formatDuration(seconds) {
 // Returns { video: Choice[], audio: Choice[] }, each Choice being
 // { kind, id, label, detail, height?, ext? }, sorted best first.
 export function groupFormats(info) {
-  const bestAudio = [...(info.audio || [])].sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0));
+  // YouTube also lists "-drc" (dynamic range compressed) copies of audio streams; show
+  // the original and keep a DRC copy only when it is the sole version.
+  const ids = new Set((info.audio || []).map((a) => a.format_id));
+  const bestAudio = (info.audio || [])
+    .filter((a) => !(a.format_id.endsWith('-drc') && ids.has(a.format_id.slice(0, -4))))
+    .sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0));
   const m4a = bestAudio.find((a) => a.ext === 'm4a');
   // Estimated audio added to each video row; yt-dlp picks the best audio when merging.
   const audioBytes = size(m4a || bestAudio[0] || {}) ?? 0;

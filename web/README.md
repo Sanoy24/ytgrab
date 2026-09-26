@@ -11,6 +11,14 @@ A static, client-rendered page in `static/`: plain HTML, CSS, and ES modules wit
 | `static/fixtures.js` | Sample jobs, health, and inspection responses |
 | `static/formats.js` | Groups inspected formats into video/audio choices |
 
+## Checking syntax
+
+The scripts are ES modules. `node --check file.js` parses them as classic scripts and misses module-only errors such as a duplicate top-level `function`. Check a `.mjs` copy instead:
+
+```powershell
+Get-ChildItem web/static/*.js | ForEach-Object { Copy-Item $_ "$env:TEMP/$($_.BaseName).mjs"; node --check "$env:TEMP/$($_.BaseName).mjs" }
+```
+
 ## Preview
 
 Any static server works. From the repository root:
@@ -32,6 +40,7 @@ Fixture scenarios are selected with a query parameter:
 | `/?fixture=degraded` | Missing `yt-dlp` and `ffmpeg`, with real health message text                                       |
 | `/?fixture=loading` | Loading skeletons that never resolve (format check also never finishes) |
 | `/?fixture=blocked` | Format check fails with a YouTube rate-limit message; presets remain |
+| `/?fixture=expired` | The first format job gets `inspection_required`; the page re-checks and retries once |
 | `/?api=live`         | Same as `/`; calls the real `/api/...` routes                                                      |
 
 ## API shapes
@@ -98,7 +107,11 @@ The New download panel shows the current output folder from `GET /api/settings` 
 
 ## Format picker
 
-When a valid video link is pasted (or typed, after a 500 ms pause), the UI calls `GET /api/inspect` and replaces the quick presets with the video's real formats: one video row per resolution and frame rate (H.264/MP4 preferred when several codecs exist, size estimated with the best M4A audio), every distinct audio stream, and an "MP3 · converted" row. A preset chosen before the list arrives carries over to the closest real format. Results are cached per link for the page session; stale requests are aborted. On failure the presets stay, with the reason and a Try again button (not offered for `video_unavailable`). A 404 from the route hides the feature silently. Grouping logic lives in `static/formats.js`.
+When a valid video link is pasted (or typed, after a 500 ms pause), the UI calls `GET /api/inspect` and replaces the quick presets with the video's real formats: one video row per resolution and frame rate (H.264/MP4 preferred when several codecs exist, size estimated with the best M4A audio), every distinct audio stream, and an "MP3 · converted" row. A preset chosen before the list arrives carries over to the closest real format. Results are cached per link for the page session; stale requests are aborted. On failure the presets stay, with the reason and a Try again button (not offered for `video_unavailable`). A 404 from the route hides the feature silently. Grouping logic lives in `static/formats.js`. YouTube's `-drc` (dynamic range compressed) audio copies are hidden when the original stream is listed.
+
+The page trusts a cached inspection for 9 minutes, just under the server's 10. If job creation still returns `inspection_required`, it re-checks the link and retries once with the same choice; if that choice is gone, it asks the user to pick again.
+
+**Suggestion for the server:** a picked H.264 video is merged with the best audio, which is usually Opus, so the result is `.mkv`. Selecting `ID+bestaudio[ext=m4a]/ID+bestaudio` for `avc1` video would produce an `.mp4` that plays everywhere.
 
 `GET /api/inspect?url=...` response (field names follow yt-dlp's info JSON, filtered to video-only and audio-only streams):
 
