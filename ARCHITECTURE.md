@@ -108,6 +108,8 @@ The foundation health route returns `200` with `status` (`ready` or `degraded`),
 
 The job API now uses the JSON shape in `web/README.md`: `{ "jobs": [...] }` for lists, one job for create/detail/actions, and `{ "error": { "code", "message" } }` for failures. The server validates a single YouTube video URL and one of the five UI presets. It accepts `YTGRAB_DATA_DIR` for the SQLite database and `YTGRAB_DOWNLOAD_DIR` for output, defaulting to a user config directory and `Downloads/ytgrab` respectively.
 
+Output-folder settings are stored in the same SQLite database. `GET /api/settings` returns `{ "downloads_dir": "..." }`; `PUT /api/settings` accepts that field only and requires an existing, writable absolute directory. A change applies to jobs that start afterward, while an active job keeps the directory it selected at process start. An explicit `YTGRAB_DOWNLOAD_DIR` provides the initial default when no persisted setting exists; the saved setting wins on later starts.
+
 ## Dependency and release strategy
 
 During development, find external binaries in a configured tools directory or `PATH` and report versions and missing capabilities. For packaged releases, distribute or install compatible binaries beside the application with a version manifest and verified checksums. Keep dependency update behavior separate from application updates because YouTube extraction may need more frequent changes.
