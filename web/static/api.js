@@ -1,7 +1,7 @@
 // Data clients. The UI talks only to this interface:
 //   health(), listJobs(), createJob({url, preset}), cancelJob(id), retryJob(id), subscribe(onChange)
-// The fixture client is the default until the Go API is available; the HTTP client
-// follows the planned routes in ARCHITECTURE.md and has not been tested against a server.
+// The live HTTP client is the default. Add ?fixture=default|empty|error|degraded|loading
+// to preview UI states without the backend.
 
 import * as fx from "./fixtures.js";
 
@@ -13,8 +13,8 @@ export class ApiError extends Error {
 }
 
 export function createClient(params = new URLSearchParams(location.search)) {
-  if (params.get("api") === "live") return new HttpClient();
-  return new FixtureClient(params.get("fixture") || "default");
+  if (params.has("fixture")) return new FixtureClient(params.get("fixture") || "default");
+  return new HttpClient();
 }
 
 // Scenarios: default | empty | error | degraded | loading
@@ -141,9 +141,15 @@ class HttpClient {
   retryJob(id) { return this.request("POST", `/api/jobs/${encodeURIComponent(id)}/retry`); }
 
   // Per-job SSE lands with the download engine; poll the list until then.
+  // Polling stops if the server has no job routes, instead of repeating 404s.
   subscribe(onChange) {
-    const timer = setInterval(() => this.listJobs().then(onChange, () => {}), 2000);
-    return () => clearInterval(timer);
+    let timer;
+    const poll = () =>
+      this.listJobs().then(onChange, (err) => err).then((err) => {
+        if (err?.code !== "not_available") timer = setTimeout(poll, 2000);
+      });
+    timer = setTimeout(poll, 2000);
+    return () => clearTimeout(timer);
   }
 
   async request(method, path, body) {
@@ -158,6 +164,9 @@ class HttpClient {
       throw new ApiError("unreachable", "Could not reach the local server. Is ytgrab still running?");
     }
     const data = await res.json().catch(() => null);
+    if (!res.ok && !data?.error && (res.status === 404 || res.status === 405)) {
+      throw new ApiError("not_available", "This version of the ytgrab server can't manage downloads yet.");
+    }
     if (!res.ok) {
       throw new ApiError(data?.error?.code || `http_${res.status}`, data?.error?.message || `Request failed (${res.status}).`);
     }

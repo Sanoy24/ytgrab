@@ -7,7 +7,7 @@ A static, client-rendered page in `static/`: plain HTML, CSS, and ES modules wit
 | `static/index.html` | Page markup and the job row template |
 | `static/app.css` | Responsive layout, light/dark themes |
 | `static/app.js` | URL validation, rendering, form and job actions |
-| `static/api.js` | Data clients: fixture (default) and HTTP (`?api=live`) |
+| `static/api.js` | Data clients: HTTP (default) and fixture (`?fixture=...`) |
 | `static/fixtures.js` | Sample jobs and health responses |
 
 ## Preview
@@ -24,12 +24,13 @@ Fixture scenarios are selected with a query parameter:
 
 | URL | Shows |
 | --- | --- |
-| `/` | Active, queued, completed, failed, interrupted, and cancelled jobs, with simulated progress |
+| `/` | Live app when served by Go; a standalone static preview cannot reach the Go API |
+| `/?fixture=default` | Active, queued, completed, failed, interrupted, and cancelled sample jobs, with simulated progress |
 | `/?fixture=empty` | Empty queue and history |
 | `/?fixture=error` | Server unreachable: load error with retry, offline banner, failing submit |
-| `/?fixture=degraded` | Missing `ffmpeg`/`ffprobe` and optional JavaScript runtime |
+| `/?fixture=degraded` | Missing `yt-dlp` and `ffmpeg`, with real health message text |
 | `/?fixture=loading` | Loading skeletons that never resolve |
-| `/?api=live` | Calls the real `/api/...` routes (not yet tested against the Go server) |
+| `/?api=live` | Same as `/`; calls the real `/api/...` routes |
 
 ## Proposed API shapes
 
@@ -62,18 +63,20 @@ The UI expects these shapes. They are a proposal for integration; the backend ow
 
 Errors: non-2xx responses with `{ "error": { "code": string, "message": string } }`. The UI shows `message` to the user and gives extra hints for the codes `video_unavailable`, `network`, and `dependency_missing`. `invalid_url` and `duplicate_job` are shown next to the URL field.
 
-`GET /api/system/health` is expected to return:
+`GET /api/system/health` returns:
 
 ```jsonc
 {
-  "status": "ok",                     // ok | degraded | error
+  "status": "ready",                  // ready | degraded
   "dependencies": [
-    { "name": "ffmpeg", "found": false, "version": null, "required": true, "message": "Not found in the tools folder or PATH." }
+    { "name": "ffmpeg", "available": false, "required": true, "message": "Install ffmpeg and add it to PATH or the tools directory." }
   ]
 }
 ```
 
-Until per-job SSE exists, the HTTP client polls `GET /api/jobs` every 2 seconds.
+The tools panel lists every dependency with a short version (`ffmpeg version 8.0.1-full_build…` shows as `8.0.1`), its message when it carries advice, and the report's `note`. It opens automatically when a required tool is missing; the header pill toggles it.
+
+Until per-job SSE exists, the HTTP client polls `GET /api/jobs` every 2 seconds. If the server answers a job route with 404 or 405 and no JSON error, the UI shows "Downloads aren't available yet" and stops polling.
 
 ## Client-side URL checks
 

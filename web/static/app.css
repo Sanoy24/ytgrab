@@ -118,7 +118,22 @@ h1, h2, h3, p { margin: 0; }
 .banner-error { background: var(--err-soft); border-color: color-mix(in srgb, var(--err) 35%, transparent); }
 .banner-info { background: var(--info-soft); border-color: color-mix(in srgb, var(--info) 30%, transparent); font-size: 0.9rem; }
 .banner strong { display: block; margin-bottom: 2px; }
-.banner ul { margin: 6px 0 0; padding-left: 20px; }
+.tools { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.tools li {
+  display: grid;
+  grid-template-columns: 7.5em 8em 1fr;
+  gap: 2px 12px;
+  align-items: baseline;
+  font-size: 0.875rem;
+}
+.tool-state { font-variant-numeric: tabular-nums; color: var(--ok); }
+.tools li[data-available="false"] .tool-state { color: var(--err); font-weight: 600; }
+.tool-msg { color: var(--muted); }
+.tools-note { margin-top: 8px; font-size: 0.8rem; color: var(--muted); }
+@media (max-width: 520px) {
+  .tools li { grid-template-columns: auto 1fr; }
+  .tool-msg { grid-column: 1 / -1; }
+}
 .banner code { font-size: 0.85em; }
 
 /* Layout */

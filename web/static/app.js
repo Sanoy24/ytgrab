@@ -264,15 +264,47 @@ function render() {
 }
 
 function renderLoadError(err) {
-  const retry = { label: "Try again", onClick: loadJobs };
+  const unsupported = err.code === "not_available";
+  const retry = unsupported ? null : { label: "Try again", onClick: loadJobs };
+  const block = () =>
+    unsupported
+      ? stateBlock("empty", "Downloads aren't available yet", err.message)
+      : stateBlock("error", "Couldn't load downloads", err.message, retry);
   for (const sel of ["#queue", "#history"]) {
     const box = $(sel);
     box.setAttribute("aria-busy", "false");
-    box.replaceChildren(stateBlock("error", "Couldn't load downloads", err.message, retry));
+    box.replaceChildren(block());
   }
 }
 
 // ---------- health ----------
+
+// "ffmpeg version 8.0.1-full_build…" -> "8.0.1"; "v24.4.1" -> "24.4.1".
+function shortVersion(v) {
+  return v?.match(/\d+(?:\.\d+)+/)?.[0] || v || "";
+}
+
+function toolList(dependencies) {
+  const ul = document.createElement("ul");
+  ul.className = "tools";
+  for (const d of dependencies) {
+    const li = document.createElement("li");
+    li.dataset.available = String(d.available);
+    const name = document.createElement("code");
+    name.textContent = d.name;
+    const state = document.createElement("span");
+    state.className = "tool-state";
+    state.textContent = d.available ? shortVersion(d.version) || "found" : d.required ? "missing" : "missing (optional)";
+    const msg = document.createElement("span");
+    msg.className = "tool-msg";
+    // "Available." adds nothing next to a version; keep messages that carry advice.
+    msg.textContent = d.available && /^available\.?$/i.test(d.message || "") ? "" : d.message || "";
+    if (d.path) li.title = d.path;
+    li.append(name, state, msg);
+    ul.append(li);
+  }
+  return ul;
+}
 
 async function loadHealth() {
   const pill = $("#health");
@@ -281,38 +313,37 @@ async function loadHealth() {
   pill.hidden = false;
   try {
     const h = await client.health();
-    const missing = h.dependencies.filter((d) => !d.found);
-    pill.dataset.status = h.status;
-    label.textContent =
-      h.status === "ok" ? "Tools ready" : missing.some((d) => d.required) ? "Tools missing" : "Limited support";
-    pill.title = h.dependencies.map((d) => `${d.name}: ${d.found ? d.version || "found" : "missing"}`).join("\n");
+    const missingRequired = h.dependencies.filter((d) => d.required && !d.available);
+    const ready = h.status === "ready" && !missingRequired.length;
+    pill.dataset.status = ready ? "ok" : "error";
+    label.textContent = ready ? "Tools ready" : `${missingRequired.length || "Some"} tool${missingRequired.length === 1 ? "" : "s"} missing`;
 
-    banner.hidden = !missing.length;
-    if (missing.length) {
-      banner.className = `banner${missing.some((d) => d.required) ? " banner-error" : ""}`;
-      const strong = document.createElement("strong");
-      strong.textContent = missing.some((d) => d.required)
-        ? "Some required tools are missing. Downloads may fail until they are installed."
-        : "Optional tools are missing.";
-      const ul = document.createElement("ul");
-      for (const d of missing) {
-        const li = document.createElement("li");
-        const code = document.createElement("code");
-        code.textContent = d.name;
-        li.append(code, ` — ${d.message || "not found."}`);
-        ul.append(li);
-      }
-      banner.replaceChildren(strong, ul);
+    const strong = document.createElement("strong");
+    strong.textContent = ready
+      ? "All required tools were found."
+      : "Downloads will fail until the missing tools are installed.";
+    const parts = [strong, toolList(h.dependencies)];
+    if (h.note) {
+      const note = Object.assign(document.createElement("p"), { className: "tools-note", textContent: h.note });
+      parts.push(note);
     }
+    banner.className = `banner${ready ? " banner-info" : " banner-error"}`;
+    banner.replaceChildren(...parts);
+    setHealthOpen(!ready);
   } catch (err) {
     pill.dataset.status = "error";
     label.textContent = "Server offline";
-    banner.hidden = false;
     banner.className = "banner banner-error";
     const strong = document.createElement("strong");
     strong.textContent = "The ytgrab server isn't responding.";
     banner.replaceChildren(strong, `${err.message} Start the app again, then reload this page.`);
+    setHealthOpen(true);
   }
+}
+
+function setHealthOpen(open) {
+  $("#health-detail").hidden = !open;
+  $("#health").setAttribute("aria-expanded", String(open));
 }
 
 // ---------- jobs ----------
@@ -429,10 +460,7 @@ function init() {
     });
   }
 
-  $("#health").addEventListener("click", () => {
-    const banner = $("#health-detail");
-    if (!banner.hidden) banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  });
+  $("#health").addEventListener("click", () => setHealthOpen($("#health-detail").hidden));
 
   document.querySelector(".filters").addEventListener("click", (e) => {
     const chip = e.target.closest(".chip");
