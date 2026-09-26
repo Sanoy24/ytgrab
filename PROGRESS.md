@@ -39,9 +39,13 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.
 - [x] ~~Add persisted output-folder settings, API, and page controls.~~
 - [ ] Verify output-folder controls in a live browser session.
+- [ ] Add output-folder settings.
+- [x] ~~Add the output-folder setting to the UI against `GET`/`PUT /api/settings`.~~
 - [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
 - [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
-- [ ] Add on-demand format inspection and controlled playlist downloads.
+- [x] ~~Build the format picker UI: inspect on paste, grouped video/audio choices, preset fallback (against fixtures).~~
+- [ ] Add `GET /api/inspect` and format-based job creation on the server, then verify the picker end to end.
+- [ ] Add controlled playlist downloads.
 
 ### 5. Release readiness
 
@@ -64,6 +68,20 @@ This file is the source of truth for project progress. Update it after every ite
 - Result: Added a versioned SQLite settings table, a synchronized output-folder manager, and `GET`/`PUT /api/settings`. New jobs read the current folder once at process start, so changing it cannot move a running download mid-stream. The setter requires an existing writable absolute directory.
 - Verification: `go test ./...` passes, including persistence and invalid-folder tests. The UI and HTTP settings contract have not yet been tested, so the checklist remains open.
 - Next: Add API contract coverage and the page controls, then run an HTTP and browser pass if a browser is available.
+
+### 2026-09-26 — Claude: format picker on paste
+
+- Result: On branch `agent/claude-format-picker` (stacked on `agent/claude-post-merge`), pasting or typing a valid video link now fetches its formats and replaces the quick presets with real choices: video rows grouped by resolution and frame rate (H.264/MP4 preferred, sizes estimated with best audio), each audio stream, and MP3 conversion. The previously chosen preset carries over to the closest format; results are cached per link; stale requests are aborted; failures keep the presets with the reason and Try again. Jobs created from a format show its label. Added `web/static/formats.js`, an inspection fixture modeled on a real YouTube format list, a `blocked` fixture scenario, and an API proposal in `web/README.md`. Updated `ARCHITECTURE.md`: inspection now runs on link entry (user request), never blocks a download, and should be cached and rate limited server-side.
+- Verification: Ran `formats.js` in Node against the fixture: 14 video streams became 10 rows, 5 audio rows, and presets map to 2160p/1080p60/720p60/M4A 130 kbps (MP3 stays a conversion). In Playwright (Chromium) with fixtures: paste showed "Checking available formats…" then the title, duration, and lists; "Up to 1080p" carried over to 1080p 60fps; picking M4A 130 kbps created a job labeled "Audio · M4A 130 kbps" and reset the form; a duplicate link showed the inline error; re-entering a link loaded from cache; an invalid link restored presets; `video_unavailable` and `blocked` showed the reason with presets kept (Try again only for `blocked`); presets ⇄ formats toggle worked. Screenshots at 1200px and 375px (no horizontal overflow, `scrollWidth` 360). `node --check` passes. No Go files were edited.
+- Blocker/notes: Needs Codex to implement `GET /api/inspect` and the `format` job field; until then the live page hides the picker (404) and uses presets. Real inspection is also subject to the YouTube rate limiting seen on this network.
+- Next: Agree the inspect/format contract with Codex, then verify the picker against the Go server with a real video.
+
+### 2026-09-26 — Claude: merged-app check and output-folder UI
+
+- Result: Checked the merged `master`: `app.js`/`api.js` differ from `agent/claude-ui-health` only by Prettier formatting, and the Go job API matches the JSON shapes in `web/README.md`. On branch `agent/claude-post-merge`, added an output-folder row to the New download panel (view, Change, Save/Cancel, Escape to cancel, inline server errors), settings methods in both data clients, and removed UI error hints that repeated the server's own advice. Recorded two backend proposals in `web/README.md`: a distinct error code for YouTube bot checks and sentence-case validation messages.
+- Verification: `go test ./...` passed on merged `master`. Ran the merged app with temp data/download dirs and used the Go-served page at 127.0.0.1:8799: health showed "Tools ready"; submitting `watch?v=jNQXAC9IVRw` (audio M4A) showed the job downloading, then failed in history with Retry. A `yt-dlp --simulate` run showed the cause: YouTube returned HTTP 429 and "Sign in to confirm you're not a bot" for this network. For settings, ran a temp build of Codex's uncommitted settings API behind a scratch proxy serving this branch's UI: the folder loaded, a relative path and a missing drive were rejected with the server's message, saving an existing folder updated the page and `GET /api/settings`, and Escape cancelled an edit. Fixture mode at 375px showed the inline error with no horizontal overflow. `node --check` passes. No Go files were edited.
+- Blocker/notes: Real downloads cannot be verified from this network until YouTube stops rate-limiting it. The settings API was tested from Codex's uncommitted working tree; re-check after it is committed. Temporary preview files and servers were removed.
+- Next: After Codex commits settings, merge this branch and re-check the Go-served page. Then switch active jobs from list polling to the per-job SSE stream (`/api/jobs/{id}/events`).
 
 ### 2026-09-26 — Post-merge checklist repair
 

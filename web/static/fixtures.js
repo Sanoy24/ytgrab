@@ -151,3 +151,40 @@ export const jobs = [
     updated_at: ago(60 * 49),
   },
 ];
+
+// GET /api/inspect sample, modeled on a typical YouTube format list.
+const v = (format_id, ext, height, fps, vcodec, mb) => ({
+  format_id, ext, height, width: Math.round((height * 16) / 9), fps, vcodec, filesize: null, filesize_approx: mb * 1e6,
+});
+const a = (format_id, ext, acodec, abr, mb, language = 'en') => ({
+  format_id, ext, acodec, abr, filesize: mb * 1e6, filesize_approx: null, language,
+});
+
+export const inspection = {
+  video_id: 'dQw4w9WgXcQ',
+  title: 'Building a local-first download manager in Go — full walkthrough',
+  duration_seconds: 1325,
+  video: [
+    v('313', 'webm', 2160, 30, 'vp9', 1210),
+    v('271', 'webm', 1440, 30, 'vp9', 610),
+    v('299', 'mp4', 1080, 60, 'avc1.64002a', 405),
+    v('303', 'webm', 1080, 60, 'vp9', 300),
+    v('137', 'mp4', 1080, 30, 'avc1.640028', 278),
+    v('248', 'webm', 1080, 30, 'vp9', 190),
+    v('399', 'mp4', 1080, 30, 'av01.0.08M.08', 160),
+    v('298', 'mp4', 720, 60, 'avc1.4d4020', 188),
+    v('136', 'mp4', 720, 30, 'avc1.4d401f', 118),
+    v('247', 'webm', 720, 30, 'vp9', 96),
+    v('135', 'mp4', 480, 30, 'avc1.4d401e', 61),
+    v('134', 'mp4', 360, 30, 'avc1.4d401e', 34),
+    v('133', 'mp4', 240, 30, 'avc1.4d4015', 17),
+    v('160', 'mp4', 144, 30, 'avc1.4d400c', 8),
+  ],
+  audio: [
+    a('251', 'webm', 'opus', 135.2, 20.4),
+    a('140', 'm4a', 'mp4a.40.2', 129.5, 21.4),
+    a('250', 'webm', 'opus', 70.1, 10.8),
+    a('249', 'webm', 'opus', 50.3, 7.9),
+    a('139', 'm4a', 'mp4a.40.5', 48.8, 8.1),
+  ],
+};

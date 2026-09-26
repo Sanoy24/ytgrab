@@ -1,4 +1,5 @@
 import { createClient, isActive } from './api.js';
+import { formatDuration, groupFormats, matchPreset } from './formats.js';
 
 const client = createClient();
 const $ = (sel) => document.querySelector(sel);
@@ -21,10 +22,9 @@ const STATE_LABELS = {
   cancelled: 'Cancelled',
 };
 
+// Extra guidance appended to server error messages; only where the server's text lacks it.
 const ERROR_HINTS = {
   video_unavailable: 'Check that the video is public and the link is correct.',
-  network: 'Check your connection, then retry.',
-  dependency_missing: 'Install the missing tool shown at the top of the page, then retry.',
 };
 
 const YT_HOSTS = new Set([
@@ -135,7 +135,8 @@ function renderJob(job) {
   badge.dataset.state = job.state;
   badge.textContent = STATE_LABELS[job.state] || job.state;
 
-  const meta = [PRESET_LABELS[job.preset] || job.preset, formatWhen(job.updated_at)];
+  const format = PRESET_LABELS[job.preset] || job.format?.label || job.preset || 'Custom format';
+  const meta = [format, formatWhen(job.updated_at)];
   if (job.attempt > 1) meta.push(`attempt ${job.attempt}`);
   el.querySelector('.job-meta').textContent = meta.join(' · ');
 
@@ -513,14 +514,16 @@ async function onSubmit(e) {
     return;
   }
   setUrlError('');
-  const preset = new FormData(e.target).get('preset');
+  const [kind, value] = String(new FormData(e.target).get('choice')).split(':');
+  const body = kind === 'preset' ? { preset: value } : { format: { kind, id: value } };
   const button = $('#submit');
   button.disabled = true;
   button.textContent = 'Adding…';
   try {
-    await client.createJob({ url: result.url, preset });
+    await client.createJob({ url: result.url, ...body });
     if (!client.isFixture) jobs = await client.listJobs();
     input.value = '';
+    resetFormats();
     toast(result.note ? `Added. ${result.note}` : 'Added to the queue.');
     render();
   } catch (err) {
@@ -532,13 +535,246 @@ async function onSubmit(e) {
   }
 }
 
+// ---------- format inspection ----------
+
+// Formats are fetched as soon as a valid video link is entered. The quick presets stay
+// usable meanwhile and remain the fallback when inspection fails.
+const inspections = new Map(); // url -> grouped formats (per page session)
+let inspectedUrl = '';
+let inspectCtl = null;
+let inspectTimer;
+
+function selectedChoice() {
+  return document.querySelector('input[name="choice"]:checked')?.value || 'preset:video-best';
+}
+
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props);
+  node.append(...children);
+  return node;
+}
+
+function setInspectStatus(...nodes) {
+  $('#inspect').replaceChildren(...nodes);
+}
+
+function showPresets(checkedValue) {
+  $('#format-choices').hidden = true;
+  $('#preset-choices').hidden = false;
+  for (const r of $('#preset-choices').querySelectorAll('input')) r.disabled = false;
+  const want = checkedValue?.startsWith('preset:') ? checkedValue : 'preset:video-best';
+  $('#preset-choices').querySelector(`input[value="${want}"]`).checked = true;
+}
+
+function resetFormats() {
+  clearTimeout(inspectTimer);
+  inspectCtl?.abort();
+  inspectCtl = null;
+  inspectedUrl = '';
+  setInspectStatus();
+  showPresets(selectedChoice());
+}
+
+function scheduleInspect(immediate = false) {
+  clearTimeout(inspectTimer);
+  const result = validateUrl($('#url').value);
+  if (result.error) {
+    if (inspectedUrl) resetFormats();
+    return;
+  }
+  if (result.url === inspectedUrl) return;
+  inspectTimer = setTimeout(() => inspect(result.url), immediate ? 0 : 500);
+}
+
+async function inspect(url) {
+  inspectCtl?.abort();
+  const ctl = (inspectCtl = new AbortController());
+  inspectedUrl = url;
+
+  const cached = inspections.get(url);
+  if (cached) return showFormats(cached, selectedChoice());
+
+  setInspectStatus(el('span', { className: 'spinner' }), 'Checking available formats…');
+  try {
+    const info = await client.inspect(url, { signal: ctl.signal });
+    const grouped = { ...groupFormats(info), title: info.title, duration: info.duration_seconds };
+    inspections.set(url, grouped);
+    if (!ctl.signal.aborted) showFormats(grouped, selectedChoice());
+  } catch (err) {
+    if (err.name === 'AbortError' || ctl.signal.aborted) return;
+    if (err.code === 'not_available') return setInspectStatus(); // server without inspection
+    const parts = [
+      el('span', {
+        className: 'inspect-error',
+        textContent: `Couldn't load formats: ${err.message}`,
+      }),
+      ' You can still use a standard preset.',
+    ];
+    if (err.code !== 'video_unavailable') {
+      const retry = el('button', {
+        type: 'button',
+        className: 'btn-link',
+        textContent: 'Try again',
+      });
+      retry.addEventListener('click', () => {
+        inspectedUrl = '';
+        inspect(url);
+      });
+      parts.push(' ', retry);
+    }
+    setInspectStatus(...parts);
+  }
+}
+
+function formatRow(choice, checked) {
+  const input = el('input', {
+    type: 'radio',
+    name: 'choice',
+    value: `${choice.kind}:${choice.id}`,
+    checked,
+  });
+  const text = el(
+    'span',
+    {},
+    el('strong', { textContent: choice.label }),
+    el('small', { textContent: choice.detail }),
+  );
+  return el('label', { className: 'preset' }, input, text);
+}
+
+const MP3_CHOICE = {
+  kind: 'preset',
+  id: 'audio-mp3',
+  label: 'MP3 · converted',
+  detail: 'Re-encoded with ffmpeg; uses more CPU',
+};
+
+function showFormats(grouped, previous) {
+  const { video, audio } = grouped;
+  if (!video.length && !audio.length) {
+    setInspectStatus('No downloadable formats were listed for this video. Using standard presets.');
+    return;
+  }
+  // Carry a choice made before the list loaded over to the closest real format.
+  const all = [...video, ...audio, MP3_CHOICE].map((c) => `${c.kind}:${c.id}`);
+  const [kind, value] = previous.split(':');
+  const match = kind === 'preset' ? matchPreset(value, grouped) : null;
+  let checked = match ? `${match.kind}:${match.id}` : previous;
+  if (!all.includes(checked)) checked = all[0];
+
+  $('#video-formats').replaceChildren(
+    ...(video.length
+      ? video.map((c) => formatRow(c, `video:${c.id}` === checked))
+      : [el('p', { className: 'hint', textContent: 'No video formats available.' })]),
+  );
+  $('#audio-formats').replaceChildren(
+    ...[...audio, MP3_CHOICE].map((c) => formatRow(c, `${c.kind}:${c.id}` === checked)),
+  );
+
+  for (const r of $('#preset-choices').querySelectorAll('input')) r.disabled = true;
+  $('#preset-choices').hidden = true;
+  $('#format-choices').hidden = false;
+
+  const meta = [
+    formatDuration(grouped.duration),
+    `${video.length} video · ${audio.length} audio options`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  setInspectStatus(
+    el('strong', { className: 'inspect-title', textContent: grouped.title || 'Video' }),
+    el('small', { textContent: meta }),
+  );
+}
+
+// ---------- output folder ----------
+
+let downloadsDir = '';
+
+// The section stays hidden when the server has no settings route or can't be reached;
+// the health banner already reports an unreachable server.
+async function loadSettings() {
+  try {
+    const s = await client.getSettings();
+    downloadsDir = s.downloads_dir;
+    $('#dir-path').textContent = downloadsDir;
+    $('#output-dir').hidden = false;
+  } catch {
+    $('#output-dir').hidden = true;
+  }
+}
+
+function setDirEditing(editing) {
+  $('#dir-view').hidden = editing;
+  $('#dir-form').hidden = !editing;
+  setDirError('');
+  if (editing) {
+    $('#dir-input').value = downloadsDir;
+    $('#dir-input').select();
+    $('#dir-input').focus();
+  } else {
+    $('#dir-edit').focus();
+  }
+}
+
+function setDirError(message) {
+  $('#dir-error').textContent = message;
+  $('#dir-error').hidden = !message;
+  $('#dir-input').setAttribute('aria-invalid', message ? 'true' : 'false');
+}
+
+async function onDirSubmit(e) {
+  e.preventDefault();
+  const value = $('#dir-input').value.trim();
+  if (!value) {
+    setDirError('Enter a folder path.');
+    return;
+  }
+  if (value === downloadsDir) {
+    setDirEditing(false);
+    return;
+  }
+  const save = $('#dir-save');
+  save.disabled = true;
+  try {
+    const s = await client.updateSettings({ downloads_dir: value });
+    downloadsDir = s.downloads_dir;
+    $('#dir-path').textContent = downloadsDir;
+    setDirEditing(false);
+    toast('Output folder saved. New downloads will go there.');
+  } catch (err) {
+    setDirError(err.message);
+  } finally {
+    save.disabled = false;
+  }
+}
+
 function init() {
   $('#fixture-note').hidden = !client.isFixture;
+  $('#dir-edit').addEventListener('click', () => setDirEditing(true));
+  $('#dir-cancel').addEventListener('click', () => setDirEditing(false));
+  $('#dir-form').addEventListener('submit', onDirSubmit);
+  $('#dir-form').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setDirEditing(false);
+  });
   $('#add-form').addEventListener('submit', onSubmit);
-  $('#folder-form').addEventListener('submit', saveSettings);
-  $('#downloads-dir').addEventListener('input', () => setFolderError(''));
-  $('#url').addEventListener('input', () => {
+  $('#url').addEventListener('input', (e) => {
     if ($('#url').getAttribute('aria-invalid') === 'true') setUrlError('');
+    scheduleInspect(e.inputType === 'insertFromPaste');
+  });
+  $('#use-presets').addEventListener('click', () => {
+    const grouped = inspections.get(inspectedUrl);
+    showPresets();
+    const back = el('button', {
+      type: 'button',
+      className: 'btn-link',
+      textContent: 'Show available formats',
+    });
+    back.addEventListener('click', () => showFormats(grouped, selectedChoice()));
+    setInspectStatus(
+      el('strong', { className: 'inspect-title', textContent: grouped?.title || 'Video' }),
+      back,
+    );
   });
 
   const paste = $('#paste');
@@ -548,6 +784,7 @@ function init() {
       try {
         $('#url').value = (await navigator.clipboard.readText()).trim();
         setUrlError('');
+        scheduleInspect(true);
         $('#url').focus();
       } catch {
         toast('Clipboard access was blocked. Paste with Ctrl+V instead.', true);

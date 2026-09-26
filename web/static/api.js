@@ -1,5 +1,6 @@
 // Data clients. The UI talks only to this interface:
-//   health(), listJobs(), createJob({url, preset}), cancelJob(id), retryJob(id), subscribe(onChange)
+//   health(), listJobs(), createJob({url, preset}), cancelJob(id), retryJob(id), subscribe(onChange),
+//   getSettings(), updateSettings({downloads_dir}), inspect(url, {signal})
 // The live HTTP client is the default. Add ?fixture=default|empty|error|degraded|loading
 // to preview UI states without the backend.
 
@@ -17,7 +18,7 @@ export function createClient(params = new URLSearchParams(location.search)) {
   return new HttpClient();
 }
 
-// Scenarios: default | empty | error | degraded | loading
+// Scenarios: default | empty | error | degraded | loading | blocked (format check fails)
 class FixtureClient {
   isFixture = true;
 
@@ -25,6 +26,7 @@ class FixtureClient {
     this.scenario = scenario;
     this.jobs = scenario === 'empty' ? [] : structuredClone(fx.jobs);
     this.nextId = 100;
+    this.downloadsDir = String.raw`C:\Users\me\Downloads\ytgrab`;
     this.listeners = new Set();
     this.timer = null;
     this.downloadsDir = 'C:\\Users\\me\\Downloads\\ytgrab';
@@ -55,7 +57,22 @@ class FixtureClient {
     return structuredClone(this.jobs);
   }
 
-  async createJob({ url, preset }) {
+  async inspect(url, { signal } = {}) {
+    await delay(this.scenario === 'loading' ? 1e9 : 1500, signal);
+    if (this.scenario === 'error')
+      throw new ApiError('unreachable', 'Could not reach the local server.');
+    if (this.scenario === 'blocked') {
+      throw new ApiError(
+        'blocked',
+        'YouTube is limiting requests from this network. Wait a while, then retry.',
+      );
+    }
+    if (url.includes('xxxxxxxxxxx'))
+      throw new ApiError('video_unavailable', 'This video is unavailable or private.');
+    return structuredClone(fx.inspection);
+  }
+
+  async createJob({ url, preset, format }) {
     await delay(400);
     if (this.scenario === 'error')
       throw new ApiError('unreachable', 'Could not reach the local server.');
@@ -68,7 +85,8 @@ class FixtureClient {
       url,
       video_id: null,
       title: null,
-      preset,
+      preset: format ? null : preset,
+      format: format ? { ...format, label: fixtureFormatLabel(format) } : null,
       state: 'queued',
       attempt: 1,
       progress: null,
@@ -99,6 +117,23 @@ class FixtureClient {
       }
       Object.assign(j, { state: 'queued', attempt: j.attempt + 1, error: null, progress: null });
     });
+  }
+
+  async getSettings() {
+    await delay(200);
+    if (this.scenario === 'error')
+      throw new ApiError('unreachable', 'Could not reach the local server.');
+    return { downloads_dir: this.downloadsDir };
+  }
+
+  async updateSettings({ downloads_dir }) {
+    await delay(300);
+    // Loosely mirrors the server rule: an absolute path to an existing, writable folder.
+    if (!/^([a-z]:[\\/]|\\\\|\/)/i.test(downloads_dir)) {
+      throw new ApiError('invalid_directory', String.raw`Use a full folder path, such as D:\Videos.`);
+    }
+    this.downloadsDir = downloads_dir;
+    return { downloads_dir };
   }
 
   update(id, fn) {
@@ -184,11 +219,20 @@ class HttpClient {
   createJob(body) {
     return this.request('POST', '/api/jobs', body);
   }
+  inspect(url, { signal } = {}) {
+    return this.request('GET', `/api/inspect?url=${encodeURIComponent(url)}`, undefined, signal);
+  }
   cancelJob(id) {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/cancel`);
   }
   retryJob(id) {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/retry`);
+  }
+  getSettings() {
+    return this.request('GET', '/api/settings');
+  }
+  updateSettings(body) {
+    return this.request('PUT', '/api/settings', body);
   }
 
   // Poll for queue/history changes; stream persisted progress for active jobs.
@@ -238,15 +282,17 @@ class HttpClient {
     };
   }
 
-  async request(method, path, body) {
+  async request(method, path, body, signal) {
     let res;
     try {
       res = await fetch(path, {
         method,
+        signal,
         headers: body ? { 'Content-Type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
-    } catch {
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
       throw new ApiError(
         'unreachable',
         'Could not reach the local server. Is ytgrab still running?',
@@ -272,4 +318,19 @@ class HttpClient {
 export const isActive = (state) =>
   ['queued', 'inspecting', 'downloading', 'processing'].includes(state);
 
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+const delay = (ms, signal) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    });
+  });
+
+// The server owns real labels; the fixture derives one from the sample inspection.
+function fixtureFormatLabel({ kind, id }) {
+  const list = kind === 'video' ? fx.inspection.video : fx.inspection.audio;
+  const f = list.find((x) => x.format_id === id);
+  if (!f) return `Format ${id}`;
+  return kind === 'video' ? `Video · ${f.height}p` : `Audio · ${f.ext.toUpperCase()} ${Math.round(f.abr)} kbps`;
+}

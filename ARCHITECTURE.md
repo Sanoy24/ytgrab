@@ -56,7 +56,7 @@ Keep the initial implementation simple. Add a package only when its boundary is 
 5. `yt-dlp` writes to the configured output directory. It invokes `ffmpeg` when separate streams need merging.
 6. The worker records the final path, outcome, and any actionable error. On restart, an interrupted active job becomes `failed` with an `interrupted` error and can be retried using its preserved partial files; it is never left permanently "running."
 
-Do not run a separate metadata inspection before every quick download. Inspect only when the user requests a format list or a workflow genuinely needs it.
+The UI inspects formats as soon as a valid video link is entered, so the user can pick an exact resolution or audio stream. Inspection never blocks a download: the quick presets stay usable while it runs and remain the fallback when it fails. The server should cache inspection results briefly per video ID and rate limit inspection, because each one is an extra YouTube request. A job created from an inspected format sends only a format ID and kind; the server validates the ID and builds the `yt-dlp` format selector itself.
 
 ## Job model and persistence
 
@@ -98,7 +98,7 @@ These are initial defaults, not performance claims. Measure throughput, CPU, mem
 | `POST` | `/api/jobs/{id}/cancel` | Cancel a queued or active job |
 | `POST` | `/api/jobs/{id}/retry` | Retry a failed or cancelled job |
 | `GET` | `/api/jobs/{id}/events` | Stream progress with SSE |
-| `GET` | `/api/inspect?url=...` | Inspect available formats on demand |
+| `GET` | `/api/inspect?url=...` | List a video's formats, grouped into video and audio (called when a link is entered) |
 | `GET`, `PUT` | `/api/settings` | Read or update local settings |
 | `GET` | `/api/system/health` | Dependency and application status |
 

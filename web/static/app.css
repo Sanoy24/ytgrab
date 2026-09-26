@@ -382,3 +382,70 @@ input[aria-invalid="true"] { border-color: var(--err); }
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
 }
 .toast[data-kind="error"] { background: var(--err); color: #fff; }
+
+/* Output folder */
+.output-dir { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.output-dir-view { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.output-dir-view .field-label { margin: 0; }
+.output-dir-path {
+  flex: 1 1 12em;
+  min-width: 0;
+  font: 0.8rem ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--muted);
+}
+.output-dir-edit input {
+  width: 100%;
+  font: 0.875rem ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.output-dir-edit input[aria-invalid="true"] { border-color: var(--err); }
+.output-dir-edit .form-actions { margin-top: 8px; }
+
+/* Format inspection */
+.inspect { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
+.inspect:empty { display: none; }
+.inspect-title { display: block; color: var(--text); font-size: 0.9rem; }
+.inspect-error { color: var(--err); }
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-link {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--info);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.preset-group-title small { text-transform: none; letter-spacing: 0; }
+.format-list { display: grid; gap: 4px; }
+.format-list .preset { padding: 6px 10px; align-items: center; }
+.format-list .preset input { margin-top: 0; }
+.format-list .preset > span {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0 8px;
+}
+.format-list .preset small { font-variant-numeric: tabular-nums; }
+#format-choices .btn-link { margin: 4px 0 12px; }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+}
