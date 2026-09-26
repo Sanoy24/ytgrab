@@ -2,6 +2,8 @@
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) and [PROGRESS.md](PROGRESS.md) before changing the application. Treat the architecture as the current design baseline; document a meaningful change in the architecture file before or alongside its implementation.
 
+When working in parallel with Claude or another agent, also read [DELEGATION.md](DELEGATION.md). Stay within the paths assigned to your branch. Update your branch's `PROGRESS.md` after each iteration; the integrator will reconcile progress logs when branches merge.
+
 ## Progress tracking is required
 
 After **every iteration** of work in this repository, update [PROGRESS.md](PROGRESS.md) before finishing the iteration. An iteration is a coherent change or investigation that you would report back to the user, even when no code was changed.

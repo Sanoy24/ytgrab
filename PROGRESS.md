@@ -9,11 +9,13 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Choose Go application plus `yt-dlp` and `ffmpeg` integration.~~
 - [x] ~~Document components, data flow, runtime boundaries, and performance defaults.~~
 - [x] ~~Add agent instructions requiring an update after every iteration and strikethrough for completed steps.~~
+- [x] ~~Define separate Codex and Claude worktrees, first task ownership, and integration procedure.~~
 
 ### 1. Application foundation
 
 - [ ] Initialize the Go module, entry point, configuration, and graceful shutdown.
 - [ ] Add dependency discovery and a local health route with actionable diagnostics.
+- [ ] Build and preview a static local UI shell in `web/`.
 - [ ] Add an embedded minimal web page served on `127.0.0.1`.
 
 ### 2. Durable jobs
@@ -42,6 +44,13 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Delegation setup
+
+- Result: Added the first parallel assignments, branch/worktree procedure, agent prompts, and merge rules in `DELEGATION.md`.
+- Verification: Confirmed the repository has a first commit and both `codex` and `claude` commands are installed. Reviewed path ownership so the first coding tasks do not overlap.
+- Decision: Both agents update `PROGRESS.md` in their own branches; the integrator combines the logs during merge.
+- Next: Commit the coordination docs, create the two worktrees, and launch each agent with its scoped prompt.
 
 ### 2026-09-26 — Architecture documentation
 

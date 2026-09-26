@@ -1,0 +1,9 @@
+# Separate local agent worktrees live here. Each has its own branch.
+.worktrees/
+
+# Local application artifacts (created by later implementation work).
+downloads/
+tools/
+*.db
+*.db-shm
+*.db-wal

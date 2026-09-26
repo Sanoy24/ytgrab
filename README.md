@@ -9,6 +9,7 @@ The project is currently in the architecture stage. There is no runnable applica
 - [ARCHITECTURE.md](ARCHITECTURE.md) describes the components, data flow, runtime behavior, and design decisions.
 - [PROGRESS.md](PROGRESS.md) tracks milestones and records each implementation iteration.
 - [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) contain instructions for coding agents working in this repository.
+- [DELEGATION.md](DELEGATION.md) assigns the first Codex and Claude tasks and explains the parallel branch workflow.
 
 ## Planned first release
 
