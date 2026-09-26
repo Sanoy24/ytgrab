@@ -16,7 +16,10 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Initialize the Go module, entry point, configuration, and graceful shutdown.~~
 - [x] ~~Add dependency discovery and a local health route with actionable diagnostics.~~
 - [x] ~~Build and preview a static local UI shell in `web/`.~~
-- [x] ~~Add an embedded minimal web page served on `127.0.0.1`.~~
+      <<<<<<< HEAD
+- [x] # ~~Add an embedded minimal web page served on `127.0.0.1`.~~
+- [ ] Add an embedded minimal web page served on `127.0.0.1`.
+  > > > > > > > agent/claude-ui-health
 
 ### 2. Durable jobs
 
@@ -120,6 +123,13 @@ This file is the source of truth for project progress. Update it after every ite
 - Verification: `go test ./...` passes, including GET checks for `/`, `/app.js`, and `/app.css`; `node --check` passes for the edited JavaScript modules. Claude's branch log records the static UI preview and responsive checks.
 - Decision: The page is served before job endpoints are available, so the UI currently shows the live API loading error until the next milestone is implemented.
 - Next: Add durable job storage and the job API contract the UI already expects.
+
+### 2026-09-26 — Claude: UI matches the health contract
+
+- Result: On branch `agent/claude-ui-health`, the UI now reads Codex's `/api/system/health` shape (`available`, status `ready`/`degraded`). The header pill toggles a tools panel that lists every dependency with a short version, advice messages, and the report note; it opens automatically when a required tool is missing. Health fixtures were replaced with shapes captured from the Go server. In live mode, a 404/405 from the job routes now shows "Downloads aren't available yet" and stops polling instead of repeating requests. Adopted the live-by-default client switch (`?fixture=...` for sample data), matching Codex's uncommitted change on `master`. Re-checked the milestone 1 UI-shell item that was unchecked during the merge.
+- Verification: Built `cmd/ytgrab` into a temp folder and ran it on 127.0.0.1:8787; `curl` of `/api/system/health` returned `degraded` (yt-dlp missing; ffmpeg/ffprobe 8.0.1; Node 24.4.1). Served `web/static` with a scratch Node server that proxies `/api/*` to Go, then checked in Playwright: the live page showed "1 tool missing" and the four real tools; `/api/jobs` was requested twice in 6 s (initial load plus one poll), then polling stopped; a submit showed the "not available" message. Fixture modes: default shows "Tools ready" with the panel collapsed and opens on click; degraded shows "2 tools missing" at 375px with no horizontal overflow (`scrollWidth` 360); error shows "Server offline". `node --check` passes. No Go files were edited.
+- Blocker/notes: Codex has uncommitted changes on `master` (`web/assets.go`, the health handler, and a smaller version of this fix in `web/static/app.js`/`api.js`/`web/README.md`). `api.js` and the README now include Codex's edits verbatim; `loadHealth` in `app.js` will conflict, and this branch's version supersedes it.
+- Next: After Codex commits the embedding work, rebase this branch onto `master`, resolve `app.js` by keeping this version, and verify the page served by Go at `http://127.0.0.1:8787/`.
 
 ### 2026-09-26 — Codex foundation
 

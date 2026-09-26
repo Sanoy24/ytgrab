@@ -1,33 +1,36 @@
 // Sample data for building the UI before the backend API exists.
-// Shapes follow the proposal in web/README.md.
+// Job shapes follow the proposal in web/README.md.
 
 const now = Date.now();
 const ago = (minutes) => new Date(now - minutes * 60_000).toISOString();
 
+// Health fixtures mirror real /api/system/health responses from internal/app/deps.
+const note = "Executable checks only. YouTube access and yt-dlp-ejs availability are not verified.";
+const tool = (name, version, path) => ({ name, available: true, required: true, path, version, message: "Available." });
+
 export const healthOk = {
-  status: "ok",
+  status: "ready",
+  checked_at: ago(0),
   dependencies: [
-    { name: "yt-dlp", found: true, version: "2026.09.10", required: true },
-    { name: "ffmpeg", found: true, version: "7.1", required: true },
-    { name: "ffprobe", found: true, version: "7.1", required: true },
-    { name: "deno", found: true, version: "2.4.0", required: false },
+    tool("yt-dlp", "2026.09.10", String.raw`C:\ytgrab\tools\yt-dlp.exe`),
+    tool("ffmpeg", "ffmpeg version 8.0.1-full_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers", String.raw`C:\ytgrab\tools\ffmpeg.exe`),
+    tool("ffprobe", "ffprobe version 8.0.1-full_build-www.gyan.dev Copyright (c) 2007-2025 the FFmpeg developers", String.raw`C:\ytgrab\tools\ffprobe.exe`),
+    { ...tool("js-runtime", "v24.4.1", String.raw`C:\Program Files\nodejs\node.exe`), message: "Node is available; yt-dlp must be run with --js-runtimes node." },
   ],
+  note,
 };
 
+// Captured from the Go server on a machine without yt-dlp (paths shortened).
 export const healthDegraded = {
   status: "degraded",
+  checked_at: ago(0),
   dependencies: [
-    { name: "yt-dlp", found: true, version: "2026.09.10", required: true },
-    {
-      name: "ffmpeg", found: false, version: null, required: true,
-      message: "Not found in the tools folder or PATH. Video merging and MP3 conversion will fail.",
-    },
-    { name: "ffprobe", found: false, version: null, required: true, message: "Not found in the tools folder or PATH." },
-    {
-      name: "deno", found: false, version: null, required: false,
-      message: "Optional. Some YouTube formats may be unavailable without a JavaScript runtime.",
-    },
+    { name: "yt-dlp", available: false, required: true, message: "Install yt-dlp and add it to PATH or the tools directory." },
+    { name: "ffmpeg", available: false, required: true, message: "Install ffmpeg and add it to PATH or the tools directory." },
+    healthOk.dependencies[2],
+    healthOk.dependencies[3],
   ],
+  note,
 };
 
 export const jobs = [
