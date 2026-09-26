@@ -24,12 +24,12 @@ YTGrab is a single Go program. Downloading is done by [yt-dlp](https://github.co
 
 Download the file for your system from [Releases](https://github.com/Sanoy24/ytgrab/releases):
 
-| System | File |
-| --- | --- |
-| Windows 10/11 (64-bit) | `ytgrab-<version>-windows-amd64.zip` |
+| System                              | File                                   |
+| ----------------------------------- | -------------------------------------- |
+| Windows 10/11 (64-bit)              | `ytgrab-<version>-windows-amd64.zip`   |
 | macOS, Apple silicon (M1 and later) | `ytgrab-<version>-darwin-arm64.tar.gz` |
-| macOS, Intel | `ytgrab-<version>-darwin-amd64.tar.gz` |
-| Linux (64-bit x86) | `ytgrab-<version>-linux-amd64.tar.gz` |
+| macOS, Intel                        | `ytgrab-<version>-darwin-amd64.tar.gz` |
+| Linux (64-bit x86)                  | `ytgrab-<version>-linux-amd64.tar.gz`  |
 
 ### Windows
 
@@ -82,13 +82,13 @@ Requires Go 1.25 or newer, with Go's `bin` folder (usually `~/go/bin`) on your `
 
 ## Usage
 
-| Command | What it does |
-| --- | --- |
-| `ytgrab --open` | Start the app and open it in your browser |
-| `ytgrab doctor` | Check tools, folders, and the port |
-| `ytgrab setup` | Install what's missing, asking before each step (`--yes` to accept all) |
+| Command                       | What it does                                                               |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `ytgrab --open`               | Start the app and open it in your browser                                  |
+| `ytgrab doctor`               | Check tools, folders, and the port                                         |
+| `ytgrab setup`                | Install what's missing, asking before each step (`--yes` to accept all)    |
 | `ytgrab setup --update-ytdlp` | Get the latest yt-dlp — the usual fix when YouTube downloads start failing |
-| `ytgrab --version` | Print the version |
+| `ytgrab --version`            | Print the version                                                          |
 
 Keep the terminal (or console) window open while you use the app; press Ctrl+C to stop it. From a downloaded archive, run the commands from its folder as `./ytgrab …` (Windows: `.\ytgrab.exe …`). See the [user guide](docs/USER_GUIDE.md) for settings, environment variables, and troubleshooting.
 
@@ -117,4 +117,4 @@ YTGrab stands on [yt-dlp](https://github.com/yt-dlp/yt-dlp), which does the hard
 
 ## License
 
-[MIT](LICENSE) © 2026 Yonas Mekonnen
+[MIT]
