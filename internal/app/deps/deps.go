@@ -173,13 +173,34 @@ func Find(cfg config.Config, name string) (string, error) {
 	return findTool(searchDirs(cfg), name)
 }
 
+// versionTimeout allows for the Windows yt-dlp.exe, which unpacks itself on every run
+// and takes about three seconds, longer on a first run while antivirus scans it.
+const versionTimeout = 15 * time.Second
+
+type versionKey struct {
+	path    string
+	size    int64
+	modTime time.Time
+}
+
+// versions caches successful version checks per file, so health checks don't re-run
+// slow tools; a replaced or updated file has a new size or modification time.
+var versions sync.Map // versionKey -> string
+
 func getVersion(ctx context.Context, path string, flag string) (string, error) {
-	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	var key versionKey
+	if info, err := os.Stat(path); err == nil {
+		key = versionKey{path: path, size: info.Size(), modTime: info.ModTime()}
+		if version, ok := versions.Load(key); ok {
+			return version.(string), nil
+		}
+	}
+	checkCtx, cancel := context.WithTimeout(ctx, versionTimeout)
 	defer cancel()
 	output, err := exec.CommandContext(checkCtx, path, flag).CombinedOutput()
 	if err != nil {
 		if errors.Is(checkCtx.Err(), context.DeadlineExceeded) {
-			return "", fmt.Errorf("timed out after 3 seconds")
+			return "", fmt.Errorf("timed out after %v", versionTimeout)
 		}
 		return "", err
 	}
@@ -187,6 +208,9 @@ func getVersion(ctx context.Context, path string, flag string) (string, error) {
 	line = strings.TrimSpace(line)
 	if line == "" {
 		return "", fmt.Errorf("version command returned no output")
+	}
+	if key.path != "" {
+		versions.Store(key, line)
 	}
 	return line, nil
 }

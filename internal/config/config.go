@@ -18,6 +18,9 @@ type Config struct {
 	DataDir         string
 	DownloadsDir    string
 	ShutdownTimeout time.Duration
+	// Version and OpenBrowser come from the command line, not the environment.
+	Version     string
+	OpenBrowser bool
 }
 
 // Load reads local configuration from the environment and validates it.

@@ -57,10 +57,21 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Test end-to-end downloading, crash recovery, cancellation, and resume on Windows.~~
 - [x] ~~Verify graceful shutdown (SIGINT) with an active download and an open progress stream (Linux; Windows Ctrl+C uses the same code path).~~
 - [x] ~~Document source-run setup, required external tools, basic usage, and dependency diagnostics.~~
-- [ ] Document packaged installation and broader troubleshooting after release verification.
-- [ ] Package and verify a local release on the supported operating systems.
+- [x] ~~Document packaged installation and broader troubleshooting after release verification.~~
+- [x] ~~Add a packaging script with checksum-verified yt-dlp, manifest, and per-file checksums.~~
+- [x] ~~Package and verify the Windows x64 release (fresh extract: checksums, manifest, start script, tool discovery, health, page).~~
+- [x] ~~Package the Linux x64 release and verify it runs and serves the page (WSL2 Ubuntu).~~
+- [ ] Complete a real YouTube download through the packaged Windows build (blocked by YouTube rate limiting during this session).
+- [ ] Verify the macOS archives on a Mac (built, not run).
 
 ## Iteration log
+
+### 2026-09-26 — Claude: release packaging, user guide, tool-check fix
+
+- Result: Added `scripts/package.ps1` (tests, trimmed version-stamped builds, yt-dlp bundled only if it matches the official `SHA2-256SUMS`, `manifest.json`, per-file `SHA256SUMS`, archive `.sha256`; zips built with `tar -a` because Windows PowerShell's `Compress-Archive` writes backslash entry names), `packaging/Start YTGrab.cmd` (CRLF, enforced by `.gitattributes`), `--open` and `--version` flags, a startup line with version and "Press Ctrl+C to stop.", and `docs/USER_GUIDE.md` (install, usage, playlists, settings, troubleshooting), shipped as the archive README. **Fixed tools flapping to "missing":** the dependency version check timed out at 3 s, and the Windows `yt-dlp.exe` takes about 3.0 s per run; the limit is now 15 s and successful checks are cached per file path, size, and modification time. Updated `README.md` and the release strategy in `ARCHITECTURE.md`; `dist/` is ignored.
+- Verification: `go test ./...` and `go vet ./...` pass, including new tests for the browser command, the version-check timeout, and the cache (the test binary acts as a fake tool; one run for two checks, a second run after the file's time changes). Built `1.0.0-rc1` for Windows, Linux, and macOS (arm64/amd64). Windows zip (rebuilt as `rc2` after the fix): `sha256sum -c` passes for the archive and every file; the manifest records yt-dlp 2026.08.19 with the official hash; `ytgrab.exe --version` prints the version; run from a fresh extract with no tools variable, it found `tools\yt-dlp.exe` beside itself, and the first health check (3.4 s) reported it available, then 0.06 s from cache (with `rc1` it was reported unavailable after a timeout); the page and scripts load. Linux archive in WSL2: checksums pass, `--version`, page 200, health reports missing tools, SIGINT exits cleanly. A real download through the Windows release returned `blocked` because YouTube was rate-limiting this network.
+- Blocker/notes: `Start YTGrab.cmd`/`--open` were not launched here (they would open the desktop browser); the command is unit-tested. macOS archives are built but not run. The Unix archives don't keep the executable bit; the guide says to `chmod +x`.
+- Next: When YouTube allows, run one download through the packaged Windows build; merge `claude/finish`.
 
 ### 2026-09-26 — Claude: graceful shutdown fix, Unix verification
 

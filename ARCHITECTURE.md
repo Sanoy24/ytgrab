@@ -116,6 +116,8 @@ Output-folder settings are stored in the same SQLite database. `GET /api/setting
 
 During development, find external binaries in a configured tools directory or `PATH` and report versions and missing capabilities. For packaged releases, distribute or install compatible binaries beside the application with a version manifest and verified checksums. Keep dependency update behavior separate from application updates because YouTube extraction may need more frequent changes.
 
+`scripts/package.ps1` implements this for the first release. The Windows x64 zip contains `ytgrab.exe` (built with `-trimpath` and the version in `main.version`), `Start YTGrab.cmd` (runs `ytgrab.exe --open`), `docs/USER_GUIDE.md` as `README.md`, and `tools/yt-dlp.exe`, which is bundled only if it matches yt-dlp's official `SHA2-256SUMS`. Each archive carries `manifest.json` (app version, commit, build time, bundled tool versions and SHA-256) and `SHA256SUMS` for every file, plus a `.sha256` for the archive. ffmpeg/ffprobe (large, GPL builds) and a JavaScript runtime are not bundled; the user guide installs them with `winget`, and the health panel reports them. Linux and macOS archives contain only the program. Users update yt-dlp independently (`yt-dlp -U`). Tool discovery checks `YTGRAB_TOOLS_DIR`, then `tools/` beside the executable, then `tools/` in the working directory, then `PATH`. Version checks allow 15 seconds, because the Windows `yt-dlp.exe` unpacks itself on each run (about 3 s), and successful results are cached per file path, size, and modification time.
+
 ## First release sequence
 
 1. Bootstrap Go application, configuration, dependency diagnostics, and local HTTP health route.

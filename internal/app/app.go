@@ -61,7 +61,17 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 	server.BaseContext = func(net.Listener) context.Context { return requests }
 	server.RegisterOnShutdown(cancelRequests)
 
-	_, _ = fmt.Fprintf(output, "YTGrab listening on http://%s\n", listener.Addr())
+	url := fmt.Sprintf("http://%s/", listener.Addr())
+	version := cfg.Version
+	if version == "" {
+		version = "dev"
+	}
+	_, _ = fmt.Fprintf(output, "YTGrab %s listening on %s\nPress Ctrl+C to stop.\n", version, url)
+	if cfg.OpenBrowser {
+		if err := openBrowser(url); err != nil {
+			_, _ = fmt.Fprintf(output, "Could not open a browser (%v); open %s manually.\n", err, url)
+		}
+	}
 	served := make(chan error, 1)
 	go func() { served <- server.Serve(listener) }()
 
