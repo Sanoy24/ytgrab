@@ -5,7 +5,7 @@ YTGrab downloads YouTube videos and audio you are allowed to save, from a page i
 ## Install (Windows release)
 
 1. Unzip `ytgrab-<version>-windows-amd64.zip` into a folder you keep, for example `C:\Apps\YTGrab`. Don't run it from inside the zip.
-2. Double-click **Start YTGrab.cmd**. The first time, it runs a quick check. If something is missing, it runs setup, which asks before each step:
+2. Double-click **Start YTGrab.cmd**. If Windows shows "Windows protected your PC", click **More info → Run anyway** (the app isn't code-signed). The first time, it runs a quick check. If something is missing, it runs setup, which asks before each step:
    - **yt-dlp**: downloaded from its official GitHub release and installed only if its checksum matches. A checked copy is already in the `tools` folder.
    - **FFmpeg** (merges video and audio, converts MP3) and **Deno** (runs YouTube's JavaScript checks): installed with `winget`.
 3. Your browser opens `http://127.0.0.1:8787/`. Choose where downloads should go: **Choose folder…** opens the normal Windows folder window, or use the suggested `Downloads\ytgrab`.
@@ -26,9 +26,37 @@ From the YTGrab folder:
 
 The header pill in the page shows **Tools ready** when everything is found. Click it for each tool's version and advice.
 
-### Linux and macOS
+### macOS
 
-Release archives for Linux and macOS contain only the `ytgrab` program. Make it executable with `chmod +x ytgrab`, then run `./ytgrab setup`: it downloads the official yt-dlp into a `tools` folder next to the program, installs FFmpeg and Deno with Homebrew on macOS, and prints the package-manager commands on Linux (they need `sudo`). Start the app with `./ytgrab --open`. The folder window uses `choose folder` on macOS and `zenity` or `kdialog` on Linux; without either, type the folder path.
+Download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon, M1 and later) or `-darwin-amd64` (Intel), then in Terminal:
+
+```sh
+mkdir -p ~/Applications/YTGrab
+tar -xzf ~/Downloads/ytgrab-*-darwin-arm64.tar.gz -C ~/Applications/YTGrab
+cd ~/Applications/YTGrab
+chmod +x ytgrab
+xattr -c ytgrab        # the app isn't signed; this stops macOS blocking it
+./ytgrab setup         # installs yt-dlp, plus FFmpeg and Deno with Homebrew (asks first)
+./ytgrab --open
+```
+
+Setup installs FFmpeg and Deno with [Homebrew](https://brew.sh); without Homebrew it tells you what to install. Choose folder uses the standard macOS folder window. Next time, run `~/Applications/YTGrab/ytgrab --open`.
+
+### Linux
+
+Download `ytgrab-<version>-linux-amd64.tar.gz`, then:
+
+```sh
+mkdir -p ~/.local/share/ytgrab
+tar -xzf ~/Downloads/ytgrab-*-linux-amd64.tar.gz -C ~/.local/share/ytgrab
+cd ~/.local/share/ytgrab
+chmod +x ytgrab
+./ytgrab setup                        # installs yt-dlp and lists anything else to install
+sudo apt install ffmpeg zenity unzip  # Debian/Ubuntu
+curl -fsSL https://deno.land/install.sh | sh
+```
+
+On Fedora use `sudo dnf install ffmpeg zenity unzip` (FFmpeg comes from RPM Fusion); on Arch, `sudo pacman -S ffmpeg zenity unzip`. Open a new terminal so Deno is on your `PATH`, then run `~/.local/share/ytgrab/ytgrab --open`. `zenity` (or `kdialog` on KDE) provides the folder window; without it, type the folder path. For other processor types, install with Go instead: `go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest`.
 
 ## Download a video
 
@@ -73,6 +101,8 @@ Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and 
 
 | What you see | What to do |
 | --- | --- |
+| "Windows protected your PC" when starting | The app isn't code-signed. Click **More info → Run anyway**. |
+| macOS says "ytgrab" can't be opened or the developer can't be verified | Run `xattr -c ytgrab` in its folder, or open **System Settings → Privacy & Security** and click **Open Anyway**. |
 | **Tools missing** in the header | Run `ytgrab.exe setup` in the YTGrab folder (or double-click **Start YTGrab.cmd** again), then reload the page. |
 | The folder window doesn't appear | It may be behind other windows; check the taskbar. Without a folder window (some Linux desktops), use **Type a path**. |
 | "YouTube is limiting requests from this network. Wait a while, then retry." | YouTube is rate-limiting or asking for a bot check. Wait (often 15–60 minutes) and press Retry. Avoid checking many links quickly. Signed-in downloads (cookies) are not supported in this version. |
