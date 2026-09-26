@@ -43,7 +43,7 @@ web/static/              Static, client-rendered UI (HTML, CSS, ES modules; no b
 internal/store/sqlite/migrations/ Versioned SQLite schema embedded in the Go binary
 ```
 
-The UI is a static page that renders from the JSON API, so the Go server only needs to embed and serve `web/static/`; server-side templates are not planned. Proposed JSON shapes for integration are in `web/README.md`.
+The UI is a static page that renders from the JSON API, so the Go server only needs to embed and serve `web/static/`; server-side templates are not planned. Current JSON shapes are in `web/README.md`.
 
 Keep the initial implementation simple. Add a package only when its boundary is useful; this layout is a target, not a requirement to create empty directories.
 
@@ -56,7 +56,7 @@ Keep the initial implementation simple. Add a package only when its boundary is 
 5. `yt-dlp` writes to the configured output directory. It invokes `ffmpeg` when separate streams need merging.
 6. The worker records the final path, outcome, and any actionable error. On restart, an interrupted active job becomes `failed` with an `interrupted` error and can be retried using its preserved partial files; it is never left permanently "running."
 
-The UI inspects formats as soon as a valid video link is entered, so the user can pick an exact resolution or audio stream. Inspection never blocks a download: the quick presets stay usable while it runs and remain the fallback when it fails. The server should cache inspection results briefly per video ID and rate limit inspection, because each one is an extra YouTube request. A job created from an inspected format sends only a format ID and kind; the server validates the ID and builds the `yt-dlp` format selector itself.
+The UI inspects formats as soon as a valid video link is entered, so the user can pick an exact resolution or audio stream. Inspection never blocks a download: the quick presets stay usable while it runs and remain the fallback when it fails. The server keeps up to 64 filtered inspection results for ten minutes, serializes inspection, and spaces launches by at least two seconds, because each one is an extra YouTube request. A job created from an inspected format sends only a format ID and kind; the server requires a matching cached inspection and builds the `yt-dlp` format selector itself. An expired inspection requires the user to check formats again.
 
 ## Job model and persistence
 

@@ -12,7 +12,7 @@ import (
 
 const downloadsKey = "downloads_dir"
 
-var ErrInvalidDirectory = errors.New("choose an existing, writable absolute folder")
+var ErrInvalidDirectory = errors.New("Choose an existing, writable absolute folder.")
 
 type Store interface {
 	GetSetting(context.Context, string) (string, bool, error)

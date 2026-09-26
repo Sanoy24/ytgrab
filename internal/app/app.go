@@ -48,9 +48,9 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 
 func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController, settings ...api.Settings) error {
 	server := &http.Server{
-		Handler: api.NewHandler(func(requestCtx context.Context) deps.Report {
+		Handler: api.NewHandlerWithInspector(func(requestCtx context.Context) deps.Report {
 			return deps.Check(requestCtx, cfg)
-		}, store, controller, settings...),
+		}, store, controller, ytdlp.NewInspector(cfg), settings...),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}

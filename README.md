@@ -2,7 +2,7 @@
 
 A local application for downloading videos and audio you are authorized to save. Go provides the browser interface, durable queue, and process control; `yt-dlp` handles downloads and `ffmpeg` handles merging and conversion.
 
-The app is runnable, but it is still under development. Single-video downloads, five presets, cancellation, retries, progress, persistent history, and output-folder settings are implemented. Format inspection, playlists, packaging, and cross-platform verification remain in progress.
+The app is runnable, but it is still under development. Single-video downloads, five presets, on-demand format inspection and selection, cancellation, retries, progress, persistent history, and output-folder settings are implemented. Playlists, packaging, and cross-platform verification remain in progress.
 
 ## Run locally
 

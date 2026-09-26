@@ -49,6 +49,9 @@ type Downloader struct {
 }
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
+	if job.Format != nil && !job.Format.Valid() {
+		return Result{}, &Error{Code: "invalid_format", Message: "Choose a format from a recent inspection."}
+	}
 	cfg := downloader.Config
 	if downloader.DownloadsDir != nil {
 		cfg.DownloadsDir = downloader.DownloadsDir()
@@ -162,7 +165,18 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"-P", cfg.DownloadsDir,
 		"-o", "%(title).150B [%(id)s].%(ext)s",
 	}
-	switch job.Preset {
+	if job.Format != nil {
+		if job.Format.Kind == "video" {
+			args = append(args, "-f", job.Format.ID+"+ba/"+job.Format.ID, "--merge-output-format", "mp4/mkv")
+		} else {
+			args = append(args, "-f", job.Format.ID)
+		}
+		return append(args, "--", job.URL)
+	}
+	if job.Preset == nil {
+		return append(args, "--", job.URL)
+	}
+	switch *job.Preset {
 	case domain.VideoBest:
 		args = append(args, "-f", "bv*+ba/b", "--merge-output-format", "mp4/mkv")
 	case domain.Video1080:
@@ -246,6 +260,8 @@ func confirmOutput(directory string, reportedPath string) (string, error) {
 func classifyFailure(stderr string) error {
 	lower := strings.ToLower(stderr)
 	switch {
+	case strings.Contains(lower, "http error 429"), strings.Contains(lower, "sign in to confirm you're not a bot"), strings.Contains(lower, "sign in to confirm you’re not a bot"), strings.Contains(lower, "too many requests"):
+		return &Error{Code: "blocked", Message: "YouTube is limiting requests from this network. Wait a while, then retry."}
 	case strings.Contains(lower, "private video"), strings.Contains(lower, "video unavailable"), strings.Contains(lower, "not available"):
 		return &Error{Code: "video_unavailable", Message: "This video is unavailable or private."}
 	case strings.Contains(lower, "ffmpeg not found"), strings.Contains(lower, "ffprobe not found"):

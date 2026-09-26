@@ -27,7 +27,7 @@ type JobController interface {
 	Cancel(string)
 }
 
-func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController) {
+func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, inspector Inspector) {
 	mux.HandleFunc("GET /api/jobs", func(w http.ResponseWriter, r *http.Request) {
 		jobs, err := store.List(r.Context(), 200)
 		if err != nil {
@@ -38,8 +38,12 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController) 
 	})
 	mux.HandleFunc("POST /api/jobs", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
-			URL    string        `json:"url"`
-			Preset domain.Preset `json:"preset"`
+			URL    string         `json:"url"`
+			Preset *domain.Preset `json:"preset"`
+			Format *struct {
+				Kind string `json:"kind"`
+				ID   string `json:"id"`
+			} `json:"format"`
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		decoder := json.NewDecoder(r.Body)
@@ -52,13 +56,47 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController) 
 			writeError(w, http.StatusBadRequest, "invalid_request", "Send exactly one JSON object.")
 			return
 		}
-		job, err := domain.NewJob(input.URL, input.Preset)
+		if (input.Preset == nil) == (input.Format == nil) {
+			writeError(w, http.StatusBadRequest, "invalid_request", "Choose one preset or inspected format.")
+			return
+		}
+		var job domain.Job
+		var err error
+		if input.Format != nil {
+			_, videoID, parseErr := domain.ParseVideoURL(input.URL)
+			if parseErr != nil {
+				writeError(w, http.StatusBadRequest, "invalid_url", parseErr.Error())
+				return
+			}
+			selection := domain.FormatSelection{Kind: input.Format.Kind, ID: input.Format.ID}
+			if !selection.Valid() {
+				writeError(w, http.StatusBadRequest, "invalid_format", domain.ErrInvalidFormat.Error())
+				return
+			}
+			if inspector == nil {
+				writeError(w, http.StatusServiceUnavailable, "dependency_missing", "Format inspection is unavailable.")
+				return
+			}
+			var found bool
+			selection, found = inspector.Select(videoID, selection.Kind, selection.ID)
+			if !found {
+				writeError(w, http.StatusConflict, "inspection_required", "Check available formats again before adding this download.")
+				return
+			}
+			job, err = domain.NewFormatJob(input.URL, selection)
+		} else {
+			job, err = domain.NewJob(input.URL, *input.Preset)
+		}
 		if errors.Is(err, domain.ErrInvalidURL) {
 			writeError(w, http.StatusBadRequest, "invalid_url", err.Error())
 			return
 		}
 		if errors.Is(err, domain.ErrInvalidPreset) {
 			writeError(w, http.StatusBadRequest, "invalid_preset", err.Error())
+			return
+		}
+		if errors.Is(err, domain.ErrInvalidFormat) {
+			writeError(w, http.StatusBadRequest, "invalid_format", err.Error())
 			return
 		}
 		if err != nil {

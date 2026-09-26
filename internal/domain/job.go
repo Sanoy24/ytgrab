@@ -34,7 +34,19 @@ const (
 
 var ErrInvalidURL = errors.New("enter a valid single YouTube video URL")
 var ErrInvalidPreset = errors.New("choose a supported download preset")
+var ErrInvalidFormat = errors.New("Choose a format from a recent inspection.")
 var videoIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
+var formatIDPattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,32}$`)
+
+type FormatSelection struct {
+	Kind  string `json:"kind"`
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+func (format FormatSelection) Valid() bool {
+	return (format.Kind == "video" || format.Kind == "audio") && formatIDPattern.MatchString(format.ID)
+}
 
 type Progress struct {
 	DownloadedBytes int64    `json:"downloaded_bytes"`
@@ -49,24 +61,46 @@ type JobError struct {
 }
 
 type Job struct {
-	ID         string    `json:"id"`
-	URL        string    `json:"url"`
-	VideoID    string    `json:"video_id"`
-	Title      *string   `json:"title"`
-	Preset     Preset    `json:"preset"`
-	State      State     `json:"state"`
-	Attempt    int       `json:"attempt"`
-	Progress   *Progress `json:"progress"`
-	OutputPath *string   `json:"output_path"`
-	Error      *JobError `json:"error"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         string           `json:"id"`
+	URL        string           `json:"url"`
+	VideoID    string           `json:"video_id"`
+	Title      *string          `json:"title"`
+	Preset     *Preset          `json:"preset"`
+	Format     *FormatSelection `json:"format"`
+	State      State            `json:"state"`
+	Attempt    int              `json:"attempt"`
+	Progress   *Progress        `json:"progress"`
+	OutputPath *string          `json:"output_path"`
+	Error      *JobError        `json:"error"`
+	CreatedAt  time.Time        `json:"created_at"`
+	UpdatedAt  time.Time        `json:"updated_at"`
 }
 
 func NewJob(rawURL string, preset Preset) (Job, error) {
 	if !preset.Valid() {
 		return Job{}, ErrInvalidPreset
 	}
+	job, err := newBaseJob(rawURL)
+	if err != nil {
+		return Job{}, err
+	}
+	job.Preset = &preset
+	return job, nil
+}
+
+func NewFormatJob(rawURL string, format FormatSelection) (Job, error) {
+	if !format.Valid() || format.Label == "" {
+		return Job{}, ErrInvalidFormat
+	}
+	job, err := newBaseJob(rawURL)
+	if err != nil {
+		return Job{}, err
+	}
+	job.Format = &format
+	return job, nil
+}
+
+func newBaseJob(rawURL string) (Job, error) {
 	url, videoID, err := ParseVideoURL(rawURL)
 	if err != nil {
 		return Job{}, err
@@ -80,7 +114,6 @@ func NewJob(rawURL string, preset Preset) (Job, error) {
 		ID:        "job_" + hex.EncodeToString(bytes),
 		URL:       url,
 		VideoID:   videoID,
-		Preset:    preset,
 		State:     Queued,
 		Attempt:   1,
 		CreatedAt: now,

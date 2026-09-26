@@ -26,6 +26,7 @@ This file is the source of truth for project progress. Update it after every ite
 
 ### 3. Download engine
 
+- [x] ~~Classify YouTube bot checks and rate limiting with an actionable `blocked` error.~~
 - [x] ~~Integrate `yt-dlp` for a single video with safe arguments and confirmed output paths.~~
 - [x] ~~Parse structured progress and expose it through SSE.~~
 - [x] ~~Implement process-tree cancellation and verify it on Windows.~~
@@ -35,16 +36,17 @@ This file is the source of truth for project progress. Update it after every ite
 
 ### 4. Usable local interface
 
+- [x] ~~Return sentence-case output-folder validation errors.~~
 - [x] ~~Build URL submission form with client-side validation and video/audio preset choice (UI against fixtures).~~
 - [ ] Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.
 - [x] ~~Add persisted output-folder settings, API, and page controls.~~
 - [ ] Verify output-folder controls in a live browser session.
-- [ ] Add output-folder settings.
 - [x] ~~Add the output-folder setting to the UI against `GET`/`PUT /api/settings`.~~
 - [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
 - [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
 - [x] ~~Build the format picker UI: inspect on paste, grouped video/audio choices, preset fallback (against fixtures).~~
-- [ ] Add `GET /api/inspect` and format-based job creation on the server, then verify the picker end to end.
+- [x] ~~Add `GET /api/inspect` and server-validated format-based job creation.~~
+- [ ] Verify the format picker end to end in a live browser.
 - [ ] Add controlled playlist downloads.
 
 ### 5. Release readiness
@@ -55,6 +57,20 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Inspection and exact-format backend
+
+- Result: Added bounded, serialized and briefly cached yt-dlp inspection for one validated video URL. The API returns filtered video-only/audio-only formats and accepts a format job only when its safe ID and kind match a recent server-side inspection. The server constructs the final yt-dlp selector; jobs persist `preset: null` and a server-made format label.
+- Verification: `go test ./... -count=1`, `go vet ./...`, and `git diff --check` pass. Tests cover parser, selector, rejected free-form/uninspected IDs, API shape, and blocked errors. The opt-in metadata-only integration test inspected a real public video and returned 12 video-only and 10 audio-only formats.
+- Verification added: The opt-in selected-format integration test inspected the same public video, selected M4A format `139-drc`, and downloaded a confirmed 117,454-byte file.
+- Limitation: Live browser picker interaction remains unverified. Controlled playlist downloads remain separate. Reconciled a duplicate unfinished output-folder checklist line left by merged progress logs.
+- Next: Verify selected-format downloading through the API and run a browser picker pass when a browser is available.
+
+### 2026-09-26 — README error-contract fixes
+
+- Result: Classified yt-dlp HTTP 429 and bot-confirmation failures as `blocked`, with an actionable wait-and-retry message. Output-folder validation now returns a sentence-case error for direct UI display.
+- Verification: Targeted settings and yt-dlp tests pass, including bot-check classification tests.
+- Next: Implement bounded on-demand inspection and validate exact format IDs before queuing format-specific jobs.
 
 ### 2026-09-26 — Output-folder API and page controls
 

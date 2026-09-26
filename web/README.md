@@ -91,16 +91,16 @@ The tools panel lists every dependency with a short version (`ffmpeg version 8.0
 
 The New download panel shows the current output folder from `GET /api/settings` (`{ "downloads_dir": "..." }`) with a Change button. Saving sends `PUT /api/settings` with the same field and shows the server's `invalid_directory` message under the input. The section stays hidden if the settings route is missing or the server is unreachable. Fixture mode keeps the folder in memory and only checks that the path looks absolute.
 
-## Backend proposals from UI testing
+## Backend behavior from UI testing
 
-- **Classify YouTube bot checks.** When YouTube answers `HTTP Error 429` or "Sign in to confirm you're not a bot", yt-dlp fails and the job currently gets `download_failed` with "Check that yt-dlp is up to date", which misleads. A distinct code (for example `blocked`) with a message such as "YouTube is limiting requests from this network. Wait a while, then retry." would be accurate. Cookie support stays deferred.
-- **Sentence-case validation messages.** `invalid_directory` returns the raw Go error text ("choose an existing, writable absolute folder"); the UI shows server messages verbatim.
+- YouTube HTTP 429 and bot-confirmation failures return `blocked` with a wait-and-retry message. Cookie support stays deferred.
+- `invalid_directory` returns a sentence-case message because the UI displays server errors verbatim.
 
 ## Format picker
 
 When a valid video link is pasted (or typed, after a 500 ms pause), the UI calls `GET /api/inspect` and replaces the quick presets with the video's real formats: one video row per resolution and frame rate (H.264/MP4 preferred when several codecs exist, size estimated with the best M4A audio), every distinct audio stream, and an "MP3 · converted" row. A preset chosen before the list arrives carries over to the closest real format. Results are cached per link for the page session; stale requests are aborted. On failure the presets stay, with the reason and a Try again button (not offered for `video_unavailable`). A 404 from the route hides the feature silently. Grouping logic lives in `static/formats.js`.
 
-Proposed `GET /api/inspect?url=...` response (field names follow yt-dlp's info JSON so the server can pass them through after filtering):
+`GET /api/inspect?url=...` response (field names follow yt-dlp's info JSON, filtered to video-only and audio-only streams):
 
 ```jsonc
 {
@@ -127,7 +127,7 @@ Creating a job from a picked format sends `format` instead of `preset`:
 { "url": "https://…", "format": { "kind": "audio", "id": "140" } }  // server downloads "140" as-is
 ```
 
-The server must validate `id` (for example `^[0-9A-Za-z_-]{1,32}$`, ideally also against its cached inspection) and build the selector itself; the raw value never becomes a free-form yt-dlp argument. The job then returns `"preset": null` and `"format": { "kind", "id", "label" }`, where `label` is a server-made display string such as `"Video · 1080p"`; the UI shows it in job rows.
+The server validates `id` with `^[0-9A-Za-z_-]{1,32}$` and against a recent cached inspection, then builds the selector itself; the raw value never becomes a free-form yt-dlp argument. The job returns `"preset": null` and `"format": { "kind", "id", "label" }`, where `label` is a server-made display string such as `"Video · 1080p"`; the UI shows it in job rows. An expired inspection returns `inspection_required` so the page can check again.
 
 
 

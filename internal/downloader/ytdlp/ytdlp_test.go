@@ -55,3 +55,12 @@ func TestConfirmOutputStaysInDownloadDirectory(t *testing.T) {
 		t.Fatal("output outside download directory was accepted")
 	}
 }
+
+func TestClassifyBotCheck(t *testing.T) {
+	for _, message := range []string{"HTTP Error 429: Too Many Requests", "Sign in to confirm you're not a bot"} {
+		err, ok := classifyFailure(message).(*Error)
+		if !ok || err.Code != "blocked" {
+			t.Fatalf("classifyFailure(%q) = %v", message, err)
+		}
+	}
+}

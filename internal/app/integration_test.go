@@ -107,3 +107,62 @@ func TestIntegrationDownload(t *testing.T) {
 	}
 	t.Fatalf("download did not finish; last state: %s", job.State)
 }
+
+func TestIntegrationInspect(t *testing.T) {
+	if os.Getenv("YTGRAB_INTEGRATION") != "1" {
+		t.Skip("set YTGRAB_INTEGRATION=1 to inspect a real video")
+	}
+	toolsDir, err := filepath.Abs(filepath.Join("..", "..", "tools"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inspector := ytdlp.NewInspector(config.Config{ToolsDir: toolsDir})
+	result, err := inspector.Inspect(context.Background(), "https://www.youtube.com/watch?v=jNQXAC9IVRw")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.VideoID != "jNQXAC9IVRw" || len(result.Audio) == 0 {
+		t.Fatalf("inspection = %+v", result)
+	}
+	t.Logf("inspected %q: %d video, %d audio formats", result.Title, len(result.Video), len(result.Audio))
+}
+
+func TestIntegrationSelectedFormat(t *testing.T) {
+	if os.Getenv("YTGRAB_INTEGRATION") != "1" {
+		t.Skip("set YTGRAB_INTEGRATION=1 to download a selected format")
+	}
+	toolsDir, err := filepath.Abs(filepath.Join("..", "..", "tools"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Config{ToolsDir: toolsDir, DownloadsDir: t.TempDir()}
+	url := "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+	inspector := ytdlp.NewInspector(cfg)
+	result, err := inspector.Inspect(context.Background(), url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var selection domain.FormatSelection
+	for _, audio := range result.Audio {
+		if audio.Ext == "m4a" {
+			selection, _ = inspector.Select(result.VideoID, "audio", audio.ID)
+			break
+		}
+	}
+	if selection.ID == "" {
+		t.Fatal("inspection returned no M4A audio stream")
+	}
+	job, err := domain.NewFormatJob(url, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	downloaded, err := (ytdlp.Downloader{Config: cfg}).Download(context.Background(), job, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(downloaded.OutputPath)
+	if err != nil || info.Size() == 0 {
+		t.Fatalf("selected-format output = %v, %v", info, err)
+	}
+	t.Logf("downloaded selected format %s (%d bytes)", selection.ID, info.Size())
+}
