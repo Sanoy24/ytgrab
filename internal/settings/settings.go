@@ -23,9 +23,13 @@ type Manager struct {
 	mu           sync.RWMutex
 	store        Store
 	downloadsDir string
+	defaultDir   string
+	configured   bool
 }
 
-func New(ctx context.Context, store Store, defaultDirectory string) (*Manager, error) {
+// New loads the saved output folder. Until the user chooses one (or sets
+// YTGRAB_DOWNLOAD_DIR, reported as explicit), the page asks for it before downloading.
+func New(ctx context.Context, store Store, defaultDirectory string, explicit bool) (*Manager, error) {
 	directory, found, err := store.GetSetting(ctx, downloadsKey)
 	if err != nil {
 		return nil, fmt.Errorf("load output folder: %w", err)
@@ -33,7 +37,27 @@ func New(ctx context.Context, store Store, defaultDirectory string) (*Manager, e
 	if !found {
 		directory = defaultDirectory
 	}
-	return &Manager{store: store, downloadsDir: directory}, nil
+	return &Manager{store: store, downloadsDir: directory, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// Configured reports whether an output folder has been chosen.
+func (manager *Manager) Configured() bool {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.configured
+}
+
+// DefaultDir is the suggested folder offered on first run.
+func (manager *Manager) DefaultDir() string {
+	return manager.defaultDir
+}
+
+// UseDefault creates the suggested folder if needed and saves it as the choice.
+func (manager *Manager) UseDefault(ctx context.Context) error {
+	if err := os.MkdirAll(manager.defaultDir, 0o755); err != nil {
+		return ErrInvalidDirectory
+	}
+	return manager.SetDownloadsDir(ctx, manager.defaultDir)
 }
 
 func (manager *Manager) DownloadsDir() string {
@@ -68,5 +92,6 @@ func (manager *Manager) SetDownloadsDir(ctx context.Context, directory string) e
 		return fmt.Errorf("save output folder: %w", err)
 	}
 	manager.downloadsDir = directory
+	manager.configured = true
 	return nil
 }

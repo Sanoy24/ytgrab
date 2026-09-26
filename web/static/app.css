@@ -473,3 +473,17 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .playlist-items label span { flex: 1; min-width: 0; }
 .playlist-items small { color: var(--muted); font-variant-numeric: tabular-nums; }
 .playlist-items input, .playlist-all input { accent-color: var(--accent); }
+
+/* First-run folder choice */
+.setup-folder {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.setup-folder .hint { margin: 2px 0 10px; }
+.setup-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.setup-actions .btn { white-space: normal; text-align: left; }
+.setup-default-path { font: 0.8rem ui-monospace, "Cascadia Mono", Consolas, monospace; font-weight: 400; overflow-wrap: anywhere; }
+.btn.is-waiting { cursor: progress; }

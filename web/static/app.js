@@ -481,6 +481,7 @@ function setUrlError(message) {
 
 async function onSubmit(e) {
   e.preventDefault();
+  if (!requireFolder()) return;
   if (playlist) {
     if (playlist.list) submitPlaylist();
     return;
@@ -835,31 +836,103 @@ async function submitPlaylist() {
 
 // ---------- output folder ----------
 
-let downloadsDir = '';
+// settings: { downloads_dir, configured, default_dir, can_pick }. On first run nothing is
+// downloaded until a folder is chosen; afterwards "Change…" opens the same folder window.
+let settings = null;
+
+function applySettings(next) {
+  settings = next;
+  const configured = next.configured !== false;
+  $('#setup-folder').hidden = configured;
+  $('#setup-pick').hidden = !next.can_pick;
+  $('#setup-default-path').textContent = next.default_dir || 'the default folder';
+  $('#setup-default').hidden = !next.default_dir;
+  $('#dir-path').textContent = next.downloads_dir;
+  $('#dir-type').hidden = !next.can_pick;
+  $('#output-dir').hidden = !configured && $('#dir-form').hidden;
+  if (configured) setSetupError('');
+}
 
 // The section stays hidden when the server has no settings route or can't be reached;
 // the health banner already reports an unreachable server.
 async function loadSettings() {
   try {
-    const s = await client.getSettings();
-    downloadsDir = s.downloads_dir;
-    $('#dir-path').textContent = downloadsDir;
-    $('#output-dir').hidden = false;
+    applySettings(await client.getSettings());
   } catch {
     $('#output-dir').hidden = true;
+    $('#setup-folder').hidden = true;
   }
 }
 
-function setDirEditing(editing) {
-  $('#dir-view').hidden = editing;
+function needsFolder() {
+  return settings && settings.configured === false;
+}
+
+function setSetupError(message) {
+  $('#setup-error').textContent = message;
+  $('#setup-error').hidden = !message;
+}
+
+async function withWaiting(button, label, work) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.classList.add('is-waiting');
+  button.textContent = label;
+  try {
+    return await work();
+  } finally {
+    button.disabled = false;
+    button.classList.remove('is-waiting');
+    button.textContent = original;
+  }
+}
+
+async function pickFolder(button) {
+  setSetupError('');
+  try {
+    const result = await withWaiting(button, 'Waiting for folder window…', () => client.pickFolder());
+    if (result.cancelled) return;
+    applySettings(result);
+    setDirEditing(false, false);
+    toast(`Downloads will be saved to ${result.downloads_dir}`);
+  } catch (err) {
+    if (err.code === 'picker_unavailable' || err.code === 'picker_failed') {
+      applySettings({ ...settings, can_pick: false });
+      setDirEditing(true);
+      setDirError(err.message);
+    } else if (needsFolder()) {
+      setSetupError(err.message);
+    } else {
+      toast(err.message, true);
+    }
+  }
+}
+
+async function useDefaultFolder(button) {
+  setSetupError('');
+  try {
+    const result = await withWaiting(button, 'Saving…', () => client.useDefaultFolder());
+    applySettings(result);
+    toast(`Downloads will be saved to ${result.downloads_dir}`);
+  } catch (err) {
+    setSetupError(err.message);
+  }
+}
+
+function setDirEditing(editing, focus = true) {
+  $('#output-dir').hidden = false;
+  $('#dir-view').hidden = editing || needsFolder();
   $('#dir-form').hidden = !editing;
   setDirError('');
   if (editing) {
-    $('#dir-input').value = downloadsDir;
-    $('#dir-input').select();
-    $('#dir-input').focus();
+    $('#dir-input').value = needsFolder() ? '' : settings?.downloads_dir || '';
+    if (focus) {
+      $('#dir-input').select();
+      $('#dir-input').focus();
+    }
   } else {
-    $('#dir-edit').focus();
+    $('#output-dir').hidden = needsFolder();
+    if (focus && !needsFolder()) $('#dir-edit').focus();
   }
 }
 
@@ -876,16 +949,14 @@ async function onDirSubmit(e) {
     setDirError('Enter a folder path.');
     return;
   }
-  if (value === downloadsDir) {
+  if (!needsFolder() && value === settings?.downloads_dir) {
     setDirEditing(false);
     return;
   }
   const save = $('#dir-save');
   save.disabled = true;
   try {
-    const s = await client.updateSettings({ downloads_dir: value });
-    downloadsDir = s.downloads_dir;
-    $('#dir-path').textContent = downloadsDir;
+    applySettings(await client.updateSettings({ downloads_dir: value }));
     setDirEditing(false);
     toast('Output folder saved. New downloads will go there.');
   } catch (err) {
@@ -895,10 +966,25 @@ async function onDirSubmit(e) {
   }
 }
 
+// Called before queueing anything: points the user at the folder choice on first run.
+function requireFolder() {
+  if (!needsFolder()) return true;
+  setSetupError('Choose a download folder first.');
+  $('#setup-folder').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  ($('#setup-pick').hidden ? $('#setup-default') : $('#setup-pick')).focus();
+  return false;
+}
+
 function init() {
   $('#fixture-note').hidden = !client.isFixture;
-  $('#dir-edit').addEventListener('click', () => setDirEditing(true));
+  $('#dir-edit').addEventListener('click', (e) =>
+    settings?.can_pick ? pickFolder(e.currentTarget) : setDirEditing(true),
+  );
+  $('#dir-type').addEventListener('click', () => setDirEditing(true));
   $('#dir-cancel').addEventListener('click', () => setDirEditing(false));
+  $('#setup-pick').addEventListener('click', (e) => pickFolder(e.currentTarget));
+  $('#setup-default').addEventListener('click', (e) => useDefaultFolder(e.currentTarget));
+  $('#setup-type').addEventListener('click', () => setDirEditing(true));
   $('#dir-form').addEventListener('submit', onDirSubmit);
   $('#dir-form').addEventListener('keydown', (e) => {
     if (e.key === 'Escape') setDirEditing(false);

@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
+	"os"
+	"strings"
+	"sync"
 
+	"ytgrab/internal/picker"
 	settingspkg "ytgrab/internal/settings"
 )
 
@@ -15,9 +20,43 @@ type Settings interface {
 	SetDownloadsDir(context.Context, string) error
 }
 
+// firstRunSettings is implemented by settings that know whether a folder was chosen.
+type firstRunSettings interface {
+	Configured() bool
+	DefaultDir() string
+	UseDefault(context.Context) error
+}
+
+// FolderPicker is optionally implemented by the settings value to open the operating
+// system's folder window on this computer.
+type FolderPicker interface {
+	Available() bool
+	Pick(ctx context.Context, initial string) (string, error)
+}
+
+func settingsBody(settings Settings) map[string]any {
+	body := map[string]any{"downloads_dir": settings.DownloadsDir(), "configured": true, "can_pick": false}
+	if first, ok := settings.(firstRunSettings); ok {
+		body["configured"] = first.Configured()
+		body["default_dir"] = first.DefaultDir()
+	}
+	if folders, ok := settings.(FolderPicker); ok {
+		body["can_pick"] = folders.Available()
+	}
+	return body
+}
+
+func writeSettingsError(w http.ResponseWriter, err error) {
+	if errors.Is(err, settingspkg.ErrInvalidDirectory) {
+		writeError(w, http.StatusBadRequest, "invalid_directory", err.Error())
+		return
+	}
+	writeError(w, http.StatusInternalServerError, "storage", "Could not save the output folder.")
+}
+
 func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 	mux.HandleFunc("GET /api/settings", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"downloads_dir": settings.DownloadsDir()})
+		writeJSON(w, http.StatusOK, settingsBody(settings))
 	})
 	mux.HandleFunc("PUT /api/settings", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
@@ -35,13 +74,76 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 			return
 		}
 		if err := settings.SetDownloadsDir(r.Context(), input.DownloadsDir); err != nil {
-			if errors.Is(err, settingspkg.ErrInvalidDirectory) {
-				writeError(w, http.StatusBadRequest, "invalid_directory", err.Error())
-				return
-			}
-			writeError(w, http.StatusInternalServerError, "storage", "Could not save the output folder.")
+			writeSettingsError(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]string{"downloads_dir": settings.DownloadsDir()})
+		writeJSON(w, http.StatusOK, settingsBody(settings))
+	})
+	if first, ok := settings.(firstRunSettings); ok {
+		mux.HandleFunc("POST /api/settings/use-default", func(w http.ResponseWriter, r *http.Request) {
+			if err := first.UseDefault(r.Context()); err != nil {
+				writeSettingsError(w, err)
+				return
+			}
+			writeJSON(w, http.StatusOK, settingsBody(settings))
+		})
+	}
+	folders, ok := settings.(FolderPicker)
+	if !ok {
+		return
+	}
+	var picking sync.Mutex
+	mux.HandleFunc("POST /api/settings/pick-folder", func(w http.ResponseWriter, r *http.Request) {
+		if !picking.TryLock() {
+			writeError(w, http.StatusConflict, "picker_busy", "A folder window is already open. Look for it on your desktop.")
+			return
+		}
+		defer picking.Unlock()
+		path, err := folders.Pick(r.Context(), initialFolder(settings))
+		switch {
+		case errors.Is(err, picker.ErrCancelled):
+			body := settingsBody(settings)
+			body["cancelled"] = true
+			writeJSON(w, http.StatusOK, body)
+		case errors.Is(err, picker.ErrUnavailable):
+			writeError(w, http.StatusNotImplemented, "picker_unavailable", "No folder window is available here. Type the folder path instead.")
+		case err != nil:
+			if r.Context().Err() == nil {
+				writeError(w, http.StatusInternalServerError, "picker_failed", "The folder window could not be opened. Type the folder path instead.")
+			}
+		default:
+			if err := settings.SetDownloadsDir(r.Context(), path); err != nil {
+				writeSettingsError(w, err)
+				return
+			}
+			writeJSON(w, http.StatusOK, settingsBody(settings))
+		}
+	})
+}
+
+// initialFolder opens the window at the current folder, or the user's home until it exists.
+func initialFolder(settings Settings) string {
+	if info, err := os.Stat(settings.DownloadsDir()); err == nil && info.IsDir() {
+		return settings.DownloadsDir()
+	}
+	home, _ := os.UserHomeDir()
+	return home
+}
+
+// RequireLoopbackHost rejects requests whose Host is not a loopback name. A DNS-rebinding
+// page would otherwise reach this server as "same-origin" under its own host name.
+func RequireLoopbackHost(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		host = strings.Trim(host, "[]")
+		ip := net.ParseIP(host)
+		if !strings.EqualFold(host, "localhost") && (ip == nil || !ip.IsLoopback()) {
+			writeError(w, http.StatusForbidden, "invalid_host", "Open YTGrab at http://127.0.0.1 on this computer.")
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }

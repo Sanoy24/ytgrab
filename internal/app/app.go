@@ -14,6 +14,7 @@ import (
 	"ytgrab/internal/app/deps"
 	"ytgrab/internal/config"
 	"ytgrab/internal/downloader/ytdlp"
+	"ytgrab/internal/picker"
 	"ytgrab/internal/queue"
 	"ytgrab/internal/settings"
 	sqlitestore "ytgrab/internal/store/sqlite"
@@ -32,7 +33,7 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	if _, err := store.Recover(ctx); err != nil {
 		return fmt.Errorf("recover interrupted jobs: %w", err)
 	}
-	appSettings, err := settings.New(ctx, store, cfg.DownloadsDir)
+	appSettings, err := settings.New(ctx, store, cfg.DownloadsDir, cfg.DownloadsDirSet)
 	if err != nil {
 		return err
 	}
@@ -43,14 +44,20 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", cfg.ListenAddress, err)
 	}
-	return serve(ctx, cfg, output, listener, store, jobQueue, appSettings)
+	return serve(ctx, cfg, output, listener, store, jobQueue, settingsWithPicker{Manager: appSettings, Picker: picker.New()})
+}
+
+// settingsWithPicker adds the desktop folder window to the settings routes.
+type settingsWithPicker struct {
+	*settings.Manager
+	picker.Picker
 }
 
 func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController, settings ...api.Settings) error {
 	server := &http.Server{
-		Handler: api.NewHandlerWithInspector(func(requestCtx context.Context) deps.Report {
+		Handler: api.RequireLoopbackHost(api.NewHandlerWithInspector(func(requestCtx context.Context) deps.Report {
 			return deps.Check(requestCtx, cfg)
-		}, store, controller, ytdlp.NewInspector(cfg), settings...),
+		}, store, controller, ytdlp.NewInspector(cfg), settings...)),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}
