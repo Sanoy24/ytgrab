@@ -41,7 +41,9 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Add the output-folder setting to the UI against `GET`/`PUT /api/settings`.~~
 - [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
 - [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
-- [ ] Add on-demand format inspection and controlled playlist downloads.
+- [x] ~~Build the format picker UI: inspect on paste, grouped video/audio choices, preset fallback (against fixtures).~~
+- [ ] Add `GET /api/inspect` and format-based job creation on the server, then verify the picker end to end.
+- [ ] Add controlled playlist downloads.
 
 ### 5. Release readiness
 
@@ -51,6 +53,13 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Claude: format picker on paste
+
+- Result: On branch `agent/claude-format-picker` (stacked on `agent/claude-post-merge`), pasting or typing a valid video link now fetches its formats and replaces the quick presets with real choices: video rows grouped by resolution and frame rate (H.264/MP4 preferred, sizes estimated with best audio), each audio stream, and MP3 conversion. The previously chosen preset carries over to the closest format; results are cached per link; stale requests are aborted; failures keep the presets with the reason and Try again. Jobs created from a format show its label. Added `web/static/formats.js`, an inspection fixture modeled on a real YouTube format list, a `blocked` fixture scenario, and an API proposal in `web/README.md`. Updated `ARCHITECTURE.md`: inspection now runs on link entry (user request), never blocks a download, and should be cached and rate limited server-side.
+- Verification: Ran `formats.js` in Node against the fixture: 14 video streams became 10 rows, 5 audio rows, and presets map to 2160p/1080p60/720p60/M4A 130 kbps (MP3 stays a conversion). In Playwright (Chromium) with fixtures: paste showed "Checking available formats…" then the title, duration, and lists; "Up to 1080p" carried over to 1080p 60fps; picking M4A 130 kbps created a job labeled "Audio · M4A 130 kbps" and reset the form; a duplicate link showed the inline error; re-entering a link loaded from cache; an invalid link restored presets; `video_unavailable` and `blocked` showed the reason with presets kept (Try again only for `blocked`); presets ⇄ formats toggle worked. Screenshots at 1200px and 375px (no horizontal overflow, `scrollWidth` 360). `node --check` passes. No Go files were edited.
+- Blocker/notes: Needs Codex to implement `GET /api/inspect` and the `format` job field; until then the live page hides the picker (404) and uses presets. Real inspection is also subject to the YouTube rate limiting seen on this network.
+- Next: Agree the inspect/format contract with Codex, then verify the picker against the Go server with a real video.
 
 ### 2026-09-26 — Claude: merged-app check and output-folder UI
 

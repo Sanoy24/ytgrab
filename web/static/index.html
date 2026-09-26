@@ -41,21 +41,37 @@
 
         <fieldset class="presets">
           <legend class="field-label">Format</legend>
-          <div class="preset-group" role="presentation">
-            <span class="preset-group-title">Video</span>
-            <label class="preset"><input type="radio" name="preset" value="video-best" checked>
-              <span><strong>Best quality</strong><small>Highest available, merged to MP4/MKV</small></span></label>
-            <label class="preset"><input type="radio" name="preset" value="video-1080">
-              <span><strong>Up to 1080p</strong><small>Good balance of size and quality</small></span></label>
-            <label class="preset"><input type="radio" name="preset" value="video-720">
-              <span><strong>Up to 720p</strong><small>Smaller files</small></span></label>
+          <div class="inspect" id="inspect" role="status" aria-live="polite"></div>
+
+          <div id="preset-choices">
+            <div class="preset-group" role="presentation">
+              <span class="preset-group-title">Video</span>
+              <label class="preset"><input type="radio" name="choice" value="preset:video-best" checked>
+                <span><strong>Best quality</strong><small>Highest available, merged to MP4/MKV</small></span></label>
+              <label class="preset"><input type="radio" name="choice" value="preset:video-1080">
+                <span><strong>Up to 1080p</strong><small>Good balance of size and quality</small></span></label>
+              <label class="preset"><input type="radio" name="choice" value="preset:video-720">
+                <span><strong>Up to 720p</strong><small>Smaller files</small></span></label>
+            </div>
+            <div class="preset-group" role="presentation">
+              <span class="preset-group-title">Audio only</span>
+              <label class="preset"><input type="radio" name="choice" value="preset:audio-m4a">
+                <span><strong>M4A</strong><small>Original audio, no re-encoding</small></span></label>
+              <label class="preset"><input type="radio" name="choice" value="preset:audio-mp3">
+                <span><strong>MP3</strong><small>Converted with ffmpeg; uses more CPU</small></span></label>
+            </div>
           </div>
-          <div class="preset-group" role="presentation">
-            <span class="preset-group-title">Audio only</span>
-            <label class="preset"><input type="radio" name="preset" value="audio-m4a">
-              <span><strong>M4A</strong><small>Original audio, no re-encoding</small></span></label>
-            <label class="preset"><input type="radio" name="preset" value="audio-mp3">
-              <span><strong>MP3</strong><small>Converted with ffmpeg; uses more CPU</small></span></label>
+
+          <div id="format-choices" hidden>
+            <div class="preset-group" role="presentation">
+              <span class="preset-group-title">Video <small>(with best audio)</small></span>
+              <div class="format-list" id="video-formats"></div>
+            </div>
+            <div class="preset-group" role="presentation">
+              <span class="preset-group-title">Audio only</span>
+              <div class="format-list" id="audio-formats"></div>
+            </div>
+            <button type="button" class="btn-link" id="use-presets">Use standard presets instead</button>
           </div>
         </fieldset>
 

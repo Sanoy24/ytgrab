@@ -1,6 +1,6 @@
 // Data clients. The UI talks only to this interface:
 //   health(), listJobs(), createJob({url, preset}), cancelJob(id), retryJob(id), subscribe(onChange),
-//   getSettings(), updateSettings({downloads_dir})
+//   getSettings(), updateSettings({downloads_dir}), inspect(url, {signal})
 // The live HTTP client is the default. Add ?fixture=default|empty|error|degraded|loading
 // to preview UI states without the backend.
 
@@ -18,7 +18,7 @@ export function createClient(params = new URLSearchParams(location.search)) {
   return new HttpClient();
 }
 
-// Scenarios: default | empty | error | degraded | loading
+// Scenarios: default | empty | error | degraded | loading | blocked (format check fails)
 class FixtureClient {
   isFixture = true;
 
@@ -49,7 +49,22 @@ class FixtureClient {
     return structuredClone(this.jobs);
   }
 
-  async createJob({ url, preset }) {
+  async inspect(url, { signal } = {}) {
+    await delay(this.scenario === 'loading' ? 1e9 : 1500, signal);
+    if (this.scenario === 'error')
+      throw new ApiError('unreachable', 'Could not reach the local server.');
+    if (this.scenario === 'blocked') {
+      throw new ApiError(
+        'blocked',
+        'YouTube is limiting requests from this network. Wait a while, then retry.',
+      );
+    }
+    if (url.includes('xxxxxxxxxxx'))
+      throw new ApiError('video_unavailable', 'This video is unavailable or private.');
+    return structuredClone(fx.inspection);
+  }
+
+  async createJob({ url, preset, format }) {
     await delay(400);
     if (this.scenario === 'error')
       throw new ApiError('unreachable', 'Could not reach the local server.');
@@ -62,7 +77,8 @@ class FixtureClient {
       url,
       video_id: null,
       title: null,
-      preset,
+      preset: format ? null : preset,
+      format: format ? { ...format, label: fixtureFormatLabel(format) } : null,
       state: 'queued',
       attempt: 1,
       progress: null,
@@ -189,6 +205,9 @@ class HttpClient {
   createJob(body) {
     return this.request('POST', '/api/jobs', body);
   }
+  inspect(url, { signal } = {}) {
+    return this.request('GET', `/api/inspect?url=${encodeURIComponent(url)}`, undefined, signal);
+  }
   cancelJob(id) {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/cancel`);
   }
@@ -216,15 +235,17 @@ class HttpClient {
     return () => clearTimeout(timer);
   }
 
-  async request(method, path, body) {
+  async request(method, path, body, signal) {
     let res;
     try {
       res = await fetch(path, {
         method,
+        signal,
         headers: body ? { 'Content-Type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
-    } catch {
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
       throw new ApiError(
         'unreachable',
         'Could not reach the local server. Is ytgrab still running?',
@@ -250,4 +271,19 @@ class HttpClient {
 export const isActive = (state) =>
   ['queued', 'inspecting', 'downloading', 'processing'].includes(state);
 
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+const delay = (ms, signal) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener('abort', () => {
+      clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    });
+  });
+
+// The server owns real labels; the fixture derives one from the sample inspection.
+function fixtureFormatLabel({ kind, id }) {
+  const list = kind === 'video' ? fx.inspection.video : fx.inspection.audio;
+  const f = list.find((x) => x.format_id === id);
+  if (!f) return `Format ${id}`;
+  return kind === 'video' ? `Video · ${f.height}p` : `Audio · ${f.ext.toUpperCase()} ${Math.round(f.abr)} kbps`;
+}
