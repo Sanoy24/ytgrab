@@ -13,8 +13,8 @@ This file is the source of truth for project progress. Update it after every ite
 
 ### 1. Application foundation
 
-- [ ] Initialize the Go module, entry point, configuration, and graceful shutdown.
-- [ ] Add dependency discovery and a local health route with actionable diagnostics.
+- [x] ~~Initialize the Go module, entry point, configuration, and graceful shutdown.~~
+- [x] ~~Add dependency discovery and a local health route with actionable diagnostics.~~
 - [ ] Build and preview a static local UI shell in `web/`.
 - [ ] Add an embedded minimal web page served on `127.0.0.1`.
 
@@ -44,6 +44,14 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Codex foundation
+
+- Result: Added the Go module, loopback-only configuration, signal-aware HTTP startup/shutdown, and `/api/system/health` with executable version checks and install guidance. Documented the health response contract.
+- Verification: `go test ./...` passed. A live request to `http://127.0.0.1:8787/api/system/health` returned `degraded` with missing `yt-dlp` guidance and detected FFmpeg, FFprobe, and Node. An integration test requests the health endpoint and verifies context-driven shutdown.
+- Decision: Health remains HTTP 200 while dependencies are missing so the local UI can show diagnostics. Node requires `--js-runtimes node` when the downloader adapter is implemented.
+- Limitation: The PTY interrupt did not terminate the `go run` processes cleanly, so the manual run did not verify OS-signal shutdown. The specific test processes were stopped; context-driven shutdown is covered by the integration test.
+- Next: Hand this branch to the integrator. The static UI shell and its serving integration remain separate tasks.
 
 ### 2026-09-26 — Delegation setup
 

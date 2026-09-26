@@ -101,6 +101,8 @@ These are initial defaults, not performance claims. Measure throughput, CPU, mem
 
 Use bounded request bodies, stable JSON error codes, and context-aware shutdown. A playlist URL should require explicit user confirmation and a maximum item count before creating multiple jobs.
 
+The foundation health route returns `200` with `status` (`ready` or `degraded`), `checked_at`, a `dependencies` array, and a `note` explaining the limit of executable checks. Each dependency includes `name`, `required`, `available`, and an actionable `message`; available tools also include `path` and `version`. `degraded` means a required executable is missing or could not be run, while the local UI remains accessible for diagnostics. The server accepts `YTGRAB_LISTEN_ADDR` (loopback IP and port only, default `127.0.0.1:8787`) and `YTGRAB_TOOLS_DIR` (optional preferred binary directory). Deno is checked first, then Node; when Node is selected, the future downloader adapter must pass `--js-runtimes node` to yt-dlp.
+
 ## Dependency and release strategy
 
 During development, find external binaries in a configured tools directory or `PATH` and report versions and missing capabilities. For packaged releases, distribute or install compatible binaries beside the application with a version manifest and verified checksums. Keep dependency update behavior separate from application updates because YouTube extraction may need more frequent changes.
