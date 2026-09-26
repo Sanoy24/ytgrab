@@ -30,7 +30,7 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Integrate `yt-dlp` for a single video with safe arguments and confirmed output paths.~~
 - [x] ~~Parse structured progress and expose it through SSE.~~
 - [x] ~~Implement process-tree cancellation and verify it on Windows.~~
-- [ ] Verify process-tree cancellation on Unix.
+- [x] ~~Verify process-tree cancellation on Unix.~~
 - [x] ~~Add a bounded worker queue and transient network-error retry handling.~~
 - [x] ~~Verify resume from yt-dlp partial files after interruption and retry.~~
 - [x] ~~Name output files by quality so a second pick of the same video is not reported as already downloaded.~~
@@ -55,12 +55,19 @@ This file is the source of truth for project progress. Update it after every ite
 ### 5. Release readiness
 
 - [x] ~~Test end-to-end downloading, crash recovery, cancellation, and resume on Windows.~~
-- [ ] Verify graceful shutdown (Ctrl+C) with an active download.
+- [x] ~~Verify graceful shutdown (SIGINT) with an active download and an open progress stream (Linux; Windows Ctrl+C uses the same code path).~~
 - [x] ~~Document source-run setup, required external tools, basic usage, and dependency diagnostics.~~
 - [ ] Document packaged installation and broader troubleshooting after release verification.
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Claude: graceful shutdown fix, Unix verification
+
+- Result: **Fixed shutdown hanging on open progress streams:** `server.Shutdown` waited for SSE handlers, which only end when their request context does, so with a browser tab open Ctrl+C took the full 5 s timeout and exited 1 with `shutdown: context deadline exceeded`. Request contexts now derive from a base context cancelled via `RegisterOnShutdown`. Added `internal/app/shutdown_test.go`.
+- Verification: The new test failed before the fix (`serve returned shutdown: context deadline exceeded` after 3 s) and passes after; `go test ./...` and `go vet ./...` pass. In WSL2 Ubuntu (Linux 6.18) with cross-compiled binaries and a fake `yt-dlp` shell script that prints progress and holds a `sleep` child: the fake ran in its own process group with its child, and Cancel left no fake or `sleep` process; the cross-compiled `internal/process` and `internal/queue` test suites pass on Linux; SIGINT with an active download and an open `curl -N` event stream exited 0 in 0.03 s (before the fix: exit 1 after 5.02 s), left no child processes, and after restart the job was `failed`/`interrupted`.
+- Blocker/notes: Windows Ctrl+C was not sent directly (no simple way from this harness); it goes through the same `signal.NotifyContext` path verified on Linux.
+- Next: Packaging script and a verified Windows release zip, then install and troubleshooting docs.
 
 ### 2026-09-26 — Claude: controlled playlist downloads
 
