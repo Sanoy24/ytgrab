@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"ytgrab/internal/domain"
-	"ytgrab/internal/downloader/ytdlp"
+	"github.com/Sanoy24/ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
 )
 
 type Inspector interface {

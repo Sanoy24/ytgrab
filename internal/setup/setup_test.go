@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
 )
 
 func report(available map[string]bool) deps.Report {

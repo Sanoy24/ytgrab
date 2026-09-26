@@ -1,4 +1,4 @@
-module ytgrab
+module github.com/Sanoy24/ytgrab
 
 go 1.25.0
 

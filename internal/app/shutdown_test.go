@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"ytgrab/internal/config"
-	"ytgrab/internal/domain"
-	sqlitestore "ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/domain"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
 // An open progress stream (a browser tab) must not hold shutdown until its timeout.

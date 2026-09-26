@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"ytgrab/internal/config"
-	"ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/domain"
 )
 
 func TestMachineOutputParsing(t *testing.T) {

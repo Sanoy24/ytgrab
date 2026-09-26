@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/domain"
 
 	_ "modernc.org/sqlite"
 )

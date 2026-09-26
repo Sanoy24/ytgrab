@@ -13,10 +13,10 @@ import (
 	"strings"
 	"sync"
 
-	"ytgrab/internal/app/deps"
-	"ytgrab/internal/config"
-	"ytgrab/internal/domain"
-	"ytgrab/internal/process"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/process"
 )
 
 const progressPrefix = "YTGRAB_PROGRESS:"

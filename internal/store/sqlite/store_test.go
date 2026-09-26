@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/domain"
 )
 
 func TestStorePersistenceRecoveryAndRetry(t *testing.T) {

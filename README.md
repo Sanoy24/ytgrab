@@ -1,52 +1,84 @@
-# Local YouTube Downloader
+# YTGrab
 
-A local application for downloading videos and audio you are authorized to save. Go provides the browser interface, durable queue, and process control; `yt-dlp` handles downloads and `ffmpeg` handles merging and conversion.
+A local YouTube downloader with a clean browser interface. Paste a link, pick the exact quality you want, and watch it download — everything runs on your own computer.
 
-Features: single videos with five quick presets or an exact resolution/audio stream picked from the video's real formats; playlists of up to 50 videos with a review list and explicit confirmation; live progress; cancel, retry, and resume from partial files; recovery after the app closes mid-download; persistent history; and a configurable output folder.
+[![CI](https://github.com/Sanoy24/ytgrab/actions/workflows/ci.yml/badge.svg)](https://github.com/Sanoy24/ytgrab/actions/workflows/ci.yml)
+[![Go](https://img.shields.io/github/go-mod/go-version/Sanoy24/ytgrab)](go.mod)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Using a release?** See the [user guide](docs/USER_GUIDE.md) for installation, usage, and troubleshooting.
+![YTGrab showing a download queue with live progress and download history](docs/images/screenshot.png)
 
-## Run locally
+## Features
 
-Install Go 1.25 or newer, `yt-dlp`, `ffmpeg`, and `ffprobe`. A JavaScript runtime such as Node or Deno is also recommended for YouTube extraction. Put the executables on `PATH` or place them in a directory selected with `YTGRAB_TOOLS_DIR`. The health panel reports missing tools.
+- **Pick the real quality.** Paste a link and choose from the video's actual resolutions and audio streams, with sizes — or use a quick preset (best, 1080p, 720p, M4A, MP3).
+- **Playlists, with a review step.** See up to 50 videos, untick what you don't want, and confirm before anything is queued.
+- **Live progress.** Speed, size, and time left for every download, updated as it happens.
+- **Resume instead of restart.** Cancel, retry, or close the app mid-download — a retry continues from the partial file.
+- **Sensible files.** Names include the quality (`Title [id] 1080p.mp4`); H.264 picks are saved as MP4.
+- **Easy setup.** `ytgrab setup` installs everything it needs, asking first. `ytgrab doctor` explains what's missing.
+- **Private by design.** The server listens only on `127.0.0.1` and keeps history in a local SQLite file. No accounts, no telemetry.
 
-From the repository root:
+YTGrab is a single Go program. Downloading is done by [yt-dlp](https://github.com/yt-dlp/yt-dlp) and merging by [FFmpeg](https://ffmpeg.org/).
 
-```powershell
-go run ./cmd/ytgrab
+## Getting started
+
+### Windows
+
+1. Download the latest `ytgrab-<version>-windows-amd64.zip` from [Releases](https://github.com/Sanoy24/ytgrab/releases) and unzip it into a folder you keep.
+2. Double-click **Start YTGrab.cmd**.
+
+The first start checks what's needed and offers to install anything missing (FFmpeg and Deno through `winget`), then opens YTGrab in your browser. Choose a download folder and paste a link.
+
+### macOS and Linux
+
+Download the archive for your platform from [Releases](https://github.com/Sanoy24/ytgrab/releases), or install with Go 1.25+:
+
+```sh
+go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest
 ```
 
-Open `http://127.0.0.1:8787/` and choose a download folder. `go run ./cmd/ytgrab doctor` checks the tools and folders; `go run ./cmd/ytgrab setup` installs what's missing (yt-dlp into `tools/`, FFmpeg and Deno through winget or Homebrew), asking first. The server binds only to loopback. By default, the SQLite database lives in the user configuration directory under `ytgrab`, and completed files go to `Downloads/ytgrab`. Change the output folder in the page to any existing writable absolute folder; this affects jobs that start afterward and persists across restarts. Set `YTGRAB_DATA_DIR` and `YTGRAB_DOWNLOAD_DIR` before starting the app to choose initial locations; a saved output-folder setting takes precedence over `YTGRAB_DOWNLOAD_DIR`. `YTGRAB_LISTEN_ADDR` can select another loopback IP and port.
+Then:
 
-Each job downloads one YouTube video; a playlist becomes one job per confirmed video. The URL is passed as a single argument to `yt-dlp`, normal `.part` files are kept for resume, and media bytes never pass through the app's server. If the app closes mid-download, the job is marked interrupted on the next start and Retry resumes it. Flags: `--open` opens the browser, `--version` prints the version.
-
-## Build a release
-
-Download `yt-dlp.exe` and `SHA2-256SUMS` from the [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) into `tools/`, then:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Version 1.0.0 -AllPlatforms
+```sh
+ytgrab setup    # installs yt-dlp; FFmpeg and Deno via Homebrew, or prints the commands on Linux
+ytgrab --open   # starts YTGrab and opens http://127.0.0.1:8787/
 ```
 
-Archives, `.sha256` files, and per-archive `manifest.json`/`SHA256SUMS` are written to `dist/`. The script runs the tests first (skip with `-SkipTests`) and refuses a `yt-dlp.exe` that doesn't match the official checksum.
+## Usage
 
-## Tests
+| Command | What it does |
+| --- | --- |
+| `ytgrab --open` | Start the app and open it in your browser |
+| `ytgrab doctor` | Check tools, folders, and the port |
+| `ytgrab setup` | Install what's missing, asking before each step (`--yes` to accept all) |
+| `ytgrab setup --update-ytdlp` | Get the latest yt-dlp — the usual fix when YouTube downloads start failing |
+| `ytgrab --version` | Print the version |
 
-To run automated checks:
+Keep the console window open while you use the app; press Ctrl+C to stop it. See the [user guide](docs/USER_GUIDE.md) for settings, environment variables, and troubleshooting.
 
-```powershell
+## How it works
+
+The browser page talks to a small local server. For each download, the server starts yt-dlp with a fixed list of arguments, reads its progress, and streams it to the page. Jobs and settings live in SQLite, so the queue and history survive restarts. Media goes straight from yt-dlp to your download folder; it never passes through the server or the browser.
+
+More detail: [architecture](docs/ARCHITECTURE.md) · [local API](docs/API.md)
+
+## Development
+
+```sh
 go test ./...
+go run ./cmd/ytgrab --open
 ```
 
-The optional real-download test requires a `tools/yt-dlp.exe` (or corresponding executable on your platform) and internet access: set `YTGRAB_INTEGRATION=1`, then run `go test ./internal/app -run TestIntegrationDownload -v`.
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for previewing the UI with sample data, opt-in integration tests, and building release archives. Issues and pull requests are welcome.
 
-## Project documents
+## Responsible use
 
-- [docs/USER_GUIDE.md](docs/USER_GUIDE.md) is the end-user guide shipped in release archives.
-- [web/README.md](web/README.md) describes the browser UI, its API contract, and fixture previews.
-- [ARCHITECTURE.md](ARCHITECTURE.md) describes the components, data flow, runtime behavior, and design decisions.
-- [PROGRESS.md](PROGRESS.md) tracks milestones and records each implementation iteration.
-- [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) contain instructions for coding agents working in this repository.
-- [DELEGATION.md](DELEGATION.md) assigns the first Codex and Claude tasks and explains the parallel branch workflow.
+Only download videos you have the right to save — for example your own uploads, content under a permissive license, or where the platform and copyright holder allow it. You are responsible for complying with YouTube's Terms of Service and the laws that apply to you. YTGrab does not bypass sign-in, DRM, or paywalls.
 
-See [PROGRESS.md](PROGRESS.md) for the current implementation status.
+## Acknowledgements
+
+YTGrab stands on [yt-dlp](https://github.com/yt-dlp/yt-dlp), which does the hard work of talking to YouTube, and [FFmpeg](https://ffmpeg.org/). The job store uses [modernc.org/sqlite](https://gitlab.com/cznic/sqlite).
+
+## License
+
+[MIT](LICENSE) © 2026 Yonas Mekonnen

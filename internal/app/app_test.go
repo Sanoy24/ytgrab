@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"ytgrab/internal/app/deps"
-	"ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/config"
 )
 
 func TestServerStopsAfterContextCancellation(t *testing.T) {

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"ytgrab/internal/app/deps"
-	"ytgrab/internal/domain"
-	sqlitestore "ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/domain"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
 func TestJobAPIContract(t *testing.T) {

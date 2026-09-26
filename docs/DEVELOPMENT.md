@@ -1,0 +1,88 @@
+# Development
+
+## Requirements
+
+- [Go](https://go.dev/dl/) 1.25 or newer
+- yt-dlp, FFmpeg/FFprobe, and Deno or Node for real downloads (`go run ./cmd/ytgrab setup` installs them)
+- Node, optionally, for checking the browser scripts
+
+## Run from source
+
+```sh
+go run ./cmd/ytgrab setup   # first time: install missing tools
+go run ./cmd/ytgrab --open
+```
+
+`setup` puts yt-dlp in `tools/` at the repository root (git-ignored). The UI in `web/static` is embedded at build time, so restart after editing it.
+
+Configuration comes from environment variables:
+
+| Variable | Default |
+| --- | --- |
+| `YTGRAB_LISTEN_ADDR` | `127.0.0.1:8787` (loopback addresses only) |
+| `YTGRAB_TOOLS_DIR` | searched before the other tool locations |
+| `YTGRAB_DATA_DIR` | `ytgrab` in the user config folder (`%AppData%` on Windows) |
+| `YTGRAB_DOWNLOAD_DIR` | `Downloads/ytgrab`; setting it skips the first-run folder choice |
+
+Use a separate `YTGRAB_DATA_DIR` while developing to keep your own settings and history untouched.
+
+## Tests
+
+```sh
+go vet ./...
+go test ./...
+```
+
+Tests that need the outside world are opt-in:
+
+```sh
+# A real download (needs tools/yt-dlp and internet access)
+YTGRAB_INTEGRATION=1 go test ./internal/app -run TestIntegrationDownload -v
+
+# Opens the real folder window on your desktop
+YTGRAB_MANUAL_PICKER=1 go test ./internal/picker -run TestManualPick -v
+```
+
+The browser scripts are ES modules. `node --check` treats `.js` files as classic scripts and misses module-only errors, so check `.mjs` copies:
+
+```sh
+mkdir -p /tmp/ytgrab-js && for f in web/static/*.js; do cp "$f" "/tmp/ytgrab-js/$(basename "$f" .js).mjs"; node --check "/tmp/ytgrab-js/$(basename "$f" .js).mjs"; done
+```
+
+## Previewing the UI without the server
+
+Serve `web/static` with any static server and add a `fixture` parameter to use sample data:
+
+```sh
+python -m http.server 8765 --bind 127.0.0.1 --directory web/static
+```
+
+| URL | Shows |
+| --- | --- |
+| `/?fixture=default` | Active, queued, finished, failed, and cancelled jobs with simulated progress |
+| `/?fixture=empty` | Empty queue and history |
+| `/?fixture=first-run` | The first-run folder choice (the first pick is cancelled) |
+| `/?fixture=no-picker` | No folder window available; typed path only |
+| `/?fixture=degraded` | Missing tools |
+| `/?fixture=error` | Server unreachable |
+| `/?fixture=loading` | Loading states that never finish |
+| `/?fixture=blocked` | YouTube rate limiting during format checks |
+| `/?fixture=expired` | An expired inspection that is re-checked automatically |
+
+Without `fixture`, the page calls the real API, which a static server doesn't have.
+
+## Building releases
+
+Download `yt-dlp.exe` and `SHA2-256SUMS` from the [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) into `tools/`, then run on Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Version 1.0.0 -AllPlatforms
+```
+
+The script runs the tests, builds Windows, Linux, and macOS archives into `dist/`, bundles `yt-dlp.exe` in the Windows zip only if it matches the official checksum, and writes `manifest.json`, `SHA256SUMS`, and a `.sha256` for each archive.
+
+## Further reading
+
+- [Architecture](ARCHITECTURE.md)
+- [Local API](API.md)
+- [User guide](USER_GUIDE.md)

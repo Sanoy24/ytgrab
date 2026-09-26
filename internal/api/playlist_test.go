@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"ytgrab/internal/app/deps"
-	"ytgrab/internal/domain"
-	"ytgrab/internal/downloader/ytdlp"
-	sqlitestore "ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
 type fakePlaylistInspector struct{ fakeInspector }

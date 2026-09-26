@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ytgrab/internal/config"
-	"ytgrab/internal/setup"
-	sqlitestore "ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/setup"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
 // DoctorChecks reports app-level readiness for "ytgrab doctor": the data folder, the

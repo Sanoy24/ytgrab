@@ -10,3 +10,12 @@ tools/
 
 # Release output from scripts/package.ps1.
 dist/
+
+# Local notes for coding agents and project tracking (not published).
+AGENTS.md
+CLAUDE.md
+DELEGATION.md
+PROGRESS.md
+
+# Browser automation output.
+.playwright-mcp/
