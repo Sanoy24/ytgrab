@@ -168,6 +168,11 @@ func findTool(dirs []string, name string) (string, error) {
 	return exec.LookPath(name)
 }
 
+// Find resolves an executable using the same search order as health checks.
+func Find(cfg config.Config, name string) (string, error) {
+	return findTool(searchDirs(cfg), name)
+}
+
 func getVersion(ctx context.Context, path string, flag string) (string, error) {
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()

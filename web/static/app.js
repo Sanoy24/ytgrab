@@ -281,11 +281,13 @@ async function loadHealth() {
   pill.hidden = false;
   try {
     const h = await client.health();
-    const missing = h.dependencies.filter((d) => !d.found);
-    pill.dataset.status = h.status;
+    const found = (d) => d.available ?? d.found;
+    const missing = h.dependencies.filter((d) => !found(d));
+    const ready = h.status === "ready" || h.status === "ok";
+    pill.dataset.status = ready ? "ok" : h.status;
     label.textContent =
-      h.status === "ok" ? "Tools ready" : missing.some((d) => d.required) ? "Tools missing" : "Limited support";
-    pill.title = h.dependencies.map((d) => `${d.name}: ${d.found ? d.version || "found" : "missing"}`).join("\n");
+      ready ? "Tools ready" : missing.some((d) => d.required) ? "Tools missing" : "Limited support";
+    pill.title = h.dependencies.map((d) => `${d.name}: ${found(d) ? d.version || "found" : "missing"}`).join("\n");
 
     banner.hidden = !missing.length;
     if (missing.length) {

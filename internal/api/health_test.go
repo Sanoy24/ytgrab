@@ -18,7 +18,7 @@ func TestHealthRouteReportsDegradedDependencies(t *testing.T) {
 				{Name: "yt-dlp", Required: true, Message: "Install yt-dlp."},
 			},
 		}
-	})
+	}, nil, nil)
 	request := httptest.NewRequest(http.MethodGet, "/api/system/health", nil)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
@@ -39,5 +39,16 @@ func TestHealthRouteReportsDegradedDependencies(t *testing.T) {
 	handler.ServeHTTP(response, request)
 	if response.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST status = %d, want 405", response.Code)
+	}
+}
+
+func TestEmbeddedWebPage(t *testing.T) {
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, nil, nil)
+	for _, path := range []string{"/", "/app.js", "/app.css"} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+		if response.Code != http.StatusOK {
+			t.Errorf("GET %s = %d, want 200", path, response.Code)
+		}
 	}
 }

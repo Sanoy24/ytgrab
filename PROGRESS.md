@@ -15,21 +15,23 @@ This file is the source of truth for project progress. Update it after every ite
 
 - [x] ~~Initialize the Go module, entry point, configuration, and graceful shutdown.~~
 - [x] ~~Add dependency discovery and a local health route with actionable diagnostics.~~
-- [ ] Build and preview a static local UI shell in `web/`.
-- [ ] Add an embedded minimal web page served on `127.0.0.1`.
+- [x] ~~Build and preview a static local UI shell in `web/`.~~
+- [x] ~~Add an embedded minimal web page served on `127.0.0.1`.~~
 
 ### 2. Durable jobs
 
-- [ ] Add versioned SQLite migrations and a job repository.
-- [ ] Define and verify valid job state transitions and startup recovery.
-- [ ] Add job creation, listing, and detail endpoints with input validation.
+- [x] ~~Add versioned SQLite migrations and a job repository.~~
+- [x] ~~Define and verify valid job state transitions and startup recovery.~~
+- [x] ~~Add job creation, listing, and detail endpoints with input validation.~~
 
 ### 3. Download engine
 
-- [ ] Integrate `yt-dlp` for a single video with safe arguments and confirmed output paths.
-- [ ] Parse structured progress and expose it through SSE.
-- [ ] Implement process-tree cancellation and verify it on supported platforms.
-- [ ] Add a bounded worker queue, transient retry handling, and resume behavior.
+- [x] ~~Integrate `yt-dlp` for a single video with safe arguments and confirmed output paths.~~
+- [x] ~~Parse structured progress and expose it through SSE.~~
+- [x] ~~Implement process-tree cancellation and verify it on Windows.~~
+- [ ] Verify process-tree cancellation on Unix.
+- [x] ~~Add a bounded worker queue and transient network-error retry handling.~~
+- [ ] Verify resume from yt-dlp partial files after interruption and retry.
 
 ### 4. Usable local interface
 
@@ -43,10 +45,81 @@ This file is the source of truth for project progress. Update it after every ite
 ### 5. Release readiness
 
 - [ ] Test end-to-end downloading, shutdown/recovery, cancellation, and resume.
-- [ ] Document installation, required external tools, usage, and troubleshooting.
+- [x] ~~Document source-run setup, required external tools, basic usage, and dependency diagnostics.~~
+- [ ] Document packaged installation and broader troubleshooting after release verification.
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Source-run handoff and HTTP smoke check
+
+- Result: Replaced the architecture-stage README with source-run instructions, environment overrides, tool requirements, and current limitations. Tidied module requirements.
+- Verification: A local Windows app process returned `ready` from `/api/system/health`; GET `/`, `/app.js`, and `/api/jobs` returned HTTP 200. `git diff --check`, JavaScript syntax checks, and `go vet ./...` passed. The test server process was stopped afterward.
+- Limitation: Browser automation had no available browser session, so visual/live UI interaction remains unchecked. Packaged installation and wider troubleshooting remain future work.
+- Next: Run a browser interaction pass, verify actual partial-file resume and Unix process cancellation, and implement settings/inspection/playlist scope.
+
+### 2026-09-26 — Bounded transient retries
+
+- Result: The two-worker queue now schedules the same job for a delayed retry after classified network errors, up to three total attempts. It persists the failed state first, leaving a manual retry path if the app exits before the timer fires.
+- Verification: `go test ./... -count=1` passes, including a fake downloader that fails once with a network error, then completes on attempt two. Windows process-tree cancellation also remains green in the full suite.
+- Decision: Do not automatically retry unavailable/private videos or generic failures. Resume from actual `.part` files remains to be verified separately.
+- Next: Test recovery/resume with partial output, finish live UI and settings, then run a supported-platform release pass.
+
+### 2026-09-26 — Windows process-tree cancellation
+
+- Result: Added a process test with a parent spawning a heartbeat child, then cancelling the parent context. The child stopped writing, exercising the Windows `taskkill /T` path.
+- Verification: `go test ./internal/process -run TestCancellationStopsProcessTree -v -count=1 -timeout 20s` passed on Windows.
+- Limitation: The Unix process-group implementation is present but has not been executed on Unix. A live browser was unavailable, so UI visual interaction remains unchecked; a local HTTP health request returned `ready` with all required executables detected.
+- Next: Add transient retry behavior and run broader recovery checks; later run the process test on Unix and the UI in a browser.
+
+### 2026-09-26 — SSE progress delivery
+
+- Result: Added a streaming HTTP test that receives an initial queued job and a later downloading event with persisted byte progress. The adapter's real-download test confirms the structured parser produces that progress.
+- Verification: `go test ./...` passes, including the new SSE test.
+- Decision: SSE emits persisted updates at the queue's throttled rate; the UI still needs a live browser check.
+- Next: Drive the embedded page against the Go API, then test process-tree cancellation and recovery.
+
+### 2026-09-26 — Real download and progress stream correction
+
+- Result: Downloaded a public sample through the Go API, queue, and yt-dlp adapter, confirmed the output file, and fixed structured progress parsing to accept tagged events from either child-process stream.
+- Verification: `go test ./...` passed. The opt-in `YTGRAB_INTEGRATION=1` app test downloaded a 309,156-byte M4A file and confirmed its title, output path, and persisted byte progress.
+- Decision: Keep the SSE and live UI checklist items open until a client observes progress events end to end. Process-tree cancellation and resume also remain unverified.
+- Next: Verify SSE delivery and live UI behavior, then test cancellation and retry/recovery paths.
+
+### 2026-09-26 — Bounded workers and cancellation wiring
+
+- Result: Added a two-worker scheduler that atomically claims queued jobs, persists throttled progress, marks download results, and propagates API cancellation to active work. Process helpers target the yt-dlp child tree on Windows and Unix.
+- Verification: `go test ./...` passes, including a queue test that starts a fake downloader, durably cancels the active job, and observes context cancellation.
+- Limitation: The real yt-dlp executable and FFmpeg child-process behavior have not yet been exercised. Automatic application-level retry and resume are not verified, so the combined queue checklist step remains open.
+- Next: Add SSE progress delivery, then run the executable adapter and UI end to end.
+
+### 2026-09-26 — yt-dlp adapter groundwork
+
+- Result: Added safe yt-dlp argument construction for all five presets, machine-readable title/progress/final-path parsing, output confinement checks, bounded diagnostic errors, and platform-specific child-process termination helpers.
+- Verification: `go test ./...` passes, including parser, URL-as-one-argument, preset-flag, and output-path checks. No actual download was run because `yt-dlp` is not installed locally yet.
+- Decision: Keep the download checklist step open until a real or controlled executable run confirms the output path and process behavior.
+- Next: Connect a two-worker queue and cancellation to persisted jobs, then exercise the adapter with an executable.
+
+### 2026-09-26 — Job API and application persistence
+
+- Result: The app opens SQLite at startup, recovers interrupted jobs, and exposes create/list/detail/cancel/retry routes. Requests validate YouTube video IDs and presets; errors use stable JSON codes. Mutating cross-origin requests are rejected.
+- Verification: `go test ./...` passes, including a job API contract test for create, duplicate rejection, invalid input, list, detail, cancel, retry, and cross-origin rejection.
+- Decision: `YTGRAB_DATA_DIR` and `YTGRAB_DOWNLOAD_DIR` can override the default user-local paths. Downloads remain queued until the worker is implemented.
+- Next: Build the `yt-dlp` process adapter and bounded scheduler, then exercise the UI against running jobs.
+
+### 2026-09-26 — Durable job model and storage
+
+- Result: Added validated single-video URLs and presets, job state transitions, a pure-Go SQLite store with embedded versioned migration, duplicate-active-video prevention, and startup recovery of interrupted jobs.
+- Verification: `go test ./...` passes, including persistence across database reopening, duplicate detection, recovery, retry state reset, URL validation, and transition checks.
+- Decision: Store indexed job fields alongside a JSON snapshot so the API can return a stable job shape without extensive row mapping. SQLite uses WAL mode and one open connection to keep writes serialized.
+- Next: Open the store during app startup and implement job creation, listing, detail, cancel, and retry routes.
+
+### 2026-09-26 — Merge integration: embedded UI
+
+- Result: Embedded `web/static` in the Go server, switched the UI default to the live HTTP client, retained `?fixture=...` previews, and aligned the health display with the Go response.
+- Verification: `go test ./...` passes, including GET checks for `/`, `/app.js`, and `/app.css`; `node --check` passes for the edited JavaScript modules. Claude's branch log records the static UI preview and responsive checks.
+- Decision: The page is served before job endpoints are available, so the UI currently shows the live API loading error until the next milestone is implemented.
+- Next: Add durable job storage and the job API contract the UI already expects.
 
 ### 2026-09-26 — Codex foundation
 

@@ -17,7 +17,7 @@ func TestValidateListenAddress(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.address, func(t *testing.T) {
-			err := (Config{ListenAddress: tc.address, ShutdownTimeout: 1}).Validate()
+			err := (Config{ListenAddress: tc.address, DataDir: t.TempDir(), DownloadsDir: t.TempDir(), ShutdownTimeout: 1}).Validate()
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("Validate() error = %v, want error %v", err, tc.wantErr)
 			}
