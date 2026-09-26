@@ -39,8 +39,10 @@ var videoIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
 var formatIDPattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,32}$`)
 
 type FormatSelection struct {
-	Kind  string `json:"kind"`
-	ID    string `json:"id"`
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+	// Ext is the inspected container; the downloader uses it to pair compatible audio.
+	Ext   string `json:"ext,omitempty"`
 	Label string `json:"label"`
 }
 
@@ -53,6 +55,8 @@ type Progress struct {
 	TotalBytes      *int64   `json:"total_bytes"`
 	SpeedBPS        *float64 `json:"speed_bps"`
 	ETASeconds      *int64   `json:"eta_seconds"`
+	// Stream is "video" or "audio" while yt-dlp fetches one part of a merged download.
+	Stream string `json:"stream,omitempty"`
 }
 
 type JobError struct {

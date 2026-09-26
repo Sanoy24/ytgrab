@@ -11,7 +11,7 @@ import (
 )
 
 func TestMachineOutputParsing(t *testing.T) {
-	event, ok := parseEvent(`YTGRAB_PROGRESS:{"downloaded_bytes":1024,"total_bytes":null,"total_bytes_estimate":2048,"speed":512.5,"eta":2}`)
+	event, ok := parseEvent(`YTGRAB_PROGRESS:{"progress":{"downloaded_bytes":1024,"total_bytes":null,"total_bytes_estimate":2048,"speed":512.5,"eta":2},"vcodec":"avc1"}`)
 	if !ok || event.Progress == nil || event.Progress.DownloadedBytes != 1024 || *event.Progress.TotalBytes != 2048 || *event.Progress.ETASeconds != 2 {
 		t.Fatalf("progress event = %+v, %v", event, ok)
 	}
@@ -63,4 +63,53 @@ func TestClassifyBotCheck(t *testing.T) {
 			t.Fatalf("classifyFailure(%q) = %v", message, err)
 		}
 	}
+}
+
+func TestProgressReportsStreamKind(t *testing.T) {
+	for _, test := range []struct {
+		vcodec string
+		want   string
+	}{
+		{`"avc1.4d401e"`, "video"},
+		{`"none"`, "audio"},
+		{`null`, ""},
+	} {
+		line := `YTGRAB_PROGRESS:{"progress":{"downloaded_bytes":10,"total_bytes":100,"speed":5,"eta":18},"vcodec":` + test.vcodec + `}`
+		event, ok := parseEvent(line)
+		if !ok || event.Progress == nil || event.Progress.DownloadedBytes != 10 || event.Progress.Stream != test.want {
+			t.Fatalf("parseEvent(%s) = %+v, %v", test.vcodec, event.Progress, ok)
+		}
+	}
+}
+
+// Different qualities of one video must not share a file name, or yt-dlp reports the
+// earlier file as "already downloaded" and the job completes with the wrong quality.
+func TestOutputNameIncludesQuality(t *testing.T) {
+	video, _ := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: "video", ID: "137", Ext: "mp4", Label: "Video · 1080p"})
+	audio, _ := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: "audio", ID: "140", Ext: "m4a", Label: "Audio · M4A"})
+	preset720, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.Video720)
+	mp3, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioMP3)
+	for _, test := range []struct {
+		job  domain.Job
+		want string
+	}{
+		{video, "%(title).150B [%(id)s] %(height)sp.%(ext)s"},
+		{preset720, "%(title).150B [%(id)s] %(height)sp.%(ext)s"},
+		{audio, "%(title).150B [%(id)s] %(abr).0fk.%(ext)s"},
+		{mp3, "%(title).150B [%(id)s].%(ext)s"},
+	} {
+		args := buildArgs(test.job, config.Config{})
+		if got := argAfter(args, "-o"); got != test.want {
+			t.Errorf("output template = %q, want %q", got, test.want)
+		}
+	}
+}
+
+func argAfter(args []string, flag string) string {
+	for i := range args[:len(args)-1] {
+		if args[i] == flag {
+			return args[i+1]
+		}
+	}
+	return ""
 }

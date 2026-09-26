@@ -42,7 +42,7 @@ export const jobs = [
     preset: "video-1080",
     state: "downloading",
     attempt: 1,
-    progress: { downloaded_bytes: 187_000_000, total_bytes: 412_000_000, speed_bps: 6_400_000, eta_seconds: 35 },
+    progress: { downloaded_bytes: 187_000_000, total_bytes: 412_000_000, speed_bps: 6_400_000, eta_seconds: 35, stream: 'video' },
     output_path: null,
     error: null,
     created_at: ago(2),

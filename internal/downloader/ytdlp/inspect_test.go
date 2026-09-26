@@ -19,8 +19,11 @@ func TestParseInspectionAndCachedSelection(t *testing.T) {
 	inspector := NewInspector(config.Config{})
 	inspector.cache[id] = cachedInspection{result: result, expires: time.Now().Add(time.Minute)}
 	selection, ok := inspector.Select(id, "video", "137")
-	if !ok || selection.Label != "Video · 1080p" {
+	if !ok || selection.Label != "Video · 1080p" || selection.Ext != "mp4" {
 		t.Fatalf("video selection = %+v, %v", selection, ok)
+	}
+	if audio, ok := inspector.Select(id, "audio", "140"); !ok || audio.Label != "Audio · M4A 130 kbps" {
+		t.Fatalf("audio selection = %+v, %v", audio, ok)
 	}
 	if _, ok := inspector.Select(id, "audio", "137"); ok {
 		t.Fatal("video ID accepted as audio")
@@ -34,20 +37,25 @@ func TestParseInspectionAndCachedSelection(t *testing.T) {
 }
 
 func TestSelectedFormatArguments(t *testing.T) {
+	// Audio is paired by container so merges stay MP4 (H.264 + AAC) or WebM (VP9 + Opus).
 	for _, test := range []struct {
 		kind string
+		id   string
+		ext  string
 		want string
 	}{
-		{"video", "137+ba/137"},
-		{"audio", "140"},
+		{"video", "137", "mp4", "137+ba[ext=m4a]/137+ba/137"},
+		{"video", "248", "webm", "248+ba[ext=webm]/248+ba/248"},
+		{"video", "137", "", "137+ba/137"},
+		{"audio", "140", "m4a", "140"},
 	} {
-		job, err := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: test.kind, ID: map[string]string{"video": "137", "audio": "140"}[test.kind], Label: "Selected"})
+		job, err := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: test.kind, ID: test.id, Ext: test.ext, Label: "Selected"})
 		if err != nil {
 			t.Fatal(err)
 		}
 		args := buildArgs(job, config.Config{})
 		joined := strings.Join(args, " ")
-		if !strings.Contains(joined, "-f "+test.want) || args[len(args)-1] != job.URL {
+		if !strings.Contains(joined, "-f "+test.want+" ") || args[len(args)-1] != job.URL {
 			t.Fatalf("format args = %v", args)
 		}
 	}

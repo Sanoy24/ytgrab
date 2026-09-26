@@ -170,15 +170,22 @@ function renderProgress(el, job) {
   if (box.hidden) return;
 
   const p = job.progress || {};
+  // Merged downloads fetch video, then audio; naming the part keeps the second 0% from
+  // looking like a restart.
+  const part = { video: 'Video', audio: 'Audio' }[p.stream] || '';
   const label = jobTitle(job);
   bar.setAttribute('aria-label', `Progress for ${label}`);
   if (job.state === 'processing') {
     bar.removeAttribute('value'); // indeterminate
     text.textContent = 'Merging and finishing up…';
+  } else if (!p.downloaded_bytes && p.total_bytes == null) {
+    bar.removeAttribute('value');
+    text.textContent = 'Starting…';
   } else if (job.state === 'inspecting' || p.total_bytes == null) {
     bar.removeAttribute('value');
     text.textContent = [
-      p.downloaded_bytes ? `${formatBytes(p.downloaded_bytes)} downloaded` : 'Starting…',
+      part,
+      `${formatBytes(p.downloaded_bytes)} downloaded`,
       p.speed_bps ? `${formatBytes(p.speed_bps)}/s` : '',
       'size unknown',
     ]
@@ -188,6 +195,7 @@ function renderProgress(el, job) {
     const pct = Math.min(100, (p.downloaded_bytes / p.total_bytes) * 100);
     bar.value = pct;
     text.textContent = [
+      part,
       `${Math.floor(pct)}%`,
       `${formatBytes(p.downloaded_bytes)} of ${formatBytes(p.total_bytes)}`,
       p.speed_bps ? `${formatBytes(p.speed_bps)}/s` : '',

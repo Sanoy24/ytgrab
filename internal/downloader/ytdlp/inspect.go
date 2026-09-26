@@ -124,6 +124,9 @@ func (inspector *Inspector) Select(videoID string, kind string, id string) (doma
 			continue
 		}
 		label := "Audio · " + strings.ToUpper(format.Ext)
+		if format.AudioBitrate != nil {
+			label += fmt.Sprintf(" %.0f kbps", *format.AudioBitrate)
+		}
 		if kind == "video" {
 			if format.Height != nil {
 				label = fmt.Sprintf("Video · %dp", *format.Height)
@@ -131,7 +134,7 @@ func (inspector *Inspector) Select(videoID string, kind string, id string) (doma
 				label = "Video · " + strings.ToUpper(format.Ext)
 			}
 		}
-		return domain.FormatSelection{Kind: kind, ID: id, Label: label}, true
+		return domain.FormatSelection{Kind: kind, ID: id, Ext: format.Ext, Label: label}, true
 	}
 	return domain.FormatSelection{}, false
 }

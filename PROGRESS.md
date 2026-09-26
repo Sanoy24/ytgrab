@@ -32,7 +32,9 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Implement process-tree cancellation and verify it on Windows.~~
 - [ ] Verify process-tree cancellation on Unix.
 - [x] ~~Add a bounded worker queue and transient network-error retry handling.~~
-- [ ] Verify resume from yt-dlp partial files after interruption and retry.
+- [x] ~~Verify resume from yt-dlp partial files after interruption and retry.~~
+- [x] ~~Name output files by quality so a second pick of the same video is not reported as already downloaded.~~
+- [x] ~~Pair picked video with audio of the same container (H.264 + AAC stays MP4).~~
 
 ### 4. Usable local interface
 
@@ -40,10 +42,11 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Build URL submission form with client-side validation and video/audio preset choice (UI against fixtures).~~
 - [x] ~~Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.~~
 - [x] ~~Add persisted output-folder settings, API, and page controls.~~
-- [ ] Verify output-folder controls in a live browser session.
+- [x] ~~Verify output-folder controls in a live browser session.~~
 - [x] ~~Add the output-folder setting to the UI against `GET`/`PUT /api/settings`.~~
 - [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
-- [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
+- [x] ~~Connect the queue/history views to the live API and SSE progress, and verify end to end.~~
+- [x] ~~Label the video and audio parts of a merged download's progress.~~
 - [x] ~~Build the format picker UI: inspect on paste, grouped video/audio choices, preset fallback (against fixtures).~~
 - [x] ~~Add `GET /api/inspect` and server-validated format-based job creation.~~
 - [x] ~~Verify the format picker end to end in a live browser.~~
@@ -51,12 +54,20 @@ This file is the source of truth for project progress. Update it after every ite
 
 ### 5. Release readiness
 
-- [ ] Test end-to-end downloading, shutdown/recovery, cancellation, and resume.
+- [x] ~~Test end-to-end downloading, crash recovery, cancellation, and resume on Windows.~~
+- [ ] Verify graceful shutdown (Ctrl+C) with an active download.
 - [x] ~~Document source-run setup, required external tools, basic usage, and dependency diagnostics.~~
 - [ ] Document packaged installation and broader troubleshooting after release verification.
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Claude: live end-to-end pass, quality file names, MP4 pairing
+
+- Result: On branch `claude/finish` (now working on backend and frontend). Picked video is paired with same-container audio (`ID+ba[ext=m4a]/ID+ba/ID` for MP4, `[ext=webm]` for WebM) and merges with `mp4/webm/mkv`; the inspected container travels in `FormatSelection.ext`, and audio labels include bitrate. **Fixed a wrong-file bug found live:** every quality of a video shared one file name, so after downloading 480p, a 1080p job finished instantly and pointed at the 480p file; names now include `%(height)sp` for video and `%(abr).0fk` for M4A/audio picks. Progress events carry `stream` (video/audio) from `%(info.vcodec)j`, and the page labels the part and shows plain "Starting…" before bytes arrive. The live client refreshes every 2 s while work is active and 10 s when idle, refreshes immediately after add/cancel/retry, guards against overlapping polls, and caps progress streams at 4.
+- Verification: `go test ./...` and `go vet ./...` pass; new tests cover the audio pairing, output names, and stream parsing; all web modules pass a `.mjs` syntax check. Live on Windows with a branch build (temp data dir, repo `tools/`): saved an output folder (bad path rejected with the sentence-case message) and it persisted across restart; Big Buck Bunny inspection took 7 s and listed 8 resolutions; a 480p H.264 pick streamed progress every 1–2 s; Cancel at 84% stopped both yt-dlp processes and kept a 23.9 MB `.part`; Retry resumed at 86%, fetched audio, merged, and ffprobe shows H.264 + AAC in `.mp4` (38.8 MB, 634 s); force-killing ytgrab during a 473 MB 1440p download also ended yt-dlp (the `.part` stopped at 10.1 MB); after restart the job was `interrupted` and Retry resumed at 14 MB. The file-name bug was observed before the fix (1080p job done, file was 480p per ffprobe); the fix is covered by unit tests but not yet re-run live because YouTube began rate-limiting this network.
+- Blocker/notes: yt-dlp exits on a broken pipe when ytgrab dies, which covers downloads; during a silent ffmpeg merge it may outlive ytgrab. Graceful Ctrl+C shutdown with an active download is not yet verified.
+- Next: Controlled playlist downloads, then graceful-shutdown and Unix checks (WSL), packaging, and install/troubleshooting docs.
 
 ### 2026-09-26 — Claude: fix broken page on master, live format downloads
 

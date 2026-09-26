@@ -157,17 +157,17 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 func buildArgs(job domain.Job, cfg config.Config) []string {
 	args := []string{
 		"--ignore-config", "--no-playlist", "--no-simulate", "--newline", "--progress",
-		"--progress-template", "download:" + progressPrefix + "%(progress)j",
+		"--progress-template", "download:" + progressPrefix + `{"progress":%(progress)j,"vcodec":%(info.vcodec)j}`,
 		"--progress-template", "postprocess:" + processingPrefix + "%(progress)j",
 		"--print", "before_dl:" + titlePrefix + "%(title)j",
 		"--print", "after_move:" + pathPrefix + "%(filepath)j",
 		"--concurrent-fragments", "4",
 		"-P", cfg.DownloadsDir,
-		"-o", "%(title).150B [%(id)s].%(ext)s",
+		"-o", outputTemplate(job),
 	}
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
-			args = append(args, "-f", job.Format.ID+"+ba/"+job.Format.ID, "--merge-output-format", "mp4/mkv")
+			args = append(args, "-f", videoSelector(*job.Format), "--merge-output-format", "mp4/webm/mkv")
 		} else {
 			args = append(args, "-f", job.Format.ID)
 		}
@@ -191,25 +191,73 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	return append(args, "--", job.URL)
 }
 
+// outputTemplate names files by quality so different picks of one video never collide;
+// otherwise yt-dlp would report an earlier quality as "already downloaded".
+func outputTemplate(job domain.Job) string {
+	const base = "%(title).150B [%(id)s]"
+	switch {
+	case job.Format != nil && job.Format.Kind == "video":
+		return base + " %(height)sp.%(ext)s"
+	case job.Format != nil:
+		return base + " %(abr).0fk.%(ext)s"
+	case job.Preset == nil:
+		return base + ".%(ext)s"
+	}
+	switch *job.Preset {
+	case domain.VideoBest, domain.Video1080, domain.Video720:
+		return base + " %(height)sp.%(ext)s"
+	case domain.AudioM4A:
+		return base + " %(abr).0fk.%(ext)s"
+	default:
+		return base + ".%(ext)s"
+	}
+}
+
+// videoSelector pairs the chosen video with audio in the same container family so the
+// merge needs no re-encode and stays MP4 (H.264/AV1 + AAC) or WebM (VP9 + Opus), falling
+// back to any audio, then to the video alone.
+func videoSelector(format domain.FormatSelection) string {
+	id := format.ID
+	switch format.Ext {
+	case "mp4":
+		return id + "+ba[ext=m4a]/" + id + "+ba/" + id
+	case "webm":
+		return id + "+ba[ext=webm]/" + id + "+ba/" + id
+	default:
+		return id + "+ba/" + id
+	}
+}
+
 func parseEvent(line string) (Event, bool) {
 	line = strings.TrimSpace(line)
 	switch {
 	case strings.HasPrefix(line, progressPrefix):
-		var raw struct {
-			DownloadedBytes    int64    `json:"downloaded_bytes"`
-			TotalBytes         *int64   `json:"total_bytes"`
-			TotalBytesEstimate *int64   `json:"total_bytes_estimate"`
-			Speed              *float64 `json:"speed"`
-			ETA                *int64   `json:"eta"`
+		var wrapper struct {
+			Progress struct {
+				DownloadedBytes    int64    `json:"downloaded_bytes"`
+				TotalBytes         *int64   `json:"total_bytes"`
+				TotalBytesEstimate *int64   `json:"total_bytes_estimate"`
+				Speed              *float64 `json:"speed"`
+				ETA                *int64   `json:"eta"`
+			} `json:"progress"`
+			VideoCodec *string `json:"vcodec"`
 		}
-		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, progressPrefix)), &raw); err != nil {
+		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, progressPrefix)), &wrapper); err != nil {
 			return Event{}, false
+		}
+		raw := wrapper.Progress
+		stream := ""
+		if wrapper.VideoCodec != nil {
+			stream = "video"
+			if *wrapper.VideoCodec == "none" {
+				stream = "audio"
+			}
 		}
 		total := raw.TotalBytes
 		if total == nil {
 			total = raw.TotalBytesEstimate
 		}
-		return Event{State: domain.Downloading, Progress: &domain.Progress{DownloadedBytes: raw.DownloadedBytes, TotalBytes: total, SpeedBPS: raw.Speed, ETASeconds: raw.ETA}}, true
+		return Event{State: domain.Downloading, Progress: &domain.Progress{DownloadedBytes: raw.DownloadedBytes, TotalBytes: total, SpeedBPS: raw.Speed, ETASeconds: raw.ETA, Stream: stream}}, true
 	case strings.HasPrefix(line, processingPrefix):
 		return Event{State: domain.Processing}, true
 	case strings.HasPrefix(line, titlePrefix):

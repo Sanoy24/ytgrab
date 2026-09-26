@@ -211,17 +211,24 @@ class HttpClient {
     return this.request('GET', '/api/jobs').then((r) => r.jobs ?? r);
   }
   createJob(body) {
-    return this.request('POST', '/api/jobs', body);
+    return this.request('POST', '/api/jobs', body).then(this.afterChange);
   }
   inspect(url, { signal } = {}) {
     return this.request('GET', `/api/inspect?url=${encodeURIComponent(url)}`, undefined, signal);
   }
   cancelJob(id) {
-    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/cancel`);
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/cancel`).then(this.afterChange);
   }
   retryJob(id) {
-    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/retry`);
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/retry`).then(this.afterChange);
   }
+
+  // A change made from this page refreshes the subscription right away, so a new job's
+  // progress stream opens without waiting for the idle poll interval.
+  afterChange = (result) => {
+    this.refreshNow?.();
+    return result;
+  };
   getSettings() {
     return this.request('GET', '/api/settings');
   }
@@ -243,7 +250,8 @@ class HttpClient {
         if (!running.has(id)) (source.close(), sources.delete(id));
       }
       for (const id of running) {
-        if (sources.has(id)) continue;
+        // Each stream holds a connection; browsers allow about six per site.
+        if (sources.has(id) || sources.size >= MAX_STREAMS) continue;
         const source = new EventSource(`/api/jobs/${encodeURIComponent(id)}/events`);
         sources.set(id, source);
         source.onmessage = (event) => {
@@ -258,18 +266,42 @@ class HttpClient {
         source.onerror = () => (source.close(), sources.delete(id));
       }
     };
-    const poll = () => this.listJobs().then((snapshot) => {
-      if (closed) return;
-      jobs = snapshot;
-      onChange([...jobs]);
-      syncSources();
-      timer = setTimeout(poll, 2000);
-    }, (err) => {
-      if (!closed && err?.code !== 'not_available') timer = setTimeout(poll, 2000);
-    });
+    // One poll chain at a time: a refresh requested mid-poll runs when that poll ends.
+    let polling = false;
+    let again = false;
+    const schedule = (ms) => {
+      clearTimeout(timer);
+      if (!closed) timer = setTimeout(poll, again ? 0 : ms);
+      again = false;
+    };
+    const poll = () => {
+      if (polling) return void (again = true);
+      polling = true;
+      this.listJobs().then(
+        (snapshot) => {
+          polling = false;
+          if (closed) return;
+          jobs = snapshot;
+          onChange([...jobs]);
+          syncSources();
+          // Refresh quickly while work is queued or running; slowly when idle.
+          schedule(jobs.some((job) => isActive(job.state)) ? 2000 : 10000);
+        },
+        (err) => {
+          polling = false;
+          if (err?.code !== 'not_available') schedule(2000);
+        },
+      );
+    };
     timer = setTimeout(poll, 2000);
+    this.refreshNow = () => {
+      if (closed) return;
+      clearTimeout(timer);
+      poll();
+    };
     return () => {
       closed = true;
+      this.refreshNow = null;
       clearTimeout(timer);
       for (const source of sources.values()) source.close();
       sources.clear();
@@ -308,6 +340,8 @@ class HttpClient {
     return data;
   }
 }
+
+const MAX_STREAMS = 4;
 
 export const isActive = (state) =>
   ['queued', 'inspecting', 'downloading', 'processing'].includes(state);
