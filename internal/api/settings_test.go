@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ytgrab/internal/app/deps"
-	"ytgrab/internal/picker"
-	"ytgrab/internal/settings"
-	sqlitestore "ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/picker"
+	"github.com/Sanoy24/ytgrab/internal/settings"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
 func TestSettingsAPI(t *testing.T) {

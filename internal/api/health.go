@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"ytgrab/internal/app/deps"
-	"ytgrab/web"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/web"
 )
 
 // NewHandler wires the foundation API. More routes can be added as milestones

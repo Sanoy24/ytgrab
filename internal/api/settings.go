@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"ytgrab/internal/picker"
-	settingspkg "ytgrab/internal/settings"
+	"github.com/Sanoy24/ytgrab/internal/picker"
+	settingspkg "github.com/Sanoy24/ytgrab/internal/settings"
 )
 
 type Settings interface {

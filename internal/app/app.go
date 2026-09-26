@@ -10,14 +10,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"ytgrab/internal/api"
-	"ytgrab/internal/app/deps"
-	"ytgrab/internal/config"
-	"ytgrab/internal/downloader/ytdlp"
-	"ytgrab/internal/picker"
-	"ytgrab/internal/queue"
-	"ytgrab/internal/settings"
-	sqlitestore "ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/api"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
+	"github.com/Sanoy24/ytgrab/internal/picker"
+	"github.com/Sanoy24/ytgrab/internal/queue"
+	"github.com/Sanoy24/ytgrab/internal/settings"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
 // Run serves the local API until ctx is cancelled, then drains active requests.

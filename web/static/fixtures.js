@@ -1,5 +1,5 @@
-// Sample data for building the UI before the backend API exists.
-// Job shapes follow the proposal in web/README.md.
+// Sample data for previewing the UI without the server (?fixture=...).
+// Job shapes match the API described in docs/API.md.
 
 const now = Date.now();
 const ago = (minutes) => new Date(now - minutes * 60_000).toISOString();

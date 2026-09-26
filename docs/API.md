@@ -1,0 +1,139 @@
+# Local API
+
+The browser UI talks to the server through this JSON API. It is served only on the loopback address and is intended for the bundled UI; there are no API keys or versioning guarantees.
+
+Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } }`. Messages are written for end users.
+
+## Routes
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/system/health` | Tool status |
+| `GET` | `/api/jobs` | Recent jobs, `{ "jobs": [Job] }` |
+| `POST` | `/api/jobs` | Create a job from a preset or an inspected format |
+| `GET` | `/api/jobs/{id}` | One job |
+| `GET` | `/api/jobs/{id}/events` | Progress stream (Server-Sent Events) |
+| `POST` | `/api/jobs/{id}/cancel` | Cancel a queued or running job |
+| `POST` | `/api/jobs/{id}/retry` | Retry a failed or cancelled job |
+| `GET` | `/api/inspect?url=…` | A video's formats, grouped into video and audio |
+| `GET` | `/api/playlist?url=…` | Up to 50 playlist entries for review |
+| `POST` | `/api/playlist/jobs` | One preset job per confirmed video |
+| `GET` | `/api/settings` | Output-folder settings |
+| `PUT` | `/api/settings` | Set the output folder to a typed path |
+| `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
+| `POST` | `/api/settings/use-default` | Create and use the suggested folder |
+
+Write requests from another site, and any request whose `Host` is not a loopback name, are rejected with `403`.
+
+## Job
+
+```jsonc
+{
+  "id": "job_a4d9…",
+  "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+  "video_id": "jNQXAC9IVRw",
+  "title": "Me at the zoo",          // null until known
+  "preset": "audio-m4a",             // or null when a format was picked
+  "format": null,                    // { "kind": "video", "id": "137", "ext": "mp4", "label": "Video · 1080p" }
+  "state": "downloading",            // queued | inspecting | downloading | processing | completed | failed | cancelled
+  "attempt": 1,
+  "progress": {                      // null before the download starts
+    "downloaded_bytes": 187000000,
+    "total_bytes": 412000000,        // null when unknown
+    "speed_bps": 6400000,            // null when unknown
+    "eta_seconds": 35,               // null when unknown
+    "stream": "video"                // "video" or "audio" while a merged download fetches each part
+  },
+  "output_path": null,               // set when completed
+  "error": null,                     // { "code": "interrupted", "message": "…" }
+  "created_at": "2026-09-26T12:00:00Z",
+  "updated_at": "2026-09-26T12:02:00Z"
+}
+```
+
+Presets: `video-best`, `video-1080`, `video-720`, `audio-m4a`, `audio-mp3`.
+
+## Creating jobs
+
+```jsonc
+// POST /api/jobs with a preset
+{ "url": "https://youtu.be/jNQXAC9IVRw", "preset": "video-1080" }
+
+// POST /api/jobs with a format from a recent inspection
+{ "url": "https://youtu.be/jNQXAC9IVRw", "format": { "kind": "video", "id": "137" } }
+```
+
+Returns `201` with the job. Errors: `invalid_url`, `invalid_preset`, `invalid_format`, `duplicate_job` (the video is already queued), and `inspection_required` (the inspection expired; inspect again and retry).
+
+## Progress stream
+
+`GET /api/jobs/{id}/events` sends the job as `data: {…}` when connected and after each saved update, and closes when the job finishes. The UI opens a stream for each running job and refreshes the job list every 2 seconds while work is active.
+
+## Inspection
+
+```jsonc
+// GET /api/inspect?url=https://youtu.be/jNQXAC9IVRw
+{
+  "video_id": "jNQXAC9IVRw",
+  "title": "Me at the zoo",
+  "duration_seconds": 19,
+  "video": [
+    { "format_id": "160", "ext": "mp4", "height": 144, "width": 192, "fps": 30,
+      "vcodec": "avc1.4d400c", "filesize": null, "filesize_approx": 505000 }
+  ],
+  "audio": [
+    { "format_id": "140", "ext": "m4a", "acodec": "mp4a.40.2", "abr": 129.8,
+      "filesize": 309288, "filesize_approx": null, "language": "en" }
+  ]
+}
+```
+
+Field names follow yt-dlp's format info. Errors: `invalid_url`, `video_unavailable`, `blocked` (YouTube is rate-limiting or asking for a bot check), `network`, `dependency_missing`.
+
+## Playlists
+
+```jsonc
+// GET /api/playlist?url=https://www.youtube.com/playlist?list=PL…
+{
+  "id": "PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2",
+  "title": "Project Gold",
+  "entries": [{ "video_id": "nV_awXI9XJY", "title": "…", "duration_seconds": 261 }],
+  "total": 7,          // YouTube's count, when known
+  "truncated": false,  // true when more than 50 entries exist
+  "unavailable": 0     // private or deleted entries that were skipped
+}
+
+// POST /api/playlist/jobs  ->  201 { "jobs": [Job], "skipped": 0 }
+{ "video_ids": ["nV_awXI9XJY", "M788vUWI2Rk"], "preset": "audio-m4a" }
+```
+
+All IDs are validated before any job is created. Videos already queued, and repeated IDs, count as `skipped`. Errors: `invalid_url`, `mix_playlist`, `video_unavailable`, `blocked`, `invalid_request`, `invalid_preset`.
+
+## Settings
+
+```jsonc
+// GET /api/settings
+{
+  "downloads_dir": "C:\\Users\\me\\Downloads\\ytgrab",
+  "configured": false,     // true once a folder was chosen or YTGRAB_DOWNLOAD_DIR is set
+  "default_dir": "C:\\Users\\me\\Downloads\\ytgrab",
+  "can_pick": true         // a folder window is available on this system
+}
+```
+
+`PUT /api/settings` takes `{ "downloads_dir": "D:\\Videos" }`; the folder must be an existing, writable absolute path (`invalid_directory` otherwise). `POST /api/settings/pick-folder` waits for the user and returns the updated settings, the settings with `"cancelled": true`, or `picker_unavailable` / `picker_busy`. Changes apply to downloads that start afterwards.
+
+## Health
+
+```jsonc
+// GET /api/system/health
+{
+  "status": "ready",       // or "degraded" when a required tool is missing
+  "checked_at": "2026-09-26T20:45:03Z",
+  "dependencies": [
+    { "name": "yt-dlp", "available": true, "required": true, "version": "2026.08.19",
+      "path": "C:\\Apps\\YTGrab\\tools\\yt-dlp.exe", "message": "Available." }
+  ],
+  "note": "Executable checks only. YouTube access and yt-dlp-ejs availability are not verified."
+}
+```

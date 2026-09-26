@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"ytgrab/internal/app/deps"
-	"ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/domain"
 )
 
 type PlaylistEntry struct {

@@ -15,7 +15,7 @@ import (
 	"runtime"
 	"strings"
 
-	"ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
 )
 
 // Env holds everything setup touches, so tests can replace it.

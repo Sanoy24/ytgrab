@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
 )
 
 func TestHealthRouteReportsDegradedDependencies(t *testing.T) {

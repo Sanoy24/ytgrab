@@ -67,6 +67,7 @@ function New-Package([string]$Os, [string]$Arch, [bool]$BundleTools) {
         Remove-Item Env:GOOS, Env:GOARCH, Env:CGO_ENABLED -ErrorAction SilentlyContinue
     }
     Copy-Item (Join-Path $root 'docs\USER_GUIDE.md') (Join-Path $stage 'README.md')
+    Copy-Item (Join-Path $root 'LICENSE') (Join-Path $stage 'LICENSE.txt')
 
     $tools = @()
     if ($Os -eq 'windows') {

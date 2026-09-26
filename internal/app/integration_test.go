@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"ytgrab/internal/config"
-	"ytgrab/internal/domain"
-	"ytgrab/internal/downloader/ytdlp"
-	"ytgrab/internal/queue"
-	sqlitestore "ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
+	"github.com/Sanoy24/ytgrab/internal/queue"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
 // TestIntegrationDownload is opt-in because it downloads a real video and

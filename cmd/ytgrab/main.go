@@ -8,10 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"ytgrab/internal/app"
-	"ytgrab/internal/app/deps"
-	"ytgrab/internal/config"
-	"ytgrab/internal/setup"
+	"github.com/Sanoy24/ytgrab/internal/app"
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/setup"
 )
 
 func main() {

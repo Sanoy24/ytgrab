@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	sqlitestore "ytgrab/internal/store/sqlite"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
 func TestOutputFolderPersistsAndValidates(t *testing.T) {
