@@ -16,10 +16,7 @@ This file is the source of truth for project progress. Update it after every ite
 - [x] ~~Initialize the Go module, entry point, configuration, and graceful shutdown.~~
 - [x] ~~Add dependency discovery and a local health route with actionable diagnostics.~~
 - [x] ~~Build and preview a static local UI shell in `web/`.~~
-      <<<<<<< HEAD
-- [x] # ~~Add an embedded minimal web page served on `127.0.0.1`.~~
-- [ ] Add an embedded minimal web page served on `127.0.0.1`.
-  > > > > > > > agent/claude-ui-health
+- [x] ~~Add an embedded minimal web page served on `127.0.0.1`.~~
 
 ### 2. Durable jobs
 
@@ -53,6 +50,12 @@ This file is the source of truth for project progress. Update it after every ite
 - [ ] Package and verify a local release on the supported operating systems.
 
 ## Iteration log
+
+### 2026-09-26 — Post-merge checklist repair
+
+- Result: Removed leftover merge-conflict text from the embedded-page checklist while preserving its completed status.
+- Verification: The merged tree is clean on `master` before this edit; the embedded page has existing HTTP smoke and automated route checks recorded below.
+- Next: Implement output-folder settings with validation and live API/UI integration.
 
 ### 2026-09-26 — Source-run handoff and HTTP smoke check
 
