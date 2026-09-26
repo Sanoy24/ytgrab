@@ -33,8 +33,11 @@ This file is the source of truth for project progress. Update it after every ite
 
 ### 4. Usable local interface
 
-- [ ] Add URL submission, video/audio presets, and output-folder settings.
-- [ ] Show live progress, history, cancellation, retries, and clear errors.
+- [x] ~~Build URL submission form with client-side validation and video/audio preset choice (UI against fixtures).~~
+- [ ] Connect URL submission and presets to `POST /api/jobs` and verify against the Go server.
+- [ ] Add output-folder settings.
+- [x] ~~Build queue/history views with progress, cancel, retry, and error/empty/loading states (UI against fixtures).~~
+- [ ] Connect the queue/history views to the live API and SSE progress, and verify end to end.
 - [ ] Add on-demand format inspection and controlled playlist downloads.
 
 ### 5. Release readiness
@@ -52,6 +55,14 @@ This file is the source of truth for project progress. Update it after every ite
 - Decision: Health remains HTTP 200 while dependencies are missing so the local UI can show diagnostics. Node requires `--js-runtimes node` when the downloader adapter is implemented.
 - Limitation: The PTY interrupt did not terminate the `go run` processes cleanly, so the manual run did not verify OS-signal shutdown. The specific test processes were stopped; context-driven shutdown is covered by the integration test.
 - Next: Hand this branch to the integrator. The static UI shell and its serving integration remain separate tasks.
+
+### 2026-09-26 — Claude: static UI shell
+
+- Result: Added the static, client-rendered UI in `web/static/` (branch `agent/claude-ui-shell`): URL input with paste button and client-side YouTube link checks; five presets (video best/1080p/720p, audio M4A/MP3); queue with determinate and indeterminate progress, speed, ETA, and cancel; history with filters, output path copy, retry, and error hints; dependency health pill and missing-tool banner; empty, loading, load-error, and offline states; light/dark themes. Data comes from `api.js`, which uses fixtures by default (`?fixture=default|empty|error|degraded|loading`) and has an untested HTTP client (`?api=live`) for the planned routes. `web/README.md` documents preview steps and proposes JSON shapes for jobs, errors, and health.
+- Verification: Served `web/static` with `python -m http.server` on 127.0.0.1 and drove it with Playwright (Chromium). Checked desktop 1280px and 1024px, phone 375px, and dark mode by screenshot; confirmed no horizontal overflow at 375px (`scrollWidth` 360) after fixing a stacked-row overflow. Scripted checks: six invalid URL cases show the expected messages; a scheme-less video link with `list=` is accepted with the playlist note; cancel moves a job to history; retry re-queues and increments the attempt; history filters show the right states; keyboard focus survives live progress updates; the error scenario shows load errors, the offline banner, and a failing-submit toast that keeps the URL; loading shows skeletons with `aria-busy`. No console errors after adding an inline favicon. `node --check` passes on all modules.
+- Decision: Use a static client-rendered page with no build step instead of server templates; recorded in `ARCHITECTURE.md`. The JSON shapes in `web/README.md` are a proposal for Codex/the integrator, not a final contract. No Go files were touched.
+- Blocker/notes: The main checkout was on `agent/codex-foundation` with uncommitted coordination docs, so this branch was created from `master` in `.worktrees/claude` and this `PROGRESS.md` started from the uncommitted working copy. The HTTP client, SSE, and server-side validation are not verified.
+- Next: After the Go server lands, embed and serve `web/static/`, align the JSON shapes, switch the default client to live, and verify submission, progress, cancel, and retry against real jobs.
 
 ### 2026-09-26 — Delegation setup
 
