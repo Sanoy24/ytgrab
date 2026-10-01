@@ -2,7 +2,7 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-01
 
 ### Added
 
@@ -37,6 +37,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.3.0]: https://github.com/Sanoy24/ytgrab/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Sanoy24/ytgrab/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Sanoy24/ytgrab/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Sanoy24/ytgrab/releases/tag/v1.0.0
