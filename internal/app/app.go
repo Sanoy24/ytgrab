@@ -13,6 +13,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/api"
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/cooldown"
 	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
 	"github.com/Sanoy24/ytgrab/internal/picker"
 	"github.com/Sanoy24/ytgrab/internal/queue"
@@ -38,6 +39,9 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 		return err
 	}
 	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg, DownloadsDir: appSettings.DownloadsDir}, 2)
+	// One pause gate for downloads and format checks: when YouTube limits this network,
+	// everything waits instead of retrying into a longer block.
+	jobQueue.SetCooldown(cooldown.New())
 	jobQueue.Start(ctx)
 	defer jobQueue.Stop()
 	listener, err := net.Listen("tcp", cfg.ListenAddress)
@@ -54,10 +58,14 @@ type settingsWithPicker struct {
 }
 
 func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController, settings ...api.Settings) error {
+	inspector := ytdlp.NewInspector(cfg)
+	if shared, ok := controller.(interface{ Cooldown() *cooldown.Gate }); ok {
+		inspector.Cooldown = shared.Cooldown()
+	}
 	server := &http.Server{
 		Handler: api.RequireLoopbackHost(api.NewHandlerWithInspector(func(requestCtx context.Context) deps.Report {
 			return deps.Check(requestCtx, cfg)
-		}, store, controller, ytdlp.NewInspector(cfg), settings...)),
+		}, store, controller, inspector, settings...)),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       30 * time.Second,
 	}

@@ -79,6 +79,10 @@ The output folder is stored in SQLite. On first run no folder is set and the pag
 - Output paths reported by yt-dlp must resolve inside the output folder.
 - Request bodies and retained process output are size-limited.
 
+## When YouTube limits the network
+
+YouTube sometimes answers with HTTP 429 or a "confirm you're not a bot" check. Retrying straight away tends to extend the block, so a shared gate (`internal/cooldown`) pauses the download queue and format and playlist checks together: 15 minutes for the first block, then 30 and 60 while blocks continue, reset by the next successful download. A blocked job returns to the queue and runs when the pause ends, up to three attempts. Format checks during a pause answer immediately without contacting YouTube, and the job list reports `paused_until` so the page can show a countdown; `POST /api/system/resume` ends a pause early. To look less like a burst, consecutive downloads start 3–8 seconds apart and yt-dlp waits half a second between requests (`--sleep-requests`). The pause is kept in memory only.
+
 ## Processes, cancellation, and shutdown
 
 Child processes run with a context. Cancellation stops the whole process tree (`taskkill /T` on Windows, a process group on Unix), and yt-dlp keeps its `.part` file so a retry resumes. On Ctrl+C or SIGTERM the server stops accepting requests, closes open progress streams, and cancels running jobs; they are marked `interrupted` on the next start.
@@ -98,6 +102,8 @@ Tools are found in this order: `YTGRAB_TOOLS_DIR`, a `tools` folder beside the p
 | Concurrent downloads | 2 |
 | Fragments per download | 4 |
 | Automatic retries | network failures, up to 3 attempts |
+| YouTube block pauses | 15, 30, then 60 minutes; up to 3 attempts per job |
+| Spacing between download starts | 3–8 seconds |
 | Inspection cache | 64 entries, 10 minutes |
 | Playlist limit | 50 videos |
 | Shutdown timeout | 5 seconds |

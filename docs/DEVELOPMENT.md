@@ -68,6 +68,7 @@ python -m http.server 8765 --bind 127.0.0.1 --directory web/static
 | `/?fixture=loading` | Loading states that never finish |
 | `/?fixture=blocked` | YouTube rate limiting during format checks |
 | `/?fixture=expired` | An expired inspection that is re-checked automatically |
+| `/?fixture=cooldown` | The YouTube pause banner with its countdown and Resume now |
 
 Without `fixture`, the page calls the real API, which a static server doesn't have.
 

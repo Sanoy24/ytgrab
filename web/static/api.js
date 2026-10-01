@@ -19,7 +19,7 @@ export function createClient(params = new URLSearchParams(location.search)) {
   return new HttpClient();
 }
 
-// Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check) | first-run (no folder chosen) | no-picker (no folder window)
+// Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check) | first-run (no folder chosen) | no-picker (no folder window) | cooldown (YouTube pause)
 class FixtureClient {
   isFixture = true;
 
@@ -40,6 +40,9 @@ class FixtureClient {
   }
 
   async listJobs() {
+    if (this.scenario === 'cooldown' && this.pausedUntil === undefined) {
+      this.pausedUntil = new Date(Date.now() + 14 * 60_000 + 32_000).toISOString();
+    }
     await delay(this.scenario === 'loading' ? 1e9 : 300);
     if (this.scenario === 'error') {
       throw new ApiError(
@@ -48,6 +51,11 @@ class FixtureClient {
       );
     }
     return structuredClone(this.jobs);
+  }
+
+  async resume() {
+    await delay(200);
+    this.pausedUntil = null;
   }
 
   async inspect(url, { signal } = {}) {
@@ -276,7 +284,16 @@ class HttpClient {
     return this.request('GET', '/api/system/health');
   }
   listJobs() {
-    return this.request('GET', '/api/jobs').then((r) => r.jobs ?? r);
+    return this.request('GET', '/api/jobs').then((r) => {
+      this.pausedUntil = r.paused_until ?? null;
+      return r.jobs ?? r;
+    });
+  }
+  resume() {
+    return this.request('POST', '/api/system/resume').then(() => {
+      this.pausedUntil = null;
+      this.refreshNow?.();
+    });
   }
   createJob(body) {
     return this.request('POST', '/api/jobs', body).then(this.afterChange);

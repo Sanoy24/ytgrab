@@ -162,6 +162,8 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"--print", "before_dl:" + titlePrefix + "%(title)j",
 		"--print", "after_move:" + pathPrefix + "%(filepath)j",
 		"--concurrent-fragments", "4",
+		// A short pause between YouTube requests makes a download look less like a burst.
+		"--sleep-requests", "0.5",
 		"-P", cfg.DownloadsDir,
 		"-o", outputTemplate(job),
 	}

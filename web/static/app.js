@@ -272,7 +272,44 @@ function fillList(container, list, empty) {
 
 const RUN_ORDER = { processing: 0, downloading: 1, inspecting: 2, queued: 3 };
 
+// ---------- YouTube pause ----------
+
+// While YouTube limits this network the server pauses downloads and format checks;
+// the banner counts down to the automatic resume.
+let pauseTimer = null;
+
+function renderPause() {
+  const until = client.pausedUntil ? new Date(client.pausedUntil).getTime() : 0;
+  const remaining = until - Date.now();
+  const banner = $('#pause-banner');
+  if (remaining <= 0) {
+    banner.hidden = true;
+    clearInterval(pauseTimer);
+    pauseTimer = null;
+    return;
+  }
+  const minutes = Math.floor(remaining / 60_000);
+  const seconds = String(Math.floor((remaining % 60_000) / 1000)).padStart(2, '0');
+  $('#pause-text').textContent = `Downloads resume automatically in ${minutes}:${seconds}.`;
+  banner.hidden = false;
+  pauseTimer ??= setInterval(renderPause, 1000);
+}
+
+async function resumeNow(button) {
+  button.disabled = true;
+  try {
+    await client.resume();
+    renderPause();
+    toast('Resuming downloads.');
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function render() {
+  renderPause();
   const queue = jobs
     .filter((j) => isActive(j.state))
     .sort(
@@ -994,6 +1031,7 @@ function init() {
     if ($('#url').getAttribute('aria-invalid') === 'true') setUrlError('');
     scheduleInspect(e.inputType === 'insertFromPaste');
   });
+  $('#pause-resume').addEventListener('click', (e) => resumeNow(e.currentTarget));
   $('#playlist-items').addEventListener('change', updatePlaylistCount);
   $('#playlist-all').addEventListener('change', (e) => {
     for (const box of document.querySelectorAll('#playlist-items input')) box.checked = e.target.checked;
