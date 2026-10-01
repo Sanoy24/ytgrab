@@ -31,6 +31,7 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 	mux.Handle("/", http.FileServer(http.FS(web.Static())))
 	if jobs != nil {
 		addJobRoutes(mux, jobs, controller, inspector)
+		addHistoryRoutes(mux, jobs)
 	}
 	if inspector != nil {
 		addInspectRoute(mux, inspector)

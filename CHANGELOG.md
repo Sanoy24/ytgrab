@@ -2,6 +2,13 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Show in folder** for finished downloads opens the file manager with the file selected (Explorer, Finder, or the Linux file manager).
+- **Remove** entries from the history; for finished downloads, choose whether to also delete the file. **Clear** removes all finished entries and keeps the files.
+
 ## [1.2.0] - 2026-10-01
 
 ### Added

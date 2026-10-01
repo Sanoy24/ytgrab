@@ -59,6 +59,29 @@ class FixtureClient {
     this.pausedUntil = null;
   }
 
+  async revealJob(id) {
+    await delay(200);
+    const job = this.jobs.find((j) => j.id === id);
+    if (!job?.output_path) throw new ApiError('file_missing', 'The file was moved or deleted.');
+  }
+
+  async deleteJob(id) {
+    await delay(200);
+    const job = this.jobs.find((j) => j.id === id);
+    if (!job) throw new ApiError('not_found', 'That job no longer exists.');
+    if (isActive(job.state)) throw new ApiError('invalid_state', 'Cancel the download before removing it.');
+    this.jobs = this.jobs.filter((j) => j.id !== id);
+    this.emit();
+  }
+
+  async clearHistory() {
+    await delay(200);
+    const before = this.jobs.length;
+    this.jobs = this.jobs.filter((j) => isActive(j.state));
+    this.emit();
+    return { removed: before - this.jobs.length };
+  }
+
   async updateYtdlp() {
     await delay(2000);
     this.ytdlpUpdated = true;
@@ -295,6 +318,19 @@ class HttpClient {
       this.pausedUntil = r.paused_until ?? null;
       return r.jobs ?? r;
     });
+  }
+  // Opens the system file manager at a finished download.
+  revealJob(id) {
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/reveal`);
+  }
+  // Removes a finished job from the history; with deleteFile, also deletes its file.
+  deleteJob(id, deleteFile = false) {
+    const query = deleteFile ? '?delete_file=true' : '';
+    return this.request('DELETE', `/api/jobs/${encodeURIComponent(id)}${query}`).then(this.afterChange);
+  }
+  // Removes every finished, failed, and cancelled job; files are kept.
+  clearHistory() {
+    return this.request('POST', '/api/history/clear').then((result) => this.afterChange(result));
   }
   // Installs or updates yt-dlp on the server; resolves with { version, previous, updated }.
   updateYtdlp() {

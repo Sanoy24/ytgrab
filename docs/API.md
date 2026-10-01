@@ -17,6 +17,9 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `GET` | `/api/jobs/{id}/events` | Progress stream (Server-Sent Events) |
 | `POST` | `/api/jobs/{id}/cancel` | Cancel a queued or running job |
 | `POST` | `/api/jobs/{id}/retry` | Retry a failed or cancelled job |
+| `POST` | `/api/jobs/{id}/reveal` | Show a finished file in the system file manager (`204`; `file_missing` if it was moved) |
+| `DELETE` | `/api/jobs/{id}` | Remove a finished, failed, or cancelled job from the history; `?delete_file=true` also deletes a finished job's file |
+| `POST` | `/api/history/clear` | Remove all finished, failed, and cancelled jobs, `{ "removed": 3 }`; files are kept |
 | `GET` | `/api/inspect?url=…` | A video's formats, grouped into video and audio |
 | `GET` | `/api/playlist?url=…` | Up to 50 playlist entries for review |
 | `POST` | `/api/playlist/jobs` | One preset job per confirmed video |
