@@ -21,6 +21,8 @@ type Config struct {
 	// user's choice of output folder.
 	DownloadsDirSet bool
 	ShutdownTimeout time.Duration
+	// CookiesBrowser is the saved browser-sign-in choice, filled in per download.
+	CookiesBrowser string
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
 	OpenBrowser bool

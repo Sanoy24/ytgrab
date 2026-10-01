@@ -139,3 +139,37 @@ func TestRejectsNonLoopbackHost(t *testing.T) {
 		}
 	}
 }
+
+func TestBrowserSignInSetting(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := settings.New(ctx, store, t.TempDir(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil, manager)
+	request := func(method, target, body string) (int, map[string]any) {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, target, bytes.NewBufferString(body)))
+		var decoded map[string]any
+		_ = json.Unmarshal(response.Body.Bytes(), &decoded)
+		return response.Code, decoded
+	}
+	code, body := request(http.MethodGet, "/api/settings", "")
+	if code != http.StatusOK || body["cookies_browser"] != "" || len(body["cookie_browsers"].([]any)) == 0 {
+		t.Fatalf("settings = %d %v", code, body)
+	}
+	if code, _ := request(http.MethodPut, "/api/settings/cookies", `{"browser":"firefox --x"}`); code != http.StatusBadRequest {
+		t.Fatalf("invalid browser = %d", code)
+	}
+	if code, body := request(http.MethodPut, "/api/settings/cookies", `{"browser":"firefox"}`); code != http.StatusOK || body["cookies_browser"] != "firefox" {
+		t.Fatalf("set firefox = %d %v", code, body)
+	}
+	if code, body := request(http.MethodPut, "/api/settings/cookies", `{"browser":""}`); code != http.StatusOK || body["cookies_browser"] != "" {
+		t.Fatalf("turn off = %d %v", code, body)
+	}
+}

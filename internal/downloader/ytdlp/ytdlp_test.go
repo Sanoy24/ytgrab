@@ -113,3 +113,39 @@ func argAfter(args []string, flag string) string {
 	}
 	return ""
 }
+
+func TestBrowserSignInIsPassedOnlyWhenSet(t *testing.T) {
+	job, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioM4A)
+	if joined := strings.Join(buildArgs(job, config.Config{}), " "); strings.Contains(joined, "--cookies") {
+		t.Fatalf("cookies used while sign-in is off: %s", joined)
+	}
+	args := buildArgs(job, config.Config{CookiesBrowser: "firefox"})
+	if got := argAfter(args, "--cookies-from-browser"); got != "firefox" {
+		t.Fatalf("--cookies-from-browser = %q in %v", got, args)
+	}
+	if args[len(args)-1] != job.URL || args[len(args)-2] != "--" {
+		t.Fatal("URL must stay the final argument")
+	}
+	// Defense in depth: anything that isn't a plain browser name is ignored.
+	if joined := strings.Join(buildArgs(job, config.Config{CookiesBrowser: "firefox --exec x"}), " "); strings.Contains(joined, "--cookies") {
+		t.Fatalf("unsafe browser value passed through: %s", joined)
+	}
+}
+
+func TestCookieFailuresAreExplained(t *testing.T) {
+	for _, stderr := range []string{
+		"ERROR: Could not copy Chrome cookie database. See https://github.com/yt-dlp/yt-dlp/issues/7271 for more info",
+		"ERROR: Failed to decrypt with DPAPI. See https://github.com/yt-dlp/yt-dlp/issues/10927 for more info",
+		"ERROR: could not find firefox cookies database in /home/me/.mozilla/firefox",
+	} {
+		err, ok := classifyFailure(stderr).(*Error)
+		if !ok || err.Code != "cookies_failed" {
+			t.Errorf("classifyFailure(%q) = %v", stderr, err)
+		}
+	}
+	// The bot check mentions --cookies-from-browser but is still a block.
+	err, _ := classifyFailure("ERROR: [youtube] x: Sign in to confirm you're not a bot. Use --cookies-from-browser or --cookies for the authentication.").(*Error)
+	if err == nil || err.Code != "blocked" {
+		t.Fatalf("bot check classified as %v", err)
+	}
+}

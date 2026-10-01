@@ -58,7 +58,7 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	if err != nil {
 		return err
 	}
-	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg, DownloadsDir: appSettings.DownloadsDir}, 2)
+	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg, DownloadsDir: appSettings.DownloadsDir, CookiesBrowser: appSettings.CookiesBrowser}, 2)
 	// One pause gate for downloads and format checks: when YouTube limits this network,
 	// everything waits instead of retrying into a longer block.
 	jobQueue.SetCooldown(cooldown.New())
@@ -80,6 +80,11 @@ type serverSettings struct {
 
 func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController, settings ...api.Settings) error {
 	inspector := ytdlp.NewInspector(cfg)
+	if len(settings) != 0 {
+		if cookies, ok := settings[0].(interface{ CookiesBrowser() string }); ok {
+			inspector.CookiesBrowser = cookies.CookiesBrowser
+		}
+	}
 	if shared, ok := controller.(interface{ Cooldown() *cooldown.Gate }); ok {
 		inspector.Cooldown = shared.Cooldown()
 	}

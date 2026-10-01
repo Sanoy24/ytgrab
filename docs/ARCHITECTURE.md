@@ -78,6 +78,7 @@ The output folder is stored in SQLite. On first run no folder is set and the pag
 - Links are validated before use; user input never becomes a yt-dlp option. Format IDs are checked against a strict pattern and a recent inspection.
 - Output paths reported by yt-dlp must resolve inside the output folder.
 - Request bodies and retained process output are size-limited.
+- Browser sign-in is opt-in. The setting accepts only names from a fixed browser list and becomes yt-dlp's `--cookies-from-browser <name>`; yt-dlp reads the cookies itself on each run, and YTGrab never reads, stores, or logs them.
 
 ## When YouTube limits the network
 
