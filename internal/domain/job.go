@@ -223,11 +223,11 @@ func CanTransition(from State, to State) bool {
 	case Queued:
 		return to == Inspecting || to == Downloading || to == Failed || to == Cancelled
 	case Inspecting:
-		return to == Downloading || to == Failed || to == Cancelled
+		return to == Downloading || to == Failed || to == Cancelled || to == Queued
 	case Downloading:
-		return to == Processing || to == Completed || to == Failed || to == Cancelled
+		return to == Processing || to == Completed || to == Failed || to == Cancelled || to == Queued
 	case Processing:
-		return to == Completed || to == Failed || to == Cancelled
+		return to == Completed || to == Failed || to == Cancelled || to == Queued
 	case Failed, Cancelled:
 		return to == Queued
 	default:
@@ -235,8 +235,23 @@ func CanTransition(from State, to State) bool {
 	}
 }
 
+// Requeue returns a running job to the queue as a new attempt, for example after
+// YouTube limited the network. Use Transition for other state changes.
+func (job *Job) Requeue() error {
+	if !job.State.Active() || job.State == Queued {
+		return errors.New("only a running job can be requeued")
+	}
+	job.State = Queued
+	job.Attempt++
+	job.Progress = nil
+	job.Error = nil
+	job.OutputPath = nil
+	job.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
 func (job *Job) Transition(to State) error {
-	if !CanTransition(job.State, to) {
+	if !CanTransition(job.State, to) || (job.State.Active() && job.State != Queued && to == Queued) {
 		return errors.New("invalid job state transition")
 	}
 	if (job.State == Failed || job.State == Cancelled) && to == Queued {
