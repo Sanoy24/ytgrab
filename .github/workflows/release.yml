@@ -1,0 +1,60 @@
+name: Release
+
+# Pushing a tag like v1.2.0 builds every platform and publishes a GitHub release.
+# Tags with a suffix (v1.2.0-rc.1) are published as pre-releases, which the installer
+# and the "latest" download links ignore.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Download the official yt-dlp for the Windows zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force tools | Out-Null
+          Invoke-WebRequest https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe -OutFile tools/yt-dlp.exe
+          Invoke-WebRequest https://github.com/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS -OutFile tools/SHA2-256SUMS
+
+      - name: Test and build archives
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1 -Version $version -AllPlatforms
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Write release notes from CHANGELOG.md
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v') -replace '-.*$', ''
+          $sections = (Get-Content CHANGELOG.md -Raw) -split '(?m)^## '
+          $section = $sections | Where-Object { $_ -match "^\[$([regex]::Escape($version))\]" } | Select-Object -First 1
+          if ($section) {
+            $notes = ($section -split "`n", 2)[1].Trim() -replace '(?ms)^\[\d+\.\d+\.\d+\]: .*$', ''
+          } else {
+            $notes = "See the [changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)."
+          }
+          $notes += "`n`n**Install:** on macOS and Linux run ``curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | sh``. On Windows, download the zip below, extract it, and double-click **Start YTGrab.cmd**. Each file has a matching ``.sha256`` checksum."
+          Set-Content -Path release-notes.md -Value $notes.Trim() -Encoding utf8
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart('v')
+          $ghArgs = @('release', 'create', $tag, '--verify-tag', '--title', "YTGrab $version", '--notes-file', 'release-notes.md')
+          if ($tag -match '-') { $ghArgs += '--prerelease' }
+          $ghArgs += Get-ChildItem dist -File | ForEach-Object { $_.FullName }
+          gh @ghArgs

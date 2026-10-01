@@ -1,0 +1,34 @@
+# Changelog
+
+All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
+
+## [1.2.0] - 2026-10-01
+
+### Added
+
+- **yt-dlp updates from the page.** YTGrab checks for a newer yt-dlp once a day; when one exists, the tools pill turns amber and an **Update** button installs it (checksum-verified, into YTGrab's own tools folder). `ytgrab doctor` shows available updates too.
+- Linux ARM64 builds (`linux-arm64`), also supported by the installer.
+
+### Fixed
+
+- Starting YTGrab while it is already running now opens the running copy instead of failing with "port in use". Previously a second launch could mark the running copy's downloads as interrupted and start duplicate downloads before noticing; YTGrab now claims its port first and locks its data folder.
+
+## [1.1.0] - 2026-10-01
+
+### Added
+
+- Automatic pause when YouTube limits the network: downloads and format checks wait (15, 30, then 60 minutes), a countdown shows when they resume, and blocked downloads retry on their own. **Resume now** ends the pause early.
+- Downloads start a few seconds apart and yt-dlp spaces out its requests.
+- One-line installer for macOS and Linux (`install.sh`), which avoids the macOS "Not Opened" warning.
+
+### Fixed
+
+- The program's `tools` folder is found when YTGrab is started through a symlink.
+
+## [1.0.0] - 2026-09-26
+
+First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
+
+[1.2.0]: https://github.com/Sanoy24/ytgrab/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/Sanoy24/ytgrab/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/Sanoy24/ytgrab/releases/tag/v1.0.0

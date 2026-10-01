@@ -1,0 +1,35 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If a download fails, first update yt-dlp (the **Update** button in the tools panel, or `ytgrab setup --update-ytdlp`) — YouTube changes often.
+  - type: input
+    id: version
+    attributes:
+      label: YTGrab version
+      description: Output of `ytgrab --version`
+      placeholder: "1.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options: [Windows, macOS (Apple silicon), macOS (Intel), Linux]
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Include any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `ytgrab doctor`
+      render: text

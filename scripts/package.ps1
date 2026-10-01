@@ -135,6 +135,7 @@ function New-Package([string]$Os, [string]$Arch, [bool]$BundleTools) {
 New-Package 'windows' 'amd64' $true
 if ($AllPlatforms) {
     New-Package 'linux' 'amd64' $false
+    New-Package 'linux' 'arm64' $false
     New-Package 'darwin' 'arm64' $false
     New-Package 'darwin' 'amd64' $false
 }

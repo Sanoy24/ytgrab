@@ -44,9 +44,10 @@ case "$(uname -m)" in
     *) arch="$(uname -m)" ;;
 esac
 
-if [ "$os" = linux ] && [ "$arch" != amd64 ]; then
-    fail "there is no prebuilt Linux $arch release yet. Install with Go instead: go install github.com/$REPO/cmd/ytgrab@latest"
-fi
+case "$arch" in
+    amd64 | arm64) ;;
+    *) fail "there is no prebuilt $os/$arch release. Install with Go instead: go install github.com/$REPO/cmd/ytgrab@latest" ;;
+esac
 if [ "$os" = darwin ] && [ "$arch" = amd64 ] && [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)" = 1 ]; then
     arch=arm64 # running under Rosetta on Apple silicon; use the native build
 fi

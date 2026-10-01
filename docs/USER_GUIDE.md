@@ -46,7 +46,7 @@ The installer downloads the build for your system, checks it against the publish
 
 Run the installer again to upgrade; yt-dlp and your settings are kept. Installer options (set before `sh`): `YTGRAB_VERSION=1.0.0` for a specific version, `YTGRAB_INSTALL_DIR` and `YTGRAB_BIN_DIR` for other locations, `YTGRAB_NO_SETUP=1` to skip the setup question. To uninstall, delete `~/.local/share/ytgrab` and `~/.local/bin/ytgrab`.
 
-**Manual install:** download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon), `-darwin-amd64` (Intel Mac), or `-linux-amd64` from the releases page, then:
+**Manual install:** download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon), `-darwin-amd64` (Intel Mac), `-linux-amd64`, or `-linux-arm64` from the releases page, then:
 
 ```sh
 mkdir -p ~/.local/share/ytgrab
@@ -58,7 +58,7 @@ xattr -c ytgrab 2>/dev/null   # macOS: browser downloads are quarantined and the
 ./ytgrab --open
 ```
 
-Other processor types (such as Linux on ARM) can install with Go: `go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest`.
+Other processor types can install with Go: `go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest`.
 
 ## Download a video
 
