@@ -257,6 +257,7 @@ input[aria-invalid="true"] { border-color: var(--err); }
 }
 .chip[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
 .filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.history-clear { margin-left: auto; margin-right: 8px; }
 
 /* Jobs */
 .job {

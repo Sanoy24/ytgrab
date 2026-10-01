@@ -207,11 +207,19 @@ function renderProgress(el, job) {
   }
 }
 
+// Finished downloads whose Remove button was pressed; they show the removal choices.
+const confirmingRemove = new Set();
+
 function renderActions(box, job) {
   const want = [];
   if (isActive(job.state)) want.push(['cancel', 'Cancel', 'btn-danger']);
-  if (job.state === 'failed' || job.state === 'cancelled') want.push(['retry', 'Retry', '']);
-  if (job.state === 'completed' && job.output_path) want.push(['copy', 'Copy path', '']);
+  if (job.state === 'failed' || job.state === 'cancelled') want.push(['retry', 'Retry', ''], ['remove', 'Remove', '']);
+  if (job.state === 'completed' && confirmingRemove.has(job.id)) {
+    want.push(['remove-list', 'Remove from list', ''], ['remove-file', 'Delete file too', 'btn-danger'], ['remove-keep', 'Keep', '']);
+  } else if (job.state === 'completed') {
+    if (job.output_path) want.push(['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
+    want.push(['remove', 'Remove', '']);
+  }
 
   const key = want.map((w) => w[0]).join(',');
   if (box.dataset.key !== key) {
@@ -271,6 +279,25 @@ function fillList(container, list, empty) {
 }
 
 const RUN_ORDER = { processing: 0, downloading: 1, inspecting: 2, queued: 3 };
+
+// ---------- history ----------
+
+async function clearHistory() {
+  const finished = jobs.filter((j) => !isActive(j.state)).length;
+  if (!finished) {
+    toast('The history is already empty.');
+    return;
+  }
+  if (!confirm(`Remove all ${finished} finished, failed, and cancelled downloads from the list? Downloaded files are kept.`)) return;
+  try {
+    const { removed } = await client.clearHistory();
+    jobs = jobs.filter((j) => isActive(j.state));
+    render();
+    toast(`Removed ${removed} entr${removed === 1 ? 'y' : 'ies'}. Your files are kept.`);
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
 
 // ---------- YouTube pause ----------
 
@@ -506,6 +533,41 @@ async function runAction(id, action) {
       toast('File path copied.');
     } catch {
       toast("Couldn't copy. Select the path text and copy it manually.", true);
+    }
+    return;
+  }
+  if (action === 'reveal') {
+    try {
+      await client.revealJob(id);
+    } catch (err) {
+      toast(err.message, true);
+    }
+    return;
+  }
+  if (action === 'remove' && job.state === 'completed') {
+    confirmingRemove.add(id);
+    render();
+    return;
+  }
+  if (action === 'remove-keep') {
+    confirmingRemove.delete(id);
+    render();
+    return;
+  }
+  if (action === 'remove' || action === 'remove-list' || action === 'remove-file') {
+    const deleteFile = action === 'remove-file';
+    pending.add(id);
+    render();
+    try {
+      await client.deleteJob(id, deleteFile);
+      jobs = jobs.filter((j) => j.id !== id);
+      toast(deleteFile ? 'File deleted and removed from the list.' : 'Removed from the list.');
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      pending.delete(id);
+      confirmingRemove.delete(id);
+      render();
     }
     return;
   }
@@ -1062,6 +1124,7 @@ function init() {
     scheduleInspect(e.inputType === 'insertFromPaste');
   });
   $('#pause-resume').addEventListener('click', (e) => resumeNow(e.currentTarget));
+  $('#clear-history').addEventListener('click', clearHistory);
   $('#playlist-items').addEventListener('change', updatePlaylistCount);
   $('#playlist-all').addEventListener('change', (e) => {
     for (const box of document.querySelectorAll('#playlist-items input')) box.checked = e.target.checked;

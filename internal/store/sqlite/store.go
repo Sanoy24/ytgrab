@@ -209,6 +209,34 @@ func (store *Store) Update(ctx context.Context, job domain.Job, expected domain.
 }
 
 // Recover marks work left active by a previous process as retryable failures.
+// Delete removes a finished (completed, failed, or cancelled) job. Queued and running
+// jobs are refused with ErrConflict; cancel them first.
+func (store *Store) Delete(ctx context.Context, id string) error {
+	result, err := store.db.ExecContext(ctx, "DELETE FROM jobs WHERE id=? AND state IN (?, ?, ?)",
+		id, domain.Completed, domain.Failed, domain.Cancelled)
+	if err != nil {
+		return err
+	}
+	if count, err := result.RowsAffected(); err != nil || count == 1 {
+		return err
+	}
+	if _, err := store.Get(ctx, id); err != nil {
+		return err // ErrNotFound
+	}
+	return ErrConflict
+}
+
+// DeleteFinished removes every completed, failed, and cancelled job and returns how many.
+func (store *Store) DeleteFinished(ctx context.Context) (int, error) {
+	result, err := store.db.ExecContext(ctx, "DELETE FROM jobs WHERE state IN (?, ?, ?)",
+		domain.Completed, domain.Failed, domain.Cancelled)
+	if err != nil {
+		return 0, err
+	}
+	count, err := result.RowsAffected()
+	return int(count), err
+}
+
 func (store *Store) Recover(ctx context.Context) (int, error) {
 	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {

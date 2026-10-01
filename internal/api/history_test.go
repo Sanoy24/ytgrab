@@ -1,0 +1,115 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/reveal"
+	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
+)
+
+func finishedJob(t *testing.T, store *sqlitestore.Store, url string, state domain.State, output string) domain.Job {
+	t.Helper()
+	ctx := context.Background()
+	job, err := domain.NewJob(url, domain.VideoBest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Create(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+	_ = job.Transition(domain.Downloading)
+	if err := store.Update(ctx, job, domain.Queued); err != nil {
+		t.Fatal(err)
+	}
+	if state == domain.Downloading {
+		return job
+	}
+	if output != "" {
+		job.OutputPath = &output
+	}
+	_ = job.Transition(state)
+	if err := store.Update(ctx, job, domain.Downloading); err != nil {
+		t.Fatal(err)
+	}
+	return job
+}
+
+func TestShowInFolderAndRemoveFromHistory(t *testing.T) {
+	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	var shown []string
+	showFile = func(path string) error { shown = append(shown, path); return nil }
+	defer func() { showFile = reveal.Show }()
+
+	dir := t.TempDir()
+	file := filepath.Join(dir, "Title [dQw4w9WgXcQ] 1080p.mp4")
+	if err := os.WriteFile(file, []byte("video"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	done := finishedJob(t, store, "https://youtu.be/dQw4w9WgXcQ", domain.Completed, file)
+	moved := finishedJob(t, store, "https://youtu.be/jNQXAC9IVRw", domain.Completed, filepath.Join(dir, "Gone [jNQXAC9IVRw] 720p.mp4"))
+	failed := finishedJob(t, store, "https://youtu.be/aqz-KE-bpKQ", domain.Failed, "")
+	running := finishedJob(t, store, "https://youtu.be/M7lc1UVf-VE", domain.Downloading, "")
+	// A record whose file name doesn't carry its video ID must never delete that file.
+	other := filepath.Join(dir, "important.docx")
+	if err := os.WriteFile(other, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	odd := finishedJob(t, store, "https://youtu.be/9bZkp7q19f0", domain.Completed, other)
+
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil)
+	do := func(method, target string) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, target, nil))
+		return response
+	}
+	if got := do(http.MethodPost, "/api/jobs/"+done.ID+"/reveal"); got.Code != http.StatusNoContent || len(shown) != 1 || shown[0] != file {
+		t.Fatalf("reveal = %d %s, shown %v", got.Code, got.Body.String(), shown)
+	}
+	if got := do(http.MethodPost, "/api/jobs/"+moved.ID+"/reveal"); got.Code != http.StatusNotFound {
+		t.Fatalf("reveal moved file = %d %s", got.Code, got.Body.String())
+	}
+	if got := do(http.MethodPost, "/api/jobs/"+failed.ID+"/reveal"); got.Code != http.StatusConflict {
+		t.Fatalf("reveal failed job = %d %s", got.Code, got.Body.String())
+	}
+	if got := do(http.MethodDelete, "/api/jobs/"+running.ID); got.Code != http.StatusConflict {
+		t.Fatalf("remove running job = %d %s", got.Code, got.Body.String())
+	}
+	if got := do(http.MethodDelete, "/api/jobs/"+odd.ID+"?delete_file=true"); got.Code != http.StatusBadRequest {
+		t.Fatalf("delete unrecognized file = %d %s", got.Code, got.Body.String())
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Fatal("an unrelated file was deleted")
+	}
+	if got := do(http.MethodDelete, "/api/jobs/"+done.ID+"?delete_file=true"); got.Code != http.StatusNoContent {
+		t.Fatalf("remove with file = %d %s", got.Code, got.Body.String())
+	}
+	if _, err := os.Stat(file); !os.IsNotExist(err) {
+		t.Fatal("downloaded file was not deleted")
+	}
+	got := do(http.MethodPost, "/api/history/clear")
+	var body struct {
+		Removed int `json:"removed"`
+	}
+	if got.Code != http.StatusOK || json.Unmarshal(got.Body.Bytes(), &body) != nil || body.Removed != 3 {
+		t.Fatalf("clear = %d %s", got.Code, got.Body.String())
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Fatal("clearing history deleted a file")
+	}
+	jobs, _ := store.List(context.Background(), 10)
+	if len(jobs) != 1 || jobs[0].ID != running.ID {
+		t.Fatalf("remaining = %+v", jobs)
+	}
+}

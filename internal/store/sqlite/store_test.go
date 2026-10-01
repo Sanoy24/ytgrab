@@ -65,3 +65,62 @@ func TestStorePersistenceRecoveryAndRetry(t *testing.T) {
 		t.Fatalf("queued jobs = %d, %v", len(queued), err)
 	}
 }
+
+func TestDeleteRemovesOnlyFinishedJobs(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	add := func(url string, state domain.State) domain.Job {
+		t.Helper()
+		job, err := domain.NewJob(url, domain.AudioM4A)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Create(ctx, job); err != nil {
+			t.Fatal(err)
+		}
+		if state != domain.Queued {
+			_ = job.Transition(domain.Downloading)
+			if err := store.Update(ctx, job, domain.Queued); err != nil {
+				t.Fatal(err)
+			}
+			if state != domain.Downloading {
+				_ = job.Transition(state)
+				if err := store.Update(ctx, job, domain.Downloading); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		return job
+	}
+	done := add("https://youtu.be/dQw4w9WgXcQ", domain.Completed)
+	failed := add("https://youtu.be/jNQXAC9IVRw", domain.Failed)
+	running := add("https://youtu.be/aqz-KE-bpKQ", domain.Downloading)
+	queued := add("https://youtu.be/M7lc1UVf-VE", domain.Queued)
+
+	if err := store.Delete(ctx, running.ID); !errors.Is(err, ErrConflict) {
+		t.Fatalf("deleting a running job = %v, want ErrConflict", err)
+	}
+	if err := store.Delete(ctx, "job_missing"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("deleting a missing job = %v, want ErrNotFound", err)
+	}
+	if err := store.Delete(ctx, done.ID); err != nil {
+		t.Fatal(err)
+	}
+	removed, err := store.DeleteFinished(ctx)
+	if err != nil || removed != 1 {
+		t.Fatalf("DeleteFinished = %d, %v; want 1 (the failed job)", removed, err)
+	}
+	jobs, _ := store.List(ctx, 10)
+	if len(jobs) != 2 {
+		t.Fatalf("remaining jobs = %d, want the running and queued ones", len(jobs))
+	}
+	for _, job := range jobs {
+		if job.ID != running.ID && job.ID != queued.ID {
+			t.Fatalf("unexpected remaining job %s (%s); failed was %s", job.ID, job.State, failed.ID)
+		}
+	}
+}
