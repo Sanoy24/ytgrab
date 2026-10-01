@@ -9,6 +9,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/system/health` | Tool status |
+| `POST` | `/api/system/update-ytdlp` | Install or update yt-dlp in YTGrab's tools folder |
 | `POST` | `/api/system/resume` | End a pause after YouTube limited this network (`204`) |
 | `GET` | `/api/jobs` | Recent jobs, `{ "jobs": [Job] }` |
 | `POST` | `/api/jobs` | Create a job from a preset or an inspected format |
@@ -140,3 +141,9 @@ All IDs are validated before any job is created. Videos already queued, and repe
   "note": "Executable checks only. YouTube access and yt-dlp-ejs availability are not verified."
 }
 ```
+
+yt-dlp also carries `"outdated": true` and an explanatory `message` when a newer release exists. The server looks up the latest release at most once a day in the background; offline, only versions older than 90 days are flagged.
+
+## Updating yt-dlp
+
+`POST /api/system/update-ytdlp` checks the latest release and, unless it is already installed, downloads it into YTGrab's tools folder (searched before `PATH`), verified against the release's SHA-256 checksums. It returns `{ "version": "2026.09.30", "previous": "2026.08.19", "updated": true }`, or `"updated": false` when the installed version was already the latest. Errors: `downloads_running` (`409`, Windows can't replace a running program), `update_busy` (`409`), `update_failed` (`502`).

@@ -4,9 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/app"
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
@@ -79,7 +81,15 @@ func loadConfig() (config.Config, bool) {
 }
 
 func toolEnv(cfg config.Config) setup.Env {
-	env := setup.SystemEnv(func(ctx context.Context) deps.Report { return deps.Check(ctx, cfg) }, app.SetupToolsDir(cfg), os.Stdin, os.Stdout)
+	check := func(ctx context.Context) deps.Report {
+		report := deps.Check(ctx, cfg)
+		lookupCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		latest, _ := setup.LatestYtdlpVersion(lookupCtx, http.DefaultClient, "") // "" offline
+		deps.MarkOutdated(&report, latest, time.Now())
+		return report
+	}
+	env := setup.SystemEnv(check, app.SetupToolsDir(cfg), os.Stdin, os.Stdout)
 	env.Extra = func() []setup.Line { return app.DoctorChecks(cfg) }
 	return env
 }

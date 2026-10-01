@@ -19,7 +19,7 @@ export function createClient(params = new URLSearchParams(location.search)) {
   return new HttpClient();
 }
 
-// Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check) | first-run (no folder chosen) | no-picker (no folder window) | cooldown (YouTube pause)
+// Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check) | first-run (no folder chosen) | no-picker (no folder window) | cooldown (YouTube pause) | outdated (yt-dlp update available)
 class FixtureClient {
   isFixture = true;
 
@@ -36,6 +36,7 @@ class FixtureClient {
     await delay(150);
     if (this.scenario === 'error')
       throw new ApiError('unreachable', 'Could not reach the local server.');
+    if (this.scenario === 'outdated' && !this.ytdlpUpdated) return fx.healthOutdated;
     return this.scenario === 'degraded' ? fx.healthDegraded : fx.healthOk;
   }
 
@@ -56,6 +57,12 @@ class FixtureClient {
   async resume() {
     await delay(200);
     this.pausedUntil = null;
+  }
+
+  async updateYtdlp() {
+    await delay(2000);
+    this.ytdlpUpdated = true;
+    return { version: '2026.09.30', previous: '2026.08.19', updated: true };
   }
 
   async inspect(url, { signal } = {}) {
@@ -288,6 +295,10 @@ class HttpClient {
       this.pausedUntil = r.paused_until ?? null;
       return r.jobs ?? r;
     });
+  }
+  // Installs or updates yt-dlp on the server; resolves with { version, previous, updated }.
+  updateYtdlp() {
+    return this.request('POST', '/api/system/update-ytdlp');
   }
   resume() {
     return this.request('POST', '/api/system/resume').then(() => {

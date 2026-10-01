@@ -65,6 +65,13 @@ func (queue *Queue) SetCooldown(gate *cooldown.Gate) {
 	queue.cooldown = gate
 }
 
+// Running returns how many downloads are in progress.
+func (queue *Queue) Running() int {
+	queue.mu.Lock()
+	defer queue.mu.Unlock()
+	return len(queue.active)
+}
+
 // Cooldown returns the shared pause gate, or nil.
 func (queue *Queue) Cooldown() *cooldown.Gate {
 	return queue.cooldown

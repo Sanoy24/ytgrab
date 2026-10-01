@@ -9,12 +9,48 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
-// ytdlpReleaseURL serves the latest official yt-dlp release assets.
-const ytdlpReleaseURL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
+// ytdlpReleaseURL serves the latest official yt-dlp release assets, and
+// ytdlpReleasesURL + "/latest" redirects to the latest release's tag page.
+const (
+	ytdlpReleaseURL  = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
+	ytdlpReleasesURL = "https://github.com/yt-dlp/yt-dlp/releases"
+)
+
+// LatestYtdlpVersion returns the newest yt-dlp release version without downloading it:
+// GitHub redirects releases/latest to releases/tag/<version>. Pass "" for releasesURL to
+// use GitHub.
+func LatestYtdlpVersion(ctx context.Context, client *http.Client, releasesURL string) (string, error) {
+	if releasesURL == "" {
+		releasesURL = ytdlpReleasesURL
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodHead, releasesURL+"/latest", nil)
+	if err != nil {
+		return "", err
+	}
+	request.Header.Set("User-Agent", "ytgrab-setup")
+	response, err := client.Do(request)
+	if err != nil {
+		return "", fmt.Errorf("check the latest yt-dlp: %w", err)
+	}
+	response.Body.Close()
+	version := path.Base(response.Request.URL.Path)
+	if response.StatusCode != http.StatusOK || version == "latest" || version == "" {
+		return "", fmt.Errorf("check the latest yt-dlp: unexpected response %s", response.Status)
+	}
+	return version, nil
+}
+
+// InstallYtdlp downloads the latest official yt-dlp for this system into dir, verified
+// against the release's SHA-256 checksums.
+func InstallYtdlp(ctx context.Context, client *http.Client, dir string) (string, error) {
+	return downloadYtdlp(ctx, client, ytdlpReleaseURL, runtime.GOOS, runtime.GOARCH, dir)
+}
 
 const maxYtdlpSize = 200 << 20
 

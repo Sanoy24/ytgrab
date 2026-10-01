@@ -402,9 +402,36 @@ function toolList(dependencies) {
     msg.textContent = d.available && /^available\.?$/i.test(d.message || '') ? '' : d.message || '';
     if (d.path) li.title = d.path;
     li.append(name, state, msg);
+    if (d.name === 'yt-dlp' && client.updateYtdlp) {
+      // yt-dlp needs updating when YouTube changes; offer it in place.
+      const label = !d.available ? 'Install' : d.outdated ? 'Update' : 'Check for update';
+      const button = el('button', { type: 'button', className: 'btn btn-small tool-action', textContent: label });
+      button.addEventListener('click', () => updateYtdlp(button));
+      li.append(button);
+      if (d.outdated) li.dataset.outdated = 'true';
+    }
     ul.append(li);
   }
   return ul;
+}
+
+async function updateYtdlp(button) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Updating…';
+  try {
+    const result = await client.updateYtdlp();
+    toast(
+      result.updated
+        ? `yt-dlp updated to ${result.version}.`
+        : `yt-dlp ${result.version} is already the latest version.`,
+    );
+    await loadHealth();
+  } catch (err) {
+    toast(err.message, true);
+    button.disabled = false;
+    button.textContent = original;
+  }
 }
 
 async function loadHealth() {
@@ -416,10 +443,13 @@ async function loadHealth() {
     const h = await client.health();
     const missingRequired = h.dependencies.filter((d) => d.required && !d.available);
     const ready = h.status === 'ready' && !missingRequired.length;
-    pill.dataset.status = ready ? 'ok' : 'error';
-    label.textContent = ready
-      ? 'Tools ready'
-      : `${missingRequired.length || 'Some'} tool${missingRequired.length === 1 ? '' : 's'} missing`;
+    const outdated = h.dependencies.some((d) => d.outdated);
+    pill.dataset.status = !ready ? 'error' : outdated ? 'degraded' : 'ok';
+    label.textContent = !ready
+      ? `${missingRequired.length || 'Some'} tool${missingRequired.length === 1 ? '' : 's'} missing`
+      : outdated
+        ? 'yt-dlp update available'
+        : 'Tools ready';
 
     const strong = document.createElement('strong');
     strong.textContent = ready

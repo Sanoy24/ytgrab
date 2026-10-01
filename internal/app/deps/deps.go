@@ -24,6 +24,48 @@ type Tool struct {
 	Path      string `json:"path,omitempty"`
 	Version   string `json:"version,omitempty"`
 	Message   string `json:"message"`
+	// Outdated marks a yt-dlp old enough that YouTube downloads are likely to break.
+	Outdated bool `json:"outdated,omitempty"`
+}
+
+// offlineMaxAgeDays flags yt-dlp as outdated when the latest release is unknown.
+const offlineMaxAgeDays = 90
+
+// ytdlpAgeDays reads yt-dlp's date-based version (2026.08.19, or 2026.08.19.1 for a
+// hotfix) and returns its age in days.
+func ytdlpAgeDays(version string, now time.Time) (int, bool) {
+	parts := strings.Split(version, ".")
+	if len(parts) < 3 {
+		return 0, false
+	}
+	released, err := time.Parse("2006.01.02", strings.Join(parts[:3], "."))
+	if err != nil {
+		return 0, false
+	}
+	return int(now.Sub(released).Hours() / 24), true
+}
+
+// MarkOutdated flags yt-dlp when a newer release exists (latest, if known), or when it
+// is very old and the latest release is unknown. yt-dlp's zero-padded date versions
+// compare correctly as strings.
+func MarkOutdated(report *Report, latest string, now time.Time) {
+	for i := range report.Dependencies {
+		tool := &report.Dependencies[i]
+		if tool.Name != "yt-dlp" || !tool.Available {
+			continue
+		}
+		if latest != "" {
+			if _, ok := ytdlpAgeDays(latest, now); ok && tool.Version < latest {
+				tool.Outdated = true
+				tool.Message = fmt.Sprintf("yt-dlp %s is available. Update when YouTube downloads start failing.", latest)
+			}
+			continue
+		}
+		if days, ok := ytdlpAgeDays(tool.Version, now); ok && days > offlineMaxAgeDays {
+			tool.Outdated = true
+			tool.Message = fmt.Sprintf("This yt-dlp is %d days old. YouTube changes often, so update it.", days)
+		}
+	}
 }
 
 // Report is a point-in-time executable check, not a network download test.
@@ -194,6 +236,11 @@ func findTool(dirs []string, name string) (string, error) {
 // Find resolves an executable using the same search order as health checks.
 func Find(cfg config.Config, name string) (string, error) {
 	return findTool(searchDirs(cfg), name)
+}
+
+// Version runs path --version, using the same cache as the health check.
+func Version(ctx context.Context, path string) (string, error) {
+	return getVersion(ctx, path, "--version")
 }
 
 // versionTimeout allows for the Windows yt-dlp.exe, which unpacks itself on every run

@@ -91,6 +91,8 @@ Child processes run with a context. Cancellation stops the whole process tree (`
 
 Tools are found in this order: `YTGRAB_TOOLS_DIR`, a `tools` folder beside the program, a `tools` folder in the working directory, WinGet's `Links` folder on Windows, then `PATH`. Version checks allow 15 seconds (the Windows yt-dlp build unpacks itself on every run) and are cached per file.
 
+yt-dlp is the part most likely to need updating, because YouTube changes often. The server looks up the latest yt-dlp release at most once a day (a single redirect request, in the background) and marks the installed one as outdated when a newer release exists. The tools panel and `ytgrab doctor` then offer an update, which installs the new version into YTGrab's own tools folder — never over a system-wide yt-dlp — with the same checksum verification as setup, and is refused while downloads are running.
+
 `ytgrab doctor` reports tools, folders, and the port. `ytgrab setup` installs what is missing after asking: yt-dlp from its official GitHub release, verified against the published SHA-256 checksums; FFmpeg and Deno through winget or Homebrew; package-manager commands are printed on Linux.
 
 `scripts/package.ps1` builds release archives. The Windows zip bundles a checksum-verified `yt-dlp.exe`; every archive includes `manifest.json` (versions and hashes) and `SHA256SUMS`. FFmpeg and a JavaScript runtime are installed separately because of their size and licensing.

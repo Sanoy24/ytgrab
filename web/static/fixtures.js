@@ -20,6 +20,16 @@ export const healthOk = {
   note,
 };
 
+// yt-dlp with a newer release available.
+export const healthOutdated = {
+  ...healthOk,
+  dependencies: healthOk.dependencies.map((d) =>
+    d.name === 'yt-dlp'
+      ? { ...d, version: '2026.08.19', outdated: true, message: 'yt-dlp 2026.09.30 is available. Update when YouTube downloads start failing.' }
+      : d,
+  ),
+};
+
 // Captured from the Go server on a machine without yt-dlp (paths shortened).
 export const healthDegraded = {
   status: "degraded",

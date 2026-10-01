@@ -48,13 +48,17 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", cfg.ListenAddress, err)
 	}
-	return serve(ctx, cfg, output, listener, store, jobQueue, settingsWithPicker{Manager: appSettings, Picker: picker.New()})
+	latest := newLatestYtdlp()
+	latest.Get() // look up the newest yt-dlp now, so the first page load can show it
+	updater := &ytdlpUpdater{cfg: cfg, running: jobQueue.Running, latest: latest}
+	return serve(ctx, cfg, output, listener, store, jobQueue, serverSettings{Manager: appSettings, Picker: picker.New(), ytdlpUpdater: updater})
 }
 
-// settingsWithPicker adds the desktop folder window to the settings routes.
-type settingsWithPicker struct {
+// serverSettings adds the desktop folder window and yt-dlp updates to the settings routes.
+type serverSettings struct {
 	*settings.Manager
 	picker.Picker
+	*ytdlpUpdater
 }
 
 func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController, settings ...api.Settings) error {
@@ -62,9 +66,17 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 	if shared, ok := controller.(interface{ Cooldown() *cooldown.Gate }); ok {
 		inspector.Cooldown = shared.Cooldown()
 	}
+	latest := func() string { return "" }
+	if len(settings) != 0 {
+		if source, ok := settings[0].(interface{ LatestYtdlp() string }); ok {
+			latest = source.LatestYtdlp
+		}
+	}
 	server := &http.Server{
 		Handler: api.RequireLoopbackHost(api.NewHandlerWithInspector(func(requestCtx context.Context) deps.Report {
-			return deps.Check(requestCtx, cfg)
+			report := deps.Check(requestCtx, cfg)
+			deps.MarkOutdated(&report, latest(), time.Now())
+			return report
 		}, store, controller, inspector, settings...)),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       30 * time.Second,

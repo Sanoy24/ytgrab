@@ -133,6 +133,9 @@ h1, h2, h3, p { margin: 0; }
 .tools li[data-available="false"] .tool-state { color: var(--err); font-weight: 600; }
 .tool-msg { color: var(--muted); }
 .tools-note { margin-top: 8px; font-size: 0.8rem; color: var(--muted); }
+.tools li { grid-template-columns: 7.5em 8em 1fr auto; }
+.tools li[data-outdated="true"] .tool-state { color: var(--warn); font-weight: 600; }
+.tool-action { justify-self: end; }
 @media (max-width: 520px) {
   .tools li { grid-template-columns: auto 1fr; }
   .tool-msg { grid-column: 1 / -1; }
