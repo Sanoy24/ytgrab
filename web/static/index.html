@@ -31,6 +31,14 @@
 
     <div class="wrap">
       <div class="banner" id="health-detail" role="status" hidden></div>
+      <div class="banner pause-banner" id="pause-banner" role="status" hidden>
+        <div>
+          <strong>YouTube is limiting requests from this network.</strong>
+          <span id="pause-text"></span>
+          <span class="hint">Queued downloads wait and nothing is lost. Retrying sooner usually makes the block last longer.</span>
+        </div>
+        <button type="button" class="btn btn-small" id="pause-resume">Resume now</button>
+      </div>
       <div class="banner banner-info" id="fixture-note" hidden>
         Showing sample data. The download server is not connected yet.
       </div>

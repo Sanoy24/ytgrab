@@ -118,6 +118,9 @@ h1, h2, h3, p { margin: 0; }
 .banner-error { background: var(--err-soft); border-color: color-mix(in srgb, var(--err) 35%, transparent); }
 .banner-info { background: var(--info-soft); border-color: color-mix(in srgb, var(--info) 30%, transparent); font-size: 0.9rem; }
 .banner strong { display: block; margin-bottom: 2px; }
+.pause-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.pause-banner .hint { display: block; margin-top: 4px; }
+#pause-text { font-variant-numeric: tabular-nums; }
 .tools { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
 .tools li {
   display: grid;

@@ -35,6 +35,9 @@ func (inspector *Inspector) ListPlaylist(ctx context.Context, rawURL string) (Pl
 	if err != nil {
 		return Playlist{}, err
 	}
+	if err := inspector.cooldownError(); err != nil {
+		return Playlist{}, err
+	}
 	path, err := deps.Find(inspector.Config, "yt-dlp")
 	if err != nil {
 		return Playlist{}, &Error{Code: "dependency_missing", Message: "Install yt-dlp and add it to PATH or the tools directory."}
@@ -45,6 +48,7 @@ func (inspector *Inspector) ListPlaylist(ctx context.Context, rawURL string) (Pl
 	}
 	defer release()
 	output, err := inspector.runJSON(ctx, path, playlistArgs(url), 45*time.Second)
+	inspector.noteResult(err)
 	var toolError *Error
 	if errors.As(err, &toolError) && toolError.Code == "video_unavailable" {
 		return Playlist{}, &Error{Code: "video_unavailable", Message: "This playlist is unavailable or private."}
@@ -85,7 +89,7 @@ func (inspector *Inspector) CachedTitle(videoID string) string {
 // playlistArgs asks for one entry beyond the limit so truncation can be detected.
 func playlistArgs(url string) []string {
 	return []string{
-		"--ignore-config", "--flat-playlist", "--dump-single-json",
+		"--ignore-config", "--flat-playlist", "--dump-single-json", "--sleep-requests", "0.5",
 		"--playlist-items", fmt.Sprintf("1:%d", domain.MaxPlaylistItems+1),
 		"--", url,
 	}

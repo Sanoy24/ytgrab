@@ -9,6 +9,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/system/health` | Tool status |
+| `POST` | `/api/system/resume` | End a pause after YouTube limited this network (`204`) |
 | `GET` | `/api/jobs` | Recent jobs, `{ "jobs": [Job] }` |
 | `POST` | `/api/jobs` | Create a job from a preset or an inspected format |
 | `GET` | `/api/jobs/{id}` | One job |
@@ -24,6 +25,8 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/settings/use-default` | Create and use the suggested folder |
 
 Write requests from another site, and any request whose `Host` is not a loopback name, are rejected with `403`.
+
+While YouTube is limiting this network, `GET /api/jobs` also returns `"paused_until": "2026-10-01T13:26:20Z"`; queued jobs wait until then.
 
 ## Job
 

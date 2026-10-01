@@ -27,6 +27,12 @@ type JobController interface {
 	Cancel(string)
 }
 
+// Pauser is implemented by a queue that pauses while YouTube limits this network.
+type Pauser interface {
+	PausedUntil() (time.Time, bool)
+	Resume()
+}
+
 func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, inspector Inspector) {
 	mux.HandleFunc("GET /api/jobs", func(w http.ResponseWriter, r *http.Request) {
 		jobs, err := store.List(r.Context(), 200)
@@ -34,8 +40,20 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 			writeError(w, http.StatusInternalServerError, "storage", "Could not load downloads.")
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"jobs": jobs})
+		body := map[string]any{"jobs": jobs}
+		if pauser, ok := controller.(Pauser); ok {
+			if until, paused := pauser.PausedUntil(); paused {
+				body["paused_until"] = until.UTC()
+			}
+		}
+		writeJSON(w, http.StatusOK, body)
 	})
+	if pauser, ok := controller.(Pauser); ok {
+		mux.HandleFunc("POST /api/system/resume", func(w http.ResponseWriter, _ *http.Request) {
+			pauser.Resume()
+			w.WriteHeader(http.StatusNoContent)
+		})
+	}
 	mux.HandleFunc("POST /api/jobs", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
 			URL    string         `json:"url"`

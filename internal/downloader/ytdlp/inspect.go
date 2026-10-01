@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os/exec"
 	"strings"
 	"sync"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/cooldown"
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/process"
 )
@@ -46,11 +48,14 @@ type cachedInspection struct {
 
 type Inspector struct {
 	Config config.Config
-	mu     sync.Mutex
-	cache  map[string]cachedInspection
-	titles map[string]string // video ID -> title from recent playlist listings
-	gate   chan struct{}
-	last   time.Time
+	// Cooldown, when set, skips YouTube requests while YouTube is limiting this network
+	// and starts a pause when a check is blocked.
+	Cooldown *cooldown.Gate
+	mu       sync.Mutex
+	cache    map[string]cachedInspection
+	titles   map[string]string // video ID -> title from recent playlist listings
+	gate     chan struct{}
+	last     time.Time
 }
 
 func NewInspector(cfg config.Config) *Inspector {
@@ -68,6 +73,9 @@ func (inspector *Inspector) Inspect(ctx context.Context, rawURL string) (Inspect
 		return cached.result, nil
 	}
 	inspector.mu.Unlock()
+	if err := inspector.cooldownError(); err != nil {
+		return Inspection{}, err
+	}
 	release, err := inspector.throttle(ctx)
 	if err != nil {
 		return Inspection{}, err
@@ -80,6 +88,7 @@ func (inspector *Inspector) Inspect(ctx context.Context, rawURL string) (Inspect
 	}
 	inspector.mu.Unlock()
 	result, err := inspector.extract(ctx, url, videoID)
+	inspector.noteResult(err)
 	if err != nil {
 		return Inspection{}, err
 	}
@@ -126,6 +135,27 @@ func (inspector *Inspector) Select(videoID string, kind string, id string) (doma
 		return domain.FormatSelection{Kind: kind, ID: id, Ext: format.Ext, Label: label}, true
 	}
 	return domain.FormatSelection{}, false
+}
+
+// cooldownError reports a pause in progress without contacting YouTube.
+func (inspector *Inspector) cooldownError() error {
+	if inspector.Cooldown == nil {
+		return nil
+	}
+	until, paused := inspector.Cooldown.Until()
+	if !paused {
+		return nil
+	}
+	minutes := int(math.Ceil(time.Until(until).Minutes()))
+	return &Error{Code: "blocked", Message: fmt.Sprintf("YouTube is limiting requests from this network. Try again in about %d min.", minutes)}
+}
+
+// noteResult starts a pause when YouTube blocked a check.
+func (inspector *Inspector) noteResult(err error) {
+	var toolError *Error
+	if inspector.Cooldown != nil && errors.As(err, &toolError) && toolError.Code == "blocked" {
+		inspector.Cooldown.Block()
+	}
 }
 
 // throttle admits one YouTube metadata request at a time, at least two seconds apart,

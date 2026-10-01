@@ -3,9 +3,11 @@ package queue
 import (
 	"context"
 	"errors"
+	"math/rand/v2"
 	"sync"
 	"time"
 
+	"github.com/Sanoy24/ytgrab/internal/cooldown"
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
 	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
@@ -32,6 +34,20 @@ type Queue struct {
 	mu         sync.Mutex
 	active     map[string]context.CancelFunc
 	retryDelay time.Duration
+
+	// cooldown pauses all work while YouTube is limiting this network; nil disables it.
+	cooldown *cooldown.Gate
+	// spacing returns the minimum gap between starting two downloads.
+	spacing   func() time.Duration
+	nextStart time.Time
+}
+
+// maxBlockedAttempts is how many times a job is tried while YouTube keeps blocking.
+const maxBlockedAttempts = 3
+
+// jitteredSpacing spreads job starts 3–8 seconds apart so bursts look less automated.
+func jitteredSpacing() time.Duration {
+	return 3*time.Second + time.Duration(rand.Int64N(int64(5*time.Second)))
 }
 
 func New(store Store, downloader Downloader, workers int) *Queue {
@@ -41,7 +57,33 @@ func New(store Store, downloader Downloader, workers int) *Queue {
 	if workers > 4 {
 		workers = 4
 	}
-	return &Queue{store: store, downloader: downloader, workers: workers, wake: make(chan struct{}, 1), active: make(map[string]context.CancelFunc), retryDelay: 2 * time.Second}
+	return &Queue{store: store, downloader: downloader, workers: workers, wake: make(chan struct{}, 1), active: make(map[string]context.CancelFunc), retryDelay: 2 * time.Second, spacing: jitteredSpacing}
+}
+
+// SetCooldown shares a pause gate with format inspection. Call before Start.
+func (queue *Queue) SetCooldown(gate *cooldown.Gate) {
+	queue.cooldown = gate
+}
+
+// Cooldown returns the shared pause gate, or nil.
+func (queue *Queue) Cooldown() *cooldown.Gate {
+	return queue.cooldown
+}
+
+// PausedUntil reports when downloads resume after YouTube limited this network.
+func (queue *Queue) PausedUntil() (time.Time, bool) {
+	if queue.cooldown == nil {
+		return time.Time{}, false
+	}
+	return queue.cooldown.Until()
+}
+
+// Resume ends a pause early.
+func (queue *Queue) Resume() {
+	if queue.cooldown != nil {
+		queue.cooldown.Resume()
+	}
+	queue.Wake()
 }
 
 func (queue *Queue) Start(parent context.Context) {
@@ -85,8 +127,18 @@ func (queue *Queue) worker() {
 		if queue.ctx.Err() != nil {
 			return
 		}
+		if queue.cooldown != nil && queue.cooldown.Wait(queue.ctx) != nil {
+			return
+		}
 		jobs, err := queue.store.Queued(queue.ctx, 1)
 		if err == nil && len(jobs) != 0 {
+			if !queue.pace() {
+				return
+			}
+			// Another worker may have been blocked while this one waited its turn.
+			if _, paused := queue.PausedUntil(); paused {
+				continue
+			}
 			queue.runJob(jobs[0])
 			continue
 		}
@@ -96,6 +148,34 @@ func (queue *Queue) worker() {
 		case <-queue.wake:
 		case <-timer.C:
 		}
+	}
+}
+
+// pace waits so consecutive downloads don't start at the same moment. It reports false
+// when the queue is stopping.
+func (queue *Queue) pace() bool {
+	if queue.cooldown == nil {
+		return true
+	}
+	queue.mu.Lock()
+	now := time.Now()
+	start := queue.nextStart
+	if start.Before(now) {
+		start = now
+	}
+	queue.nextStart = start.Add(queue.spacing())
+	queue.mu.Unlock()
+	wait := time.Until(start)
+	if wait <= 0 {
+		return true
+	}
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+	select {
+	case <-queue.ctx.Done():
+		return false
+	case <-timer.C:
+		return true
 	}
 }
 
@@ -168,11 +248,22 @@ func (queue *Queue) runJob(job domain.Job) {
 		}
 		current.Error = failure
 		if err := current.Transition(domain.Failed); err == nil {
-			if err := queue.store.Update(queue.ctx, current, previous); err == nil && failure.Code == "network" && current.Attempt < 3 {
-				queue.scheduleRetry(current.ID, current.Attempt)
+			if err := queue.store.Update(queue.ctx, current, previous); err == nil {
+				switch {
+				case failure.Code == "network" && current.Attempt < 3:
+					queue.scheduleRetry(current.ID, current.Attempt)
+				case failure.Code == "blocked" && queue.cooldown != nil:
+					queue.cooldown.Block()
+					if current.Attempt < maxBlockedAttempts {
+						queue.requeue(current)
+					}
+				}
 			}
 		}
 		return
+	}
+	if queue.cooldown != nil {
+		queue.cooldown.Success()
 	}
 	if result.Title != "" {
 		current.Title = &result.Title
@@ -181,6 +272,14 @@ func (queue *Queue) runJob(job domain.Job) {
 	if err := current.Transition(domain.Completed); err == nil {
 		_ = queue.store.Update(queue.ctx, current, previous)
 	}
+}
+
+// requeue returns a blocked job to the queue; it runs again when the pause ends.
+func (queue *Queue) requeue(job domain.Job) {
+	if err := job.Transition(domain.Queued); err != nil {
+		return
+	}
+	_ = queue.store.Update(queue.ctx, job, domain.Failed)
 }
 
 func (queue *Queue) scheduleRetry(id string, attempt int) {

@@ -1,11 +1,15 @@
 package ytdlp
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/cooldown"
 	"github.com/Sanoy24/ytgrab/internal/domain"
 )
 
@@ -59,5 +63,40 @@ func TestMissingPlaylistIsUnavailable(t *testing.T) {
 	err, ok := classifyFailure("ERROR: [youtube:tab] PLx: YouTube said: The playlist does not exist.").(*Error)
 	if !ok || err.Code != "video_unavailable" {
 		t.Fatalf("classifyFailure = %v", err)
+	}
+}
+
+func TestChecksWaitDuringCooldown(t *testing.T) {
+	inspector := NewInspector(config.Config{})
+	inspector.Cooldown = cooldown.WithSteps(30 * time.Minute)
+	inspector.Cooldown.Block()
+	for name, check := range map[string]func() error{
+		"inspect": func() error {
+			_, err := inspector.Inspect(context.Background(), "https://youtu.be/jNQXAC9IVRw")
+			return err
+		},
+		"playlist": func() error {
+			_, err := inspector.ListPlaylist(context.Background(), "https://www.youtube.com/playlist?list=PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2")
+			return err
+		},
+	} {
+		err := check()
+		var toolError *Error
+		// Without a configured yt-dlp, running it would report dependency_missing instead.
+		if !errors.As(err, &toolError) || toolError.Code != "blocked" || !strings.Contains(toolError.Message, "about 30 min") {
+			t.Errorf("%s during cooldown = %v", name, err)
+		}
+	}
+}
+
+func TestDownloadsAndListingsPaceRequests(t *testing.T) {
+	job, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioM4A)
+	for name, args := range map[string][]string{
+		"download": buildArgs(job, config.Config{}),
+		"playlist": playlistArgs("https://www.youtube.com/playlist?list=PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2"),
+	} {
+		if !strings.Contains(strings.Join(args, " "), "--sleep-requests 0.5") {
+			t.Errorf("%s arguments do not pace requests: %v", name, args)
+		}
 	}
 }
