@@ -75,3 +75,34 @@ func TestFolderMustBeChosenOnFirstRun(t *testing.T) {
 		t.Fatalf("explicit YTGRAB_DOWNLOAD_DIR should count as chosen: %v, %v", explicit.Configured(), err)
 	}
 }
+
+func TestCookiesBrowserIsOptInAndAllowlisted(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := New(ctx, store, t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manager.CookiesBrowser() != "" {
+		t.Fatal("browser sign-in must be off by default")
+	}
+	for _, bad := range []string{"netscape", "firefox --exec", "chrome:Profile 1", "FIREFOX"} {
+		if err := manager.SetCookiesBrowser(ctx, bad); !errors.Is(err, ErrInvalidBrowser) {
+			t.Errorf("SetCookiesBrowser(%q) = %v", bad, err)
+		}
+	}
+	if err := manager.SetCookiesBrowser(ctx, "firefox"); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, _ := New(ctx, store, t.TempDir(), false)
+	if reloaded.CookiesBrowser() != "firefox" {
+		t.Fatalf("reloaded browser = %q", reloaded.CookiesBrowser())
+	}
+	if err := reloaded.SetCookiesBrowser(ctx, ""); err != nil || reloaded.CookiesBrowser() != "" {
+		t.Fatalf("turning sign-in off = %v, %q", err, reloaded.CookiesBrowser())
+	}
+}

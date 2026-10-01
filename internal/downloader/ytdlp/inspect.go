@@ -48,6 +48,8 @@ type cachedInspection struct {
 
 type Inspector struct {
 	Config config.Config
+	// CookiesBrowser, when set, returns the browser whose YouTube sign-in to use.
+	CookiesBrowser func() string
 	// Cooldown, when set, skips YouTube requests while YouTube is limiting this network
 	// and starts a pause when a check is blocked.
 	Cooldown *cooldown.Gate
@@ -211,6 +213,9 @@ func (inspector *Inspector) extract(ctx context.Context, url string, videoID str
 
 // runJSON runs yt-dlp for machine-readable metadata with a timeout and bounded output.
 func (inspector *Inspector) runJSON(ctx context.Context, path string, args []string, timeout time.Duration) ([]byte, error) {
+	if inspector.CookiesBrowser != nil {
+		args = append(cookieArgs(inspector.CookiesBrowser()), args...)
+	}
 	if _, err := deps.Find(inspector.Config, "deno"); err != nil {
 		if _, err := deps.Find(inspector.Config, "node"); err == nil {
 			args = append([]string{"--js-runtimes", "node"}, args...)

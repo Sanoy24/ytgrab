@@ -978,6 +978,7 @@ function applySettings(next) {
   $('#setup-default').hidden = !next.default_dir;
   $('#dir-path').textContent = next.downloads_dir;
   $('#dir-type').hidden = !next.can_pick;
+  renderSignIn(next);
   $('#output-dir').hidden = !configured && $('#dir-form').hidden;
   if (configured) setSetupError('');
 }
@@ -1095,6 +1096,41 @@ async function onDirSubmit(e) {
   }
 }
 
+const BROWSER_NAMES = {
+  firefox: 'Firefox', chrome: 'Chrome', edge: 'Edge', brave: 'Brave',
+  chromium: 'Chromium', opera: 'Opera', vivaldi: 'Vivaldi', safari: 'Safari',
+};
+
+// Browser sign-in is an opt-in, advanced setting; the server accepts only listed browsers.
+function renderSignIn(next) {
+  const box = $('#signin');
+  box.hidden = !Array.isArray(next.cookie_browsers);
+  if (box.hidden) return;
+  const select = $('#signin-browser');
+  if (select.options.length !== next.cookie_browsers.length + 1) {
+    select.replaceChildren(
+      el('option', { value: '', textContent: 'Off (recommended)' }),
+      ...next.cookie_browsers.map((b) => el('option', { value: b, textContent: `Use ${BROWSER_NAMES[b] || b}` })),
+    );
+  }
+  select.value = next.cookies_browser || '';
+}
+
+async function onSignInChange(e) {
+  const select = e.currentTarget;
+  const previous = settings?.cookies_browser || '';
+  select.disabled = true;
+  try {
+    applySettings(await client.setCookiesBrowser(select.value));
+    toast(select.value ? `Downloads will use your ${BROWSER_NAMES[select.value] || select.value} YouTube sign-in.` : 'YouTube sign-in turned off.');
+  } catch (err) {
+    select.value = previous;
+    toast(err.message, true);
+  } finally {
+    select.disabled = false;
+  }
+}
+
 // Called before queueing anything: points the user at the folder choice on first run.
 function requireFolder() {
   if (!needsFolder()) return true;
@@ -1125,6 +1161,7 @@ function init() {
   });
   $('#pause-resume').addEventListener('click', (e) => resumeNow(e.currentTarget));
   $('#clear-history').addEventListener('click', clearHistory);
+  $('#signin-browser').addEventListener('change', onSignInChange);
   $('#playlist-items').addEventListener('change', updatePlaylistCount);
   $('#playlist-all').addEventListener('change', (e) => {
     for (const box of document.querySelectorAll('#playlist-items input')) box.checked = e.target.checked;

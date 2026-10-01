@@ -162,6 +162,15 @@
             <button type="button" class="btn btn-small" id="dir-edit">Change…</button>
             <button type="button" class="btn-link" id="dir-type">Type a path</button>
           </div>
+          <div class="signin" id="signin" hidden>
+            <label for="signin-browser" class="field-label">YouTube sign-in</label>
+            <select id="signin-browser"></select>
+            <p class="hint">
+              Only if YouTube keeps blocking downloads. yt-dlp then uses your browser's YouTube
+              sign-in; YTGrab never stores it. Heavy use can get an account flagged, so a secondary
+              account is safer. On Windows, Firefox works best; close the browser if reading fails.
+            </p>
+          </div>
           <form class="output-dir-edit" id="dir-form" novalidate hidden>
             <label for="dir-input" class="field-label">Output folder</label>
             <input

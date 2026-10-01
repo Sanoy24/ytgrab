@@ -6,11 +6,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 )
 
-const downloadsKey = "downloads_dir"
+const (
+	downloadsKey = "downloads_dir"
+	cookiesKey   = "cookies_browser"
+)
+
+// Browsers yt-dlp can read YouTube sign-in cookies from. Only these names are accepted,
+// so the setting can never become an arbitrary yt-dlp option.
+var CookieBrowsers = []string{"firefox", "chrome", "edge", "brave", "chromium", "opera", "vivaldi", "safari"}
+
+var ErrInvalidBrowser = errors.New("Choose one of the listed browsers.")
 
 var ErrInvalidDirectory = errors.New("Choose an existing, writable absolute folder.")
 
@@ -23,6 +33,7 @@ type Manager struct {
 	mu           sync.RWMutex
 	store        Store
 	downloadsDir string
+	cookies      string
 	defaultDir   string
 	configured   bool
 }
@@ -37,7 +48,35 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if !found {
 		directory = defaultDirectory
 	}
-	return &Manager{store: store, downloadsDir: directory, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	cookies, _, err := store.GetSetting(ctx, cookiesKey)
+	if err != nil {
+		return nil, fmt.Errorf("load sign-in setting: %w", err)
+	}
+	if !slices.Contains(CookieBrowsers, cookies) {
+		cookies = ""
+	}
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// CookiesBrowser returns the browser whose YouTube sign-in yt-dlp should use, or "" (off).
+func (manager *Manager) CookiesBrowser() string {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.cookies
+}
+
+// SetCookiesBrowser turns browser sign-in on for one of CookieBrowsers, or off with "".
+func (manager *Manager) SetCookiesBrowser(ctx context.Context, browser string) error {
+	if browser != "" && !slices.Contains(CookieBrowsers, browser) {
+		return ErrInvalidBrowser
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, cookiesKey, browser); err != nil {
+		return fmt.Errorf("save sign-in setting: %w", err)
+	}
+	manager.cookies = browser
+	return nil
 }
 
 // Configured reports whether an output folder has been chosen.

@@ -201,7 +201,15 @@ class FixtureClient {
       configured: this.configured ?? this.scenario !== 'first-run',
       default_dir: String.raw`C:\Users\me\Downloads\ytgrab`,
       can_pick: this.scenario !== 'no-picker',
+      cookies_browser: this.cookiesBrowser ?? '',
+      cookie_browsers: ['firefox', 'chrome', 'edge', 'brave', 'chromium', 'opera', 'vivaldi', 'safari'],
     };
+  }
+
+  async setCookiesBrowser(browser) {
+    await delay(200);
+    this.cookiesBrowser = browser;
+    return this.settingsBody();
   }
 
   async getSettings() {
@@ -372,6 +380,10 @@ class HttpClient {
   }
   updateSettings(body) {
     return this.request('PUT', '/api/settings', body);
+  }
+  // Turns browser sign-in on for one of the listed browsers, or off with ''.
+  setCookiesBrowser(browser) {
+    return this.request('PUT', '/api/settings/cookies', { browser });
   }
   // Opens the operating system's folder window on this computer; resolves when it closes.
   pickFolder() {

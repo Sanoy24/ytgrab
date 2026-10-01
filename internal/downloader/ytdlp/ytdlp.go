@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -44,8 +45,9 @@ type Error struct {
 func (err *Error) Error() string { return err.Message }
 
 type Downloader struct {
-	Config       config.Config
-	DownloadsDir func() string
+	Config         config.Config
+	DownloadsDir   func() string
+	CookiesBrowser func() string
 }
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
@@ -55,6 +57,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	cfg := downloader.Config
 	if downloader.DownloadsDir != nil {
 		cfg.DownloadsDir = downloader.DownloadsDir()
+	}
+	if downloader.CookiesBrowser != nil {
+		cfg.CookiesBrowser = downloader.CookiesBrowser()
 	}
 	path, err := deps.Find(cfg, "yt-dlp")
 	if err != nil {
@@ -167,6 +172,7 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"-P", cfg.DownloadsDir,
 		"-o", outputTemplate(job),
 	}
+	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
 			args = append(args, "-f", videoSelector(*job.Format), "--merge-output-format", "mp4/webm/mkv")
@@ -191,6 +197,18 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "-f", "ba", "-x", "--audio-format", "mp3", "--audio-quality", "0")
 	}
 	return append(args, "--", job.URL)
+}
+
+// browserName matches the plain lowercase names in settings.CookieBrowsers.
+var browserName = regexp.MustCompile(`^[a-z]{2,16}$`)
+
+// cookieArgs lets yt-dlp use the browser's YouTube sign-in when the user turned it on.
+// YTGrab never reads or stores the cookies itself.
+func cookieArgs(browser string) []string {
+	if !browserName.MatchString(browser) {
+		return nil
+	}
+	return []string{"--cookies-from-browser", browser}
 }
 
 // outputTemplate names files by quality so different picks of one video never collide;
@@ -310,6 +328,9 @@ func confirmOutput(directory string, reportedPath string) (string, error) {
 func classifyFailure(stderr string) error {
 	lower := strings.ToLower(stderr)
 	switch {
+	// Checked first and by specific phrases: YouTube's bot check also mentions cookies.
+	case strings.Contains(lower, "cookie database"), strings.Contains(lower, "cookies database"), strings.Contains(lower, "failed to decrypt"), strings.Contains(lower, "failed to load cookies"), strings.Contains(lower, "unsupported browser"):
+		return &Error{Code: "cookies_failed", Message: "YTGrab couldn't use your browser's YouTube sign-in. Close that browser and retry, or choose another browser in the settings (on Windows, Firefox works best)."}
 	case strings.Contains(lower, "http error 429"), strings.Contains(lower, "sign in to confirm you're not a bot"), strings.Contains(lower, "sign in to confirm you’re not a bot"), strings.Contains(lower, "too many requests"):
 		return &Error{Code: "blocked", Message: "YouTube is limiting requests from this network. Wait a while, then retry."}
 	case strings.Contains(lower, "private video"), strings.Contains(lower, "video unavailable"), strings.Contains(lower, "not available"), strings.Contains(lower, "does not exist"):

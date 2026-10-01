@@ -27,6 +27,12 @@ type firstRunSettings interface {
 	UseDefault(context.Context) error
 }
 
+// cookieSettings is implemented by settings that support browser sign-in.
+type cookieSettings interface {
+	CookiesBrowser() string
+	SetCookiesBrowser(context.Context, string) error
+}
+
 // FolderPicker is optionally implemented by the settings value to open the operating
 // system's folder window on this computer.
 type FolderPicker interface {
@@ -42,6 +48,10 @@ func settingsBody(settings Settings) map[string]any {
 	}
 	if folders, ok := settings.(FolderPicker); ok {
 		body["can_pick"] = folders.Available()
+	}
+	if cookies, ok := settings.(cookieSettings); ok {
+		body["cookies_browser"] = cookies.CookiesBrowser()
+		body["cookie_browsers"] = settingspkg.CookieBrowsers
 	}
 	return body
 }
@@ -79,6 +89,29 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 		}
 		writeJSON(w, http.StatusOK, settingsBody(settings))
 	})
+	if cookies, ok := settings.(cookieSettings); ok {
+		mux.HandleFunc("PUT /api/settings/cookies", func(w http.ResponseWriter, r *http.Request) {
+			var input struct {
+				Browser string `json:"browser"`
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, 1024)
+			decoder := json.NewDecoder(r.Body)
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&input); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_request", "Send a browser name as JSON.")
+				return
+			}
+			if err := cookies.SetCookiesBrowser(r.Context(), input.Browser); err != nil {
+				if errors.Is(err, settingspkg.ErrInvalidBrowser) {
+					writeError(w, http.StatusBadRequest, "invalid_browser", err.Error())
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "storage", "Could not save the setting.")
+				return
+			}
+			writeJSON(w, http.StatusOK, settingsBody(settings))
+		})
+	}
 	if first, ok := settings.(firstRunSettings); ok {
 		mux.HandleFunc("POST /api/settings/use-default", func(w http.ResponseWriter, r *http.Request) {
 			if err := first.UseDefault(r.Context()); err != nil {

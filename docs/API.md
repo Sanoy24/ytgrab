@@ -26,6 +26,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `GET` | `/api/settings` | Output-folder settings |
 | `PUT` | `/api/settings` | Set the output folder to a typed path |
 | `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
+| `PUT` | `/api/settings/cookies` | Turn browser sign-in on (`{ "browser": "firefox" }`) or off (`""`); only listed browsers are accepted |
 | `POST` | `/api/settings/use-default` | Create and use the suggested folder |
 
 Write requests from another site, and any request whose `Host` is not a loopback name, are rejected with `403`.

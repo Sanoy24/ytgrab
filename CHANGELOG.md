@@ -8,6 +8,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 - **Show in folder** for finished downloads opens the file manager with the file selected (Explorer, Finder, or the Linux file manager).
 - **Remove** entries from the history; for finished downloads, choose whether to also delete the file. **Clear** removes all finished entries and keeps the files.
+- Optional **YouTube sign-in** from your browser (off by default) for networks YouTube keeps blocking. yt-dlp reads the browser's sign-in directly; YTGrab never stores it. Cookie-reading problems get their own clear error.
 
 ## [1.2.0] - 2026-10-01
 
