@@ -23,7 +23,9 @@ func TestServerStopsAfterContextCancellation(t *testing.T) {
 	finished := make(chan error, 1)
 	go func() { finished <- serve(ctx, cfg, io.Discard, listener, nil, nil) }()
 
-	client := &http.Client{Timeout: 2 * time.Second}
+	// The health check runs each installed tool's version command; cold starts on CI
+	// machines (and the self-extracting Windows yt-dlp) can take several seconds.
+	client := &http.Client{Timeout: 30 * time.Second}
 	response, err := client.Get("http://" + listener.Addr().String() + "/api/system/health")
 	if err != nil {
 		cancel()
