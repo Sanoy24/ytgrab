@@ -66,3 +66,21 @@ func TestYtdlpAssetNames(t *testing.T) {
 		}
 	}
 }
+
+func TestLatestYtdlpVersionFollowsTheReleaseRedirect(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/latest":
+			http.Redirect(w, r, "/tag/2026.09.30", http.StatusFound)
+		case "/tag/2026.09.30":
+			_, _ = w.Write([]byte("release page"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	version, err := LatestYtdlpVersion(context.Background(), server.Client(), server.URL)
+	if err != nil || version != "2026.09.30" {
+		t.Fatalf("LatestYtdlpVersion = %q, %v", version, err)
+	}
+}

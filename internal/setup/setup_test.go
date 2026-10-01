@@ -111,3 +111,20 @@ func TestSetupOnLinuxPrintsPackageCommands(t *testing.T) {
 		t.Errorf("missing package hint:\n%s", out.String())
 	}
 }
+
+func TestDoctorShowsAnUpdateWithoutFailing(t *testing.T) {
+	var out bytes.Buffer
+	env := Env{Out: &out, Check: func(context.Context) deps.Report {
+		r := report(map[string]bool{"yt-dlp": true, "ffmpeg": true, "ffprobe": true, "js-runtime": true})
+		r.Dependencies[0].Version = "2026.08.19"
+		r.Dependencies[0].Outdated = true
+		r.Dependencies[0].Message = "yt-dlp 2026.09.30 is available."
+		return r
+	}}
+	if !Doctor(context.Background(), env) {
+		t.Fatalf("an available update should not fail doctor:\n%s", out.String())
+	}
+	if text := out.String(); !strings.Contains(text, "[update]  yt-dlp") || !strings.Contains(text, "2026.09.30 is available") || !strings.Contains(text, "--update-ytdlp") {
+		t.Fatalf("doctor output:\n%s", text)
+	}
+}

@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/app"
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
@@ -62,6 +65,18 @@ func run(args []string) int {
 	defer stop()
 
 	if err := app.Run(ctx, cfg, os.Stdout); err != nil {
+		var running *app.AlreadyRunningError
+		if errors.As(err, &running) {
+			// Starting YTGrab again (for example double-clicking the start script twice)
+			// just brings up the copy that is already running.
+			fmt.Printf("YTGrab is already running at %s\n", running.URL)
+			if *open {
+				if err := app.OpenBrowser(running.URL); err != nil {
+					fmt.Printf("Open %s in your browser.\n", running.URL)
+				}
+			}
+			return 0
+		}
 		fmt.Fprintf(os.Stderr, "server error: %v\n", err)
 		return 1
 	}
@@ -79,7 +94,15 @@ func loadConfig() (config.Config, bool) {
 }
 
 func toolEnv(cfg config.Config) setup.Env {
-	env := setup.SystemEnv(func(ctx context.Context) deps.Report { return deps.Check(ctx, cfg) }, app.SetupToolsDir(cfg), os.Stdin, os.Stdout)
+	check := func(ctx context.Context) deps.Report {
+		report := deps.Check(ctx, cfg)
+		lookupCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		latest, _ := setup.LatestYtdlpVersion(lookupCtx, http.DefaultClient, "") // "" offline
+		deps.MarkOutdated(&report, latest, time.Now())
+		return report
+	}
+	env := setup.SystemEnv(check, app.SetupToolsDir(cfg), os.Stdin, os.Stdout)
 	env.Extra = func() []setup.Line { return app.DoctorChecks(cfg) }
 	return env
 }

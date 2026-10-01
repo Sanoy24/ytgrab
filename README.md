@@ -44,7 +44,7 @@ If `ytgrab` isn't found, the installer printed the line to add `~/.local/bin` to
 <details>
 <summary>Install manually from the release archive instead</summary>
 
-Download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon), `-darwin-amd64` (Intel Mac), or `-linux-amd64` from [Releases](https://github.com/Sanoy24/ytgrab/releases), then:
+Download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon), `-darwin-amd64` (Intel Mac), `-linux-amd64`, or `-linux-arm64` from [Releases](https://github.com/Sanoy24/ytgrab/releases), then:
 
 ```sh
 mkdir -p ~/.local/share/ytgrab
@@ -104,7 +104,7 @@ go test ./...
 go run ./cmd/ytgrab --open
 ```
 
-See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for previewing the UI with sample data, opt-in integration tests, and building release archives. Issues and pull requests are welcome.
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for previewing the UI with sample data and opt-in integration tests, and [CONTRIBUTING.md](CONTRIBUTING.md) for reporting problems and sending changes. What's new in each version is in the [changelog](CHANGELOG.md).
 
 ## Responsible use
 

@@ -23,8 +23,10 @@ func DoctorChecks(cfg config.Config) []setup.Line {
 	if listener, err := net.Listen("tcp", cfg.ListenAddress); err == nil {
 		_ = listener.Close()
 		lines = append(lines, setup.Line{Status: "ok", Name: "port", Detail: cfg.ListenAddress + " is free"})
+	} else if runningYTGrab(cfg.ListenAddress) {
+		lines = append(lines, setup.Line{Status: "ok", Name: "port", Detail: "YTGrab is running at " + url})
 	} else {
-		lines = append(lines, setup.Line{Status: "warn", Name: "port", Detail: cfg.ListenAddress + " is in use. YTGrab may already be running: open " + url})
+		lines = append(lines, setup.Line{Status: "warn", Name: "port", Detail: cfg.ListenAddress + " is used by another program. Set YTGRAB_LISTEN_ADDR to another port, for example 127.0.0.1:8788."})
 	}
 	return lines
 }

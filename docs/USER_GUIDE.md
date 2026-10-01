@@ -46,7 +46,7 @@ The installer downloads the build for your system, checks it against the publish
 
 Run the installer again to upgrade; yt-dlp and your settings are kept. Installer options (set before `sh`): `YTGRAB_VERSION=1.0.0` for a specific version, `YTGRAB_INSTALL_DIR` and `YTGRAB_BIN_DIR` for other locations, `YTGRAB_NO_SETUP=1` to skip the setup question. To uninstall, delete `~/.local/share/ytgrab` and `~/.local/bin/ytgrab`.
 
-**Manual install:** download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon), `-darwin-amd64` (Intel Mac), or `-linux-amd64` from the releases page, then:
+**Manual install:** download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon), `-darwin-amd64` (Intel Mac), `-linux-amd64`, or `-linux-arm64` from the releases page, then:
 
 ```sh
 mkdir -p ~/.local/share/ytgrab
@@ -58,7 +58,7 @@ xattr -c ytgrab 2>/dev/null   # macOS: browser downloads are quarantined and the
 ./ytgrab --open
 ```
 
-Other processor types (such as Linux on ARM) can install with Go: `go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest`.
+Other processor types can install with Go: `go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest`.
 
 ## Download a video
 
@@ -108,11 +108,13 @@ Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and 
 | **Tools missing** in the header | Run `ytgrab.exe setup` in the YTGrab folder (or double-click **Start YTGrab.cmd** again), then reload the page. |
 | The folder window doesn't appear | It may be behind other windows; check the taskbar. Without a folder window (some Linux desktops), use **Type a path**. |
 | "YouTube is limiting requests from this network" | YouTube is rate-limiting this connection or asking for a bot check. YTGrab pauses all downloads and format checks automatically (15 minutes, then 30 and 60 if it keeps happening), shows a countdown, and resumes on its own; queued downloads are kept. **Resume now** ends the pause early, for example after switching networks. A download blocked three times stops and can be retried later. Checking many links quickly makes blocks more likely. Signed-in downloads (cookies) are not supported in this version. |
-| "yt-dlp could not download this video. Check that yt-dlp is up to date and retry." | YouTube changes often. Update yt-dlp: `ytgrab.exe setup --update-ytdlp` in the YTGrab folder, then Retry. |
+| "yt-dlp could not download this video. Check that yt-dlp is up to date and retry." | YouTube changes often. Click the tools pill at the top of the page and press **Update** next to yt-dlp (or run `ytgrab setup --update-ytdlp`), then Retry. The pill turns amber and says "yt-dlp update available" when a newer version exists. |
 | "This video is unavailable or private." | The video is private, removed, age- or region-restricted. Check the link in a browser. |
 | "Couldn't load formats" | The same causes as above; the quick presets still work. |
 | Video saved as `.mkv` or `.webm` | Best quality often uses VP9 or AV1 video, which isn't stored in MP4. Pick an H.264 row or **Up to 1080p** for `.mp4`. |
-| Console shows `listen on 127.0.0.1:8787 … Only one usage of each socket address` | YTGrab is already running (open `http://127.0.0.1:8787/`), or another program uses the port. Set `YTGRAB_LISTEN_ADDR=127.0.0.1:8788` and start again. |
+| Starting YTGrab says "YTGrab is already running at …" | It is already open; the browser is brought to it (with `--open` or **Start YTGrab.cmd**). Only one copy runs at a time. |
+| "listen on 127.0.0.1:8787 … Another program is using this port" | A different program uses the port. Set `YTGRAB_LISTEN_ADDR=127.0.0.1:8788` and start again. |
+| "another YTGrab is using the data folder" | A second copy was started with a different port. Use the copy that is already running. |
 | The page says "The ytgrab server isn't responding" | The console window was closed. Start YTGrab again and reload the page. |
 | Antivirus warns about `yt-dlp.exe` | It is a packaged Python program, which some scanners flag. Compare its SHA-256 with `manifest.json` and the official release. |
 | "Choose an existing, writable absolute folder." | Enter a full path like `D:\Videos` for a folder that already exists. |

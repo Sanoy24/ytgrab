@@ -68,19 +68,27 @@ python -m http.server 8765 --bind 127.0.0.1 --directory web/static
 | `/?fixture=loading` | Loading states that never finish |
 | `/?fixture=blocked` | YouTube rate limiting during format checks |
 | `/?fixture=expired` | An expired inspection that is re-checked automatically |
+| `/?fixture=outdated` | A yt-dlp update available, with the Update button |
 | `/?fixture=cooldown` | The YouTube pause banner with its countdown and Resume now |
 
 Without `fixture`, the page calls the real API, which a static server doesn't have.
 
-## Building releases
+## Releasing
 
-Download `yt-dlp.exe` and `SHA2-256SUMS` from the [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) into `tools/`, then run on Windows:
+Add a section for the new version at the top of `CHANGELOG.md`, commit, and push a tag:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Version 1.0.0 -AllPlatforms
+```sh
+git tag v1.3.0
+git push origin v1.3.0
 ```
 
-The script runs the tests, builds Windows, Linux, and macOS archives into `dist/`, bundles `yt-dlp.exe` in the Windows zip only if it matches the official checksum, and writes `manifest.json`, `SHA256SUMS`, and a `.sha256` for each archive.
+The [release workflow](../.github/workflows/release.yml) downloads the official `yt-dlp.exe` and its checksums, runs the tests, builds Windows, Linux (x86 and ARM), and macOS archives, and publishes a GitHub release whose notes come from the changelog. A tag with a suffix, such as `v1.3.0-rc.1`, becomes a pre-release, which the installer and "latest" links ignore.
+
+To build the archives locally instead, put `yt-dlp.exe` and `SHA2-256SUMS` from the [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) in `tools/` and run on Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Version 1.3.0 -AllPlatforms
+```
 
 ## Further reading
 

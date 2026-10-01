@@ -80,7 +80,9 @@ func Doctor(ctx context.Context, env Env) bool {
 	fmt.Fprintln(env.Out, "Tools")
 	for _, tool := range report.Dependencies {
 		status, detail := "ok", shortVersion(tool.Version)
-		if !tool.Available {
+		if tool.Available && tool.Outdated {
+			status, detail = "update", shortVersion(tool.Version)+"  "+tool.Message+` Run "ytgrab setup --update-ytdlp".`
+		} else if !tool.Available {
 			status, detail = "missing", tool.Message
 			if tool.Required {
 				problems++

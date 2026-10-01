@@ -40,6 +40,9 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 	}
 	if len(settings) != 0 && settings[0] != nil {
 		addSettingsRoutes(mux, settings[0])
+		if updater, ok := settings[0].(YtdlpUpdater); ok {
+			addUpdateRoute(mux, updater)
+		}
 	}
 	return protectLocalAPI(mux)
 }
