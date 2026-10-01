@@ -137,13 +137,32 @@ func probe(ctx context.Context, dirs []string, name string, required bool, versi
 	return Tool{Name: name, Required: required, Available: true, Path: path, Version: version, Message: "Available."}
 }
 
+// programDir returns the folder of the real program file. When started through a symlink,
+// os.Executable may return the link on some systems (macOS), and tools/ lives beside the
+// real file.
+func programDir(exe string) string {
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = resolved
+	}
+	return filepath.Dir(exe)
+}
+
+// ProgramDir is the folder containing the running program, with symlinks resolved.
+func ProgramDir() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return programDir(exe), nil
+}
+
 func searchDirs(cfg config.Config) []string {
 	var dirs []string
 	if cfg.ToolsDir != "" {
 		dirs = append(dirs, cfg.ToolsDir)
 	}
 	if exe, err := os.Executable(); err == nil {
-		dirs = append(dirs, filepath.Join(filepath.Dir(exe), "tools"))
+		dirs = append(dirs, filepath.Join(programDir(exe), "tools"))
 	}
 	if cwd, err := os.Getwd(); err == nil {
 		dirs = append(dirs, filepath.Join(cwd, "tools"))
