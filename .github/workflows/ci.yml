@@ -37,3 +37,9 @@ jobs:
             cp "$f" "/tmp/ytgrab-js/$(basename "$f" .js).mjs"
             node --check "/tmp/ytgrab-js/$(basename "$f" .js).mjs"
           done
+
+  install-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck -s sh install.sh

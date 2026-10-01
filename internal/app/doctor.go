@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/config"
 	"github.com/Sanoy24/ytgrab/internal/setup"
 	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
@@ -70,8 +71,8 @@ func SetupToolsDir(cfg config.Config) string {
 	if cfg.ToolsDir != "" {
 		return cfg.ToolsDir
 	}
-	if exe, err := os.Executable(); err == nil && !strings.Contains(filepath.ToSlash(exe), "/go-build") {
-		return filepath.Join(filepath.Dir(exe), "tools")
+	if dir, err := deps.ProgramDir(); err == nil && !strings.Contains(filepath.ToSlash(dir), "/go-build") {
+		return filepath.Join(dir, "tools")
 	}
 	cwd, _ := os.Getwd()
 	return filepath.Join(cwd, "tools")

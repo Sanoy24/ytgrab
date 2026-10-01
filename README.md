@@ -22,53 +22,50 @@ YTGrab is a single Go program. Downloading is done by [yt-dlp](https://github.co
 
 ## Getting started
 
-Download the file for your system from [Releases](https://github.com/Sanoy24/ytgrab/releases):
+### macOS and Linux
 
-| System                              | File                                   |
-| ----------------------------------- | -------------------------------------- |
-| Windows 10/11 (64-bit)              | `ytgrab-<version>-windows-amd64.zip`   |
-| macOS, Apple silicon (M1 and later) | `ytgrab-<version>-darwin-arm64.tar.gz` |
-| macOS, Intel                        | `ytgrab-<version>-darwin-amd64.tar.gz` |
-| Linux (64-bit x86)                  | `ytgrab-<version>-linux-amd64.tar.gz`  |
-
-### Windows
-
-1. Right-click the zip → **Extract All…**, into a folder you keep (for example `C:\Apps\YTGrab`).
-2. Double-click **Start YTGrab.cmd**. If Windows shows "Windows protected your PC", click **More info → Run anyway** (the app isn't code-signed).
-3. The first start checks what's needed and offers to install anything missing — FFmpeg and Deno through `winget` — then opens YTGrab in your browser.
-4. Choose a download folder and paste a link.
-
-Next time, just double-click **Start YTGrab.cmd** again.
-
-### macOS
-
-In Terminal (use the `arm64` or `amd64` file you downloaded):
+Run this in Terminal:
 
 ```sh
-mkdir -p ~/Applications/YTGrab
-tar -xzf ~/Downloads/ytgrab-*-darwin-arm64.tar.gz -C ~/Applications/YTGrab
-cd ~/Applications/YTGrab
-chmod +x ytgrab
-xattr -c ytgrab        # the app isn't signed; this stops macOS blocking it
-./ytgrab setup         # installs yt-dlp, plus FFmpeg and Deno with Homebrew
-./ytgrab --open        # opens http://127.0.0.1:8787/ in your browser
+curl -fsSL https://raw.githubusercontent.com/Sanoy24/ytgrab/main/install.sh | sh
 ```
 
-`setup` uses [Homebrew](https://brew.sh) for FFmpeg and Deno; without it, setup tells you what to install. Next time, run `~/Applications/YTGrab/ytgrab --open`.
+The installer picks the right build for your system, verifies its checksum, installs it into `~/.local/share/ytgrab`, adds a `ytgrab` command to `~/.local/bin`, and offers to run `ytgrab setup` to install yt-dlp, FFmpeg, and Deno. Then start YTGrab:
 
-### Linux
+```sh
+ytgrab --open
+```
+
+If `ytgrab` isn't found, the installer printed the line to add `~/.local/bin` to your `PATH`. Run the same command again to upgrade.
+
+- **macOS:** `setup` installs FFmpeg and Deno with [Homebrew](https://brew.sh).
+- **Linux:** `setup` installs yt-dlp and prints the package commands for the rest, for example `sudo apt install ffmpeg zenity unzip` and `curl -fsSL https://deno.land/install.sh | sh`. `zenity` (or `kdialog` on KDE) provides the folder window.
+
+<details>
+<summary>Install manually from the release archive instead</summary>
+
+Download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon), `-darwin-amd64` (Intel Mac), or `-linux-amd64` from [Releases](https://github.com/Sanoy24/ytgrab/releases), then:
 
 ```sh
 mkdir -p ~/.local/share/ytgrab
-tar -xzf ~/Downloads/ytgrab-*-linux-amd64.tar.gz -C ~/.local/share/ytgrab
+tar -xzf ~/Downloads/ytgrab-*.tar.gz -C ~/.local/share/ytgrab
 cd ~/.local/share/ytgrab
 chmod +x ytgrab
-./ytgrab setup                        # installs yt-dlp and lists anything else to install
-sudo apt install ffmpeg zenity unzip  # Debian/Ubuntu; use dnf or pacman on other distributions
-curl -fsSL https://deno.land/install.sh | sh
+xattr -c ytgrab 2>/dev/null   # macOS: browser downloads are quarantined; the app isn't signed
+./ytgrab setup
+./ytgrab --open
 ```
 
-Open a new terminal so Deno is on your `PATH`, then start YTGrab with `~/.local/share/ytgrab/ytgrab --open`. Run `./ytgrab doctor` any time to see what's missing. `zenity` (or `kdialog` on KDE) provides the folder window; without it, you type the folder path instead.
+</details>
+
+### Windows
+
+1. Download `ytgrab-<version>-windows-amd64.zip` from [Releases](https://github.com/Sanoy24/ytgrab/releases).
+2. Right-click it → **Extract All…**, into a folder you keep (for example `C:\Apps\YTGrab`).
+3. Double-click **Start YTGrab.cmd**. If Windows shows "Windows protected your PC", click **More info → Run anyway** (the app isn't code-signed).
+4. The first start checks what's needed and offers to install anything missing — FFmpeg and Deno through `winget` — then opens YTGrab in your browser.
+
+Next time, just double-click **Start YTGrab.cmd** again.
 
 ### With Go (any system)
 
@@ -79,6 +76,8 @@ ytgrab --open
 ```
 
 Requires Go 1.25 or newer, with Go's `bin` folder (usually `~/go/bin`) on your `PATH`.
+
+Whichever way you install, choose a download folder in the page and paste a link.
 
 ## Usage
 

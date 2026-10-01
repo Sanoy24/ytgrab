@@ -26,37 +26,39 @@ From the YTGrab folder:
 
 The header pill in the page shows **Tools ready** when everything is found. Click it for each tool's version and advice.
 
-### macOS
+### macOS and Linux
 
-Download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon, M1 and later) or `-darwin-amd64` (Intel), then in Terminal:
+Run this in Terminal:
 
 ```sh
-mkdir -p ~/Applications/YTGrab
-tar -xzf ~/Downloads/ytgrab-*-darwin-arm64.tar.gz -C ~/Applications/YTGrab
-cd ~/Applications/YTGrab
-chmod +x ytgrab
-xattr -c ytgrab        # the app isn't signed; this stops macOS blocking it
-./ytgrab setup         # installs yt-dlp, plus FFmpeg and Deno with Homebrew (asks first)
-./ytgrab --open
+curl -fsSL https://raw.githubusercontent.com/Sanoy24/ytgrab/main/install.sh | sh
 ```
 
-Setup installs FFmpeg and Deno with [Homebrew](https://brew.sh); without Homebrew it tells you what to install. Choose folder uses the standard macOS folder window. Next time, run `~/Applications/YTGrab/ytgrab --open`.
+The installer downloads the build for your system, checks it against the published SHA-256 checksum, installs it into `~/.local/share/ytgrab`, and adds a `ytgrab` command to `~/.local/bin`. It then offers to run `ytgrab setup`. If `~/.local/bin` isn't on your `PATH`, it prints the line to add to your shell's startup file. Start the app with `ytgrab --open`.
 
-### Linux
+- **macOS:** setup installs FFmpeg and Deno with [Homebrew](https://brew.sh); without Homebrew it tells you what to install. Choose folder uses the standard macOS folder window.
+- **Linux:** setup installs yt-dlp and prints the commands for the rest, which need `sudo`:
+  ```sh
+  sudo apt install ffmpeg zenity unzip   # Debian/Ubuntu
+  curl -fsSL https://deno.land/install.sh | sh
+  ```
+  On Fedora use `sudo dnf install ffmpeg zenity unzip` (FFmpeg comes from RPM Fusion); on Arch, `sudo pacman -S ffmpeg zenity unzip`. Open a new terminal after installing Deno. `zenity` (or `kdialog` on KDE) provides the folder window; without it, type the folder path.
 
-Download `ytgrab-<version>-linux-amd64.tar.gz`, then:
+Run the installer again to upgrade; yt-dlp and your settings are kept. Installer options (set before `sh`): `YTGRAB_VERSION=1.0.0` for a specific version, `YTGRAB_INSTALL_DIR` and `YTGRAB_BIN_DIR` for other locations, `YTGRAB_NO_SETUP=1` to skip the setup question. To uninstall, delete `~/.local/share/ytgrab` and `~/.local/bin/ytgrab`.
+
+**Manual install:** download `ytgrab-<version>-darwin-arm64.tar.gz` (Apple silicon), `-darwin-amd64` (Intel Mac), or `-linux-amd64` from the releases page, then:
 
 ```sh
 mkdir -p ~/.local/share/ytgrab
-tar -xzf ~/Downloads/ytgrab-*-linux-amd64.tar.gz -C ~/.local/share/ytgrab
+tar -xzf ~/Downloads/ytgrab-*.tar.gz -C ~/.local/share/ytgrab
 cd ~/.local/share/ytgrab
 chmod +x ytgrab
-./ytgrab setup                        # installs yt-dlp and lists anything else to install
-sudo apt install ffmpeg zenity unzip  # Debian/Ubuntu
-curl -fsSL https://deno.land/install.sh | sh
+xattr -c ytgrab 2>/dev/null   # macOS: browser downloads are quarantined and the app isn't signed
+./ytgrab setup
+./ytgrab --open
 ```
 
-On Fedora use `sudo dnf install ffmpeg zenity unzip` (FFmpeg comes from RPM Fusion); on Arch, `sudo pacman -S ffmpeg zenity unzip`. Open a new terminal so Deno is on your `PATH`, then run `~/.local/share/ytgrab/ytgrab --open`. `zenity` (or `kdialog` on KDE) provides the folder window; without it, type the folder path. For other processor types, install with Go instead: `go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest`.
+Other processor types (such as Linux on ARM) can install with Go: `go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest`.
 
 ## Download a video
 
@@ -102,7 +104,7 @@ Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and 
 | What you see | What to do |
 | --- | --- |
 | "Windows protected your PC" when starting | The app isn't code-signed. Click **More info → Run anyway**. |
-| macOS says "ytgrab" can't be opened or the developer can't be verified | Run `xattr -c ytgrab` in its folder, or open **System Settings → Privacy & Security** and click **Open Anyway**. |
+| macOS says "ytgrab" Not Opened, or Apple could not verify it | Browser downloads are quarantined and the app isn't signed. Install with the `curl` installer instead, or run `xattr -c ytgrab` in its folder, or click **Open Anyway** in **System Settings → Privacy & Security**. |
 | **Tools missing** in the header | Run `ytgrab.exe setup` in the YTGrab folder (or double-click **Start YTGrab.cmd** again), then reload the page. |
 | The folder window doesn't appear | It may be behind other windows; check the taskbar. Without a folder window (some Linux desktops), use **Type a path**. |
 | "YouTube is limiting requests from this network. Wait a while, then retry." | YouTube is rate-limiting or asking for a bot check. Wait (often 15–60 minutes) and press Retry. Avoid checking many links quickly. Signed-in downloads (cookies) are not supported in this version. |
