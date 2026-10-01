@@ -112,7 +112,9 @@ Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and 
 | "This video is unavailable or private." | The video is private, removed, age- or region-restricted. Check the link in a browser. |
 | "Couldn't load formats" | The same causes as above; the quick presets still work. |
 | Video saved as `.mkv` or `.webm` | Best quality often uses VP9 or AV1 video, which isn't stored in MP4. Pick an H.264 row or **Up to 1080p** for `.mp4`. |
-| Console shows `listen on 127.0.0.1:8787 … Only one usage of each socket address` | YTGrab is already running (open `http://127.0.0.1:8787/`), or another program uses the port. Set `YTGRAB_LISTEN_ADDR=127.0.0.1:8788` and start again. |
+| Starting YTGrab says "YTGrab is already running at …" | It is already open; the browser is brought to it (with `--open` or **Start YTGrab.cmd**). Only one copy runs at a time. |
+| "listen on 127.0.0.1:8787 … Another program is using this port" | A different program uses the port. Set `YTGRAB_LISTEN_ADDR=127.0.0.1:8788` and start again. |
+| "another YTGrab is using the data folder" | A second copy was started with a different port. Use the copy that is already running. |
 | The page says "The ytgrab server isn't responding" | The console window was closed. Start YTGrab again and reload the page. |
 | Antivirus warns about `yt-dlp.exe` | It is a packaged Python program, which some scanners flag. Compare its SHA-256 with `manifest.json` and the official release. |
 | "Choose an existing, writable absolute folder." | Enter a full path like `D:\Videos` for a folder that already exists. |

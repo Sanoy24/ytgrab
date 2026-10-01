@@ -83,6 +83,10 @@ The output folder is stored in SQLite. On first run no folder is set and the pag
 
 YouTube sometimes answers with HTTP 429 or a "confirm you're not a bot" check. Retrying straight away tends to extend the block, so a shared gate (`internal/cooldown`) pauses the download queue and format and playlist checks together: 15 minutes for the first block, then 30 and 60 while blocks continue, reset by the next successful download. A blocked job returns to the queue and runs when the pause ends, up to three attempts. Format checks during a pause answer immediately without contacting YouTube, and the job list reports `paused_until` so the page can show a countdown; `POST /api/system/resume` ends a pause early. To look less like a burst, consecutive downloads start 3–8 seconds apart and yt-dlp waits half a second between requests (`--sleep-requests`). The pause is kept in memory only.
 
+## One copy at a time
+
+On startup YTGrab claims its port before opening the database. If the port is taken by a running YTGrab (recognized by the `X-YTGrab-Version` response header), the new launch opens the browser to it and exits; it never runs startup recovery or starts workers against the running copy's jobs. An exclusive lock on `ytgrab.lock` in the data folder (`LockFileEx` on Windows, `flock` elsewhere) also stops a second copy on a different port from sharing the database. The lock is released automatically if the process ends.
+
 ## Processes, cancellation, and shutdown
 
 Child processes run with a context. Cancellation stops the whole process tree (`taskkill /T` on Windows, a process group on Unix), and yt-dlp keeps its `.part` file so a retry resumes. On Ctrl+C or SIGTERM the server stops accepting requests, closes open progress streams, and cancels running jobs; they are marked `interrupted` on the next start.

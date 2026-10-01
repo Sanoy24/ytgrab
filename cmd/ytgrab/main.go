@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -64,6 +65,18 @@ func run(args []string) int {
 	defer stop()
 
 	if err := app.Run(ctx, cfg, os.Stdout); err != nil {
+		var running *app.AlreadyRunningError
+		if errors.As(err, &running) {
+			// Starting YTGrab again (for example double-clicking the start script twice)
+			// just brings up the copy that is already running.
+			fmt.Printf("YTGrab is already running at %s\n", running.URL)
+			if *open {
+				if err := app.OpenBrowser(running.URL); err != nil {
+					fmt.Printf("Open %s in your browser.\n", running.URL)
+				}
+			}
+			return 0
+		}
 		fmt.Fprintf(os.Stderr, "server error: %v\n", err)
 		return 1
 	}
