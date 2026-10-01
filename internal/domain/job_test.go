@@ -86,3 +86,26 @@ func TestPlaylistJobsUseCanonicalVideoURLs(t *testing.T) {
 		t.Fatal("video ID validation is wrong")
 	}
 }
+
+func TestRequeueReturnsRunningJobToQueue(t *testing.T) {
+	job, err := NewJob("https://youtu.be/dQw4w9WgXcQ", AudioM4A)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := job.Requeue(); err == nil {
+		t.Fatal("a queued job cannot be requeued")
+	}
+	if err := job.Transition(Downloading); err != nil {
+		t.Fatal(err)
+	}
+	job.Progress = &Progress{DownloadedBytes: 10}
+	if err := job.Requeue(); err != nil {
+		t.Fatal(err)
+	}
+	if job.State != Queued || job.Attempt != 2 || job.Progress != nil || !CanTransition(Downloading, Queued) {
+		t.Fatalf("requeued job = %+v", job)
+	}
+	if CanTransition(Completed, Queued) {
+		t.Fatal("completed jobs must not return to the queue")
+	}
+}

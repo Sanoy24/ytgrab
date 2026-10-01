@@ -246,19 +246,21 @@ func (queue *Queue) runJob(job domain.Job) {
 		if errors.As(downloadErr, &downloadError) {
 			failure = &domain.JobError{Code: downloadError.Code, Message: downloadError.Message}
 		}
-		current.Error = failure
-		if err := current.Transition(domain.Failed); err == nil {
-			if err := queue.store.Update(queue.ctx, current, previous); err == nil {
-				switch {
-				case failure.Code == "network" && current.Attempt < 3:
-					queue.scheduleRetry(current.ID, current.Attempt)
-				case failure.Code == "blocked" && queue.cooldown != nil:
-					queue.cooldown.Block()
-					if current.Attempt < maxBlockedAttempts {
-						queue.requeue(current)
-					}
-				}
+		if failure.Code == "blocked" && queue.cooldown != nil {
+			// Pause first so no worker picks the job up early. Until the attempts run out,
+			// the job goes straight back to the queue and never appears failed.
+			queue.cooldown.Block()
+			if current.Attempt < maxBlockedAttempts && current.Requeue() == nil {
+				_ = queue.store.Update(queue.ctx, current, previous)
+				return
 			}
+		}
+		current.Error = failure
+		if err := current.Transition(domain.Failed); err != nil {
+			return
+		}
+		if err := queue.store.Update(queue.ctx, current, previous); err == nil && failure.Code == "network" && current.Attempt < 3 {
+			queue.scheduleRetry(current.ID, current.Attempt)
 		}
 		return
 	}
@@ -272,14 +274,6 @@ func (queue *Queue) runJob(job domain.Job) {
 	if err := current.Transition(domain.Completed); err == nil {
 		_ = queue.store.Update(queue.ctx, current, previous)
 	}
-}
-
-// requeue returns a blocked job to the queue; it runs again when the pause ends.
-func (queue *Queue) requeue(job domain.Job) {
-	if err := job.Transition(domain.Queued); err != nil {
-		return
-	}
-	_ = queue.store.Update(queue.ctx, job, domain.Failed)
 }
 
 func (queue *Queue) scheduleRetry(id string, attempt int) {
