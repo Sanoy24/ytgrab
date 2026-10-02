@@ -103,3 +103,23 @@ test('offers a YTGrab update with the command for this install', async ({ page }
   await expect(page.locator('#queue .job')).toHaveCount(3);
   await expect(banner).toBeHidden(); // dismissed for this version
 });
+
+test('queues several pasted links at once', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  const input = page.locator('#url');
+  await input.focus();
+  // Paste three lines: two videos and a playlist, which is skipped.
+  await page.evaluate(() => {
+    const data = new DataTransfer();
+    data.setData('text/plain', 'https://youtu.be/aBcDeFgHiJk\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ\nhttps://www.youtube.com/playlist?list=PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2\n');
+    document.querySelector('#url').dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(input).toHaveValue(/^https:\/\/youtu\.be\/aBcDeFgHiJk https:\/\/www\.youtube/);
+  await expect(page.locator('#playlist-meta')).toHaveText('2 links');
+  await expect(page.locator('#playlist-note')).toContainText("1 isn't a video link");
+  await expect(page.locator('#submit')).toHaveText('Add 2 videos');
+  await page.locator('#submit').click();
+  await expect(page.locator('#toast')).toContainText('Added 2 videos.');
+  await expect(page.locator('#queue .job')).toHaveCount(2);
+  await expect(input).toHaveValue('');
+});

@@ -98,6 +98,10 @@ Files include the video's title, channel, upload date, and chapters; M4A and MP3
 
 Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`), so different qualities of one video never overwrite each other.
 
+## Download several videos at once
+
+Paste several video links into the link field at once, one per line or separated by spaces (from a document, a chat, or a list you made). YTGrab shows them in a list like a playlist: untick any you don't want, choose a preset, and press **Add N videos**. Repeated links are added once. Playlist links and anything that isn't a single-video link are skipped, with a note saying how many; paste a playlist on its own to review its videos.
+
 ## Download a playlist
 
 Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 50 videos, all ticked; **Load next 50** shows more. Up to 200 can be added at a time. Untick what you don't want, choose a preset (it applies to every video), and press **Add N videos**. Nothing is queued until you press that button. Private and deleted videos are skipped. For a link to one video inside a playlist, YTGrab downloads just that video and offers **Download the whole playlist instead**. YouTube Mixes (auto-generated radio lists) can't be downloaded as playlists.
