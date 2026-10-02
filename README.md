@@ -24,7 +24,14 @@ YTGrab is a single Go program. Downloading is done by [yt-dlp](https://github.co
 
 ### macOS and Linux
 
-Run this in Terminal:
+With [Homebrew](https://brew.sh), which also installs yt-dlp, FFmpeg, and Deno:
+
+```sh
+brew install sanoy24/tap/ytgrab
+ytgrab --open
+```
+
+Or, without Homebrew, run this in Terminal:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Sanoy24/ytgrab/main/install.sh | sh
@@ -59,6 +66,16 @@ xattr -c ytgrab 2>/dev/null   # macOS: browser downloads are quarantined; the ap
 </details>
 
 ### Windows
+
+With [Scoop](https://scoop.sh), which also installs FFmpeg and Deno and adds YTGrab to the Start menu:
+
+```powershell
+scoop bucket add sanoy24 https://github.com/Sanoy24/scoop-bucket
+scoop install sanoy24/ytgrab
+ytgrab --open
+```
+
+Or install from the zip:
 
 1. Download `ytgrab-<version>-windows-amd64.zip` from [Releases](https://github.com/Sanoy24/ytgrab/releases).
 2. Right-click it → **Extract All…**, into a folder you keep (for example `C:\Apps\YTGrab`).

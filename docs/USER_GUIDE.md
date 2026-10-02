@@ -2,7 +2,19 @@
 
 YTGrab downloads YouTube videos and audio you are allowed to save, from a page in your browser. It runs only on your computer: the page is served from `127.0.0.1`, and files are written straight to your downloads folder by `yt-dlp`.
 
-## Install (Windows release)
+## Install on Windows
+
+**With Scoop:** if you use [Scoop](https://scoop.sh), run:
+
+```powershell
+scoop bucket add sanoy24 https://github.com/Sanoy24/scoop-bucket
+scoop install sanoy24/ytgrab
+ytgrab --open
+```
+
+Scoop installs FFmpeg and Deno too and adds **YTGrab** to the Start menu; yt-dlp comes in the package. Upgrade with `scoop update ytgrab`, uninstall with `scoop uninstall ytgrab`. Your settings and history are kept either way.
+
+**From the zip:**
 
 1. Unzip `ytgrab-<version>-windows-amd64.zip` into a folder you keep, for example `C:\Apps\YTGrab`. Don't run it from inside the zip.
 2. Double-click **Start YTGrab.cmd**. If Windows shows "Windows protected your PC", click **More info → Run anyway** (the app isn't code-signed). The first time, it runs a quick check. If something is missing, it runs setup, which asks before each step:
@@ -28,7 +40,16 @@ The header pill in the page shows **Tools ready** when everything is found. Clic
 
 ### macOS and Linux
 
-Run this in Terminal:
+**With Homebrew:** if you use [Homebrew](https://brew.sh), run:
+
+```sh
+brew install sanoy24/tap/ytgrab
+ytgrab --open
+```
+
+Homebrew installs yt-dlp, FFmpeg, and Deno with it, and nothing is quarantined, so there are no macOS warnings. Upgrade with `brew upgrade ytgrab`; when YouTube downloads start failing, `brew upgrade yt-dlp` (or the update button in the page) gets a newer yt-dlp. On Linux, add `zenity` from your package manager for the folder window.
+
+**With the installer:** run this in Terminal:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Sanoy24/ytgrab/main/install.sh | sh
