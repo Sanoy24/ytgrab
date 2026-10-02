@@ -7,6 +7,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 ### Added
 
 - Install with Homebrew (`brew install sanoy24/tap/ytgrab`) on macOS and Linux, or with Scoop (`scoop install sanoy24/ytgrab`) on Windows. Both are updated automatically with each release.
+- YTGrab has an icon: a download arrow on red. It shows on `ytgrab.exe`, in the Start menu for Scoop installs, and on the browser tab.
 
 ## [1.5.0] - 2026-10-02
 

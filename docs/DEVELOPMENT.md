@@ -103,3 +103,12 @@ powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Version 1.3.0 -All
 - [Architecture](ARCHITECTURE.md)
 - [Local API](API.md)
 - [User guide](USER_GUIDE.md)
+
+## App icon
+
+The icon is drawn by [`scripts/make-icon.py`](../scripts/make-icon.py) (needs Pillow) into `packaging/icon/`. Windows builds pick it up from `cmd/ytgrab/rsrc_windows_*.syso`, which Go links automatically. After changing the icon, regenerate both:
+
+```sh
+python scripts/make-icon.py
+cd cmd/ytgrab && go run github.com/tc-hib/go-winres@v0.3.3 simply --arch amd64,arm64 --out rsrc --icon ../../packaging/icon/ytgrab.ico --manifest cli --product-name YTGrab --file-description "YTGrab local YouTube downloader"
+```
