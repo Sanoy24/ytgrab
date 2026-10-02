@@ -87,6 +87,7 @@ func run(args []string) int {
 			fmt.Fprintf(os.Stderr, "could not update the sign-in entry: %v\n", err)
 		}
 		actions.StartAtLogin, actions.SetStartAtLogin = login.Enabled, login.Set
+		actions.StartAtLoginLabel = autostart.Label()
 	}
 	err := tray.Run(ctx, actions, func(ctx context.Context, hooks tray.Hooks) error {
 		serverCfg := cfg

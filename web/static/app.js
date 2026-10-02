@@ -1349,7 +1349,10 @@ function renderPreferences(next) {
   renderSpeed(next);
   // Only sent where YTGrab can start at sign-in (Windows).
   $('#pref-login-row').hidden = typeof next.start_at_login !== 'boolean';
-  if (!$('#pref-login-row').hidden) $('#pref-login').checked = next.start_at_login;
+  if (!$('#pref-login-row').hidden) {
+    $('#pref-login').checked = next.start_at_login;
+    $('#pref-login-label').textContent = next.start_at_login_label || 'Start with Windows';
+  }
   const parallel = $('#pref-parallel');
   $('#pref-parallel-row').hidden = !next.max_downloads;
   $('#pref-preset-row').hidden = !next.default_preset;
@@ -1379,7 +1382,7 @@ async function onStartAtLoginChange(e) {
   box.disabled = true;
   try {
     applySettings(await client.setStartAtLogin(box.checked));
-    toast(box.checked ? 'YTGrab will start in the tray when you sign in to Windows.' : "YTGrab won't start when you sign in.");
+    toast(box.checked ? 'YTGrab will start in the tray when you sign in.' : "YTGrab won't start when you sign in.");
   } catch (err) {
     box.checked = !box.checked;
     toast(err.message, true);

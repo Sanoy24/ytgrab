@@ -1,25 +1,27 @@
-//go:build windows
+//go:build windows || linux
 
 package tray
 
 import (
 	"context"
-	_ "embed"
 	"sync"
 	"time"
 
 	"fyne.io/systray"
 
 	"github.com/Sanoy24/ytgrab/internal/activity"
+	"github.com/Sanoy24/ytgrab/internal/trayhost"
 )
-
-//go:embed ytgrab.ico
-var icon []byte
 
 // Run calls serve and, once the server is listening, shows a tray icon with Open and
 // Quit until serve returns. Quit cancels serve's context, which shuts the server down
 // like Ctrl+C. Run must be called from the main goroutine.
 func Run(ctx context.Context, actions Actions, serve Serve) error {
+	if !trayhost.Available() {
+		// No notification area (for example GNOME without the AppIndicator extension):
+		// run as before, from the terminal.
+		return serve(ctx, Hooks{Ready: func(string, func() string) {}})
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	done := make(chan error, 1)
@@ -76,7 +78,7 @@ func Run(ctx context.Context, actions Actions, serve Serve) error {
 		var resync <-chan time.Time
 		var ticker *time.Ticker
 		if actions.StartAtLogin != nil && actions.SetStartAtLogin != nil {
-			login = systray.AddMenuItemCheckbox("Start with Windows", "Start YTGrab in the tray when you sign in", actions.StartAtLogin())
+			login = systray.AddMenuItemCheckbox(actions.StartAtLoginLabel, "Start YTGrab in the tray when you sign in", actions.StartAtLogin())
 			loginClicked = login.ClickedCh
 			// The page can change the setting too; keep the tick in step with it.
 			ticker = time.NewTicker(5 * time.Second)

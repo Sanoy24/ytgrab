@@ -1,5 +1,6 @@
 // Package autostart starts YTGrab when the user signs in. On Windows it uses the per-user
-// Run registry key, which needs no administrator rights; other systems aren't supported yet.
+// Run registry key and on Linux an XDG autostart entry; neither needs administrator rights.
+// macOS isn't supported yet.
 package autostart
 
 import (

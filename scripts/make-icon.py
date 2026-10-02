@@ -3,7 +3,7 @@
     python scripts/make-icon.py
 
 Writes packaging/icon/ytgrab.png (512 px) and packaging/icon/ytgrab.ico (16-256 px), and
-copies the .ico to internal/tray for the Windows tray icon.
+copies the .ico and a 128 px PNG to internal/tray for the Windows and Linux tray icons.
 Needs Pillow. Each size is drawn at 8x and scaled down, so small sizes stay sharp.
 """
 from pathlib import Path
@@ -39,4 +39,5 @@ sizes = [256, 128, 64, 48, 32, 24, 16]
 frames = [draw(n) for n in sizes]
 frames[0].save(OUT / "ytgrab.ico", sizes=[(n, n) for n in sizes], append_images=frames[1:])
 (ROOT / "internal" / "tray" / "ytgrab.ico").write_bytes((OUT / "ytgrab.ico").read_bytes())
+draw(128).save(ROOT / "internal" / "tray" / "ytgrab-tray.png", optimize=True)
 print("wrote", OUT / "ytgrab.png", "and", OUT / "ytgrab.ico")

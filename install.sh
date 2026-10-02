@@ -12,6 +12,7 @@
 #   YTGRAB_INSTALL_DIR  program folder (default: ~/.local/share/ytgrab)
 #   YTGRAB_BIN_DIR      folder for the `ytgrab` command (default: ~/.local/bin)
 #   YTGRAB_NO_SETUP=1   don't offer to run `ytgrab setup` afterwards
+#   YTGRAB_NO_MENU=1    on Linux, don't add YTGrab to the applications menu
 
 set -eu
 
@@ -102,7 +103,7 @@ if [ "$os" = darwin ]; then
     xattr -c "$INSTALL_DIR/ytgrab.new" 2>/dev/null || true
 fi
 mv -f "$INSTALL_DIR/ytgrab.new" "$INSTALL_DIR/ytgrab"
-for doc in README.md LICENSE.txt; do
+for doc in README.md LICENSE.txt ytgrab.png; do
     if [ -f "$tmp/extract/$doc" ]; then cp "$tmp/extract/$doc" "$INSTALL_DIR/$doc"; fi
 done
 
@@ -117,6 +118,36 @@ chmod 755 "$launcher"
 installed="$("$INSTALL_DIR/ytgrab" --version 2>/dev/null)" || fail "the installed program did not start."
 say "Installed YTGrab $installed to $INSTALL_DIR"
 say "The ytgrab command is in $BIN_DIR"
+
+# On Linux, add YTGrab to the applications menu. Started from there it has no terminal;
+# its tray icon (on desktops with one) opens and quits it.
+menu_entry=""
+if [ "$os" = linux ] && [ "${YTGRAB_NO_MENU:-}" != 1 ]; then
+    case "$INSTALL_DIR" in
+        *[\\\"\`\$]*) say "Not adding a menu entry: the install folder's name has characters a menu entry can't hold." ;;
+        *)
+            apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+            mkdir -p "$apps"
+            menu_entry="$apps/ytgrab.desktop"
+            {
+                printf '[Desktop Entry]\n'
+                printf 'Type=Application\n'
+                printf 'Name=YTGrab\n'
+                printf 'GenericName=YouTube downloader\n'
+                printf 'Comment=Download YouTube videos you are allowed to save\n'
+                printf 'Exec="%s" --open\n' "$INSTALL_DIR/ytgrab"
+                if [ -f "$INSTALL_DIR/ytgrab.png" ]; then printf 'Icon=%s\n' "$INSTALL_DIR/ytgrab.png"; fi
+                printf 'Terminal=false\n'
+                printf 'Categories=Network;AudioVideo;\n'
+                printf 'StartupNotify=false\n'
+            } >"$menu_entry"
+            if command -v update-desktop-database >/dev/null 2>&1; then
+                update-desktop-database "$apps" 2>/dev/null || true
+            fi
+            say "Added YTGrab to your applications menu"
+            ;;
+    esac
+fi
 
 case ":$PATH:" in
     *":$BIN_DIR:"*) on_path=1 ;;
@@ -148,4 +179,8 @@ fi
 say ""
 say "Start YTGrab with:  ytgrab --open"
 say "Check your setup:   ytgrab doctor"
-say "Uninstall:          rm -rf \"$INSTALL_DIR\" \"$launcher\""
+if [ -n "$menu_entry" ]; then
+    say "Uninstall:          rm -rf \"$INSTALL_DIR\" \"$launcher\" \"$menu_entry\""
+else
+    say "Uninstall:          rm -rf \"$INSTALL_DIR\" \"$launcher\""
+fi

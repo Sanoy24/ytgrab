@@ -68,6 +68,10 @@ function New-Package([string]$Os, [string]$Arch, [bool]$BundleTools) {
     }
     Copy-Item (Join-Path $root 'docs\USER_GUIDE.md') (Join-Path $stage 'README.md')
     Copy-Item (Join-Path $root 'LICENSE') (Join-Path $stage 'LICENSE.txt')
+    if ($Os -eq 'linux') {
+        # The installer uses it for the applications menu and notifications.
+        Copy-Item (Join-Path $root 'packaging\icon\ytgrab.png') (Join-Path $stage 'ytgrab.png')
+    }
 
     $tools = @()
     if ($Os -eq 'windows') {

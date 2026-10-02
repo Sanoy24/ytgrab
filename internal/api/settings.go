@@ -59,6 +59,7 @@ type startupSettings interface {
 	StartAtLoginSupported() bool
 	StartAtLogin() bool
 	SetStartAtLogin(bool) error
+	StartAtLoginLabel() string
 }
 
 // FolderPicker is optionally implemented by the settings value to open the operating
@@ -88,6 +89,7 @@ func settingsBody(settings Settings) map[string]any {
 	}
 	if startup, ok := settings.(startupSettings); ok && startup.StartAtLoginSupported() {
 		body["start_at_login"] = startup.StartAtLogin()
+		body["start_at_login_label"] = startup.StartAtLoginLabel()
 	}
 	if speed, ok := settings.(speedSettings); ok {
 		body["speed_limit_kbps"] = speed.SpeedLimit()
