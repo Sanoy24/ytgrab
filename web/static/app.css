@@ -605,6 +605,18 @@ input[aria-invalid="true"] { border-color: var(--err); }
   padding: 7px 10px; width: 13rem; max-width: 58%;
 }
 .pref-hint { margin-top: 8px; font-size: 0.8rem; }
+.send-bookmark {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--grad);
+  color: #fff;
+  font-weight: 700; font-size: 0.875rem;
+  text-decoration: none;
+  box-shadow: var(--cta-shadow);
+  cursor: grab;
+}
+.send-bookmark:active { cursor: grabbing; }
 .pref-check {
   appearance: none; flex: none; position: relative;
   width: 42px; height: 24px; margin: 0;

@@ -213,3 +213,13 @@ test('takes a link pasted anywhere on the page', async ({ page }) => {
   await expect(page.locator('#url')).toHaveValue('https://youtu.be/aBcDeFgHiJk');
   await expect(page.locator('#inspect')).toContainText('full walkthrough');
 });
+
+test('takes a link handed over by the Send to YTGrab bookmark', async ({ page }) => {
+  await page.goto('/?fixture=empty&url=' + encodeURIComponent('https://www.youtube.com/watch?v=aBcDeFgHiJk&t=42'));
+  await expect(page.locator('#url')).toHaveValue('https://www.youtube.com/watch?v=aBcDeFgHiJk&t=42');
+  await expect(page.locator('#inspect')).toContainText('full walkthrough');
+  await expect(page).toHaveURL(/\?fixture=empty$/); // the address is tidied
+  await expect(page.locator('#queue .job')).toHaveCount(0); // nothing is queued by itself
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.locator('#send-bookmark')).toHaveAttribute('href', /^javascript:/);
+});
