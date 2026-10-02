@@ -106,3 +106,37 @@ func TestCookiesBrowserIsOptInAndAllowlisted(t *testing.T) {
 		t.Fatalf("turning sign-in off = %v, %q", err, reloaded.CookiesBrowser())
 	}
 }
+
+func TestDownloadPreferences(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := New(ctx, store, t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manager.MaxDownloads() != 2 || manager.DefaultPreset() != "video-best" {
+		t.Fatalf("defaults = %d, %q", manager.MaxDownloads(), manager.DefaultPreset())
+	}
+	for _, bad := range []int{0, 5, -1} {
+		if err := manager.SetMaxDownloads(ctx, bad); !errors.Is(err, ErrInvalidPreference) {
+			t.Errorf("SetMaxDownloads(%d) = %v", bad, err)
+		}
+	}
+	if err := manager.SetDefaultPreset(ctx, "video-4k"); !errors.Is(err, ErrInvalidPreference) {
+		t.Errorf("unknown preset accepted: %v", err)
+	}
+	if err := manager.SetMaxDownloads(ctx, 3); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.SetDefaultPreset(ctx, "audio-mp3"); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, _ := New(ctx, store, t.TempDir(), false)
+	if reloaded.MaxDownloads() != 3 || reloaded.DefaultPreset() != "audio-mp3" {
+		t.Fatalf("reloaded = %d, %q", reloaded.MaxDownloads(), reloaded.DefaultPreset())
+	}
+}

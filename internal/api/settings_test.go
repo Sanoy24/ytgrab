@@ -173,3 +173,36 @@ func TestBrowserSignInSetting(t *testing.T) {
 		t.Fatalf("turn off = %d %v", code, body)
 	}
 }
+
+func TestDownloadPreferencesAPI(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := settings.New(ctx, store, t.TempDir(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil, manager)
+	request := func(method, target, body string) (int, map[string]any) {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, target, bytes.NewBufferString(body)))
+		var decoded map[string]any
+		_ = json.Unmarshal(response.Body.Bytes(), &decoded)
+		return response.Code, decoded
+	}
+	if code, body := request(http.MethodGet, "/api/settings", ""); code != http.StatusOK || body["max_downloads"] != float64(2) || body["default_preset"] != "video-best" {
+		t.Fatalf("settings = %d %v", code, body)
+	}
+	if code, _ := request(http.MethodPut, "/api/settings/preferences", `{"max_downloads":9}`); code != http.StatusBadRequest {
+		t.Fatalf("max_downloads 9 = %d", code)
+	}
+	if code, body := request(http.MethodPut, "/api/settings/preferences", `{"max_downloads":1}`); code != http.StatusOK || body["max_downloads"] != float64(1) || body["default_preset"] != "video-best" {
+		t.Fatalf("set one field = %d %v", code, body)
+	}
+	if code, body := request(http.MethodPut, "/api/settings/preferences", `{"default_preset":"audio-m4a"}`); code != http.StatusOK || body["default_preset"] != "audio-m4a" || body["max_downloads"] != float64(1) {
+		t.Fatalf("set preset = %d %v", code, body)
+	}
+}

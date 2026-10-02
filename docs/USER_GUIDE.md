@@ -89,7 +89,8 @@ Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists up to 50 v
 ## Settings and data
 
 - The first time, the page asks where to save downloads; nothing is downloaded until you choose. **Change…** next to **Save to** opens the folder window again, and **Type a path** lets you enter a full path instead. The folder applies to downloads that start afterwards and is remembered.
-- **YouTube sign-in** (under **Save to**) is off by default. If YouTube keeps blocking downloads even after the automatic pauses, choose your browser there: yt-dlp then uses that browser's YouTube sign-in. YTGrab never reads or stores the sign-in itself. Heavy use can get an account flagged, so a secondary account is safer. On Windows, Firefox works best, because recent Chrome and Edge versions protect their sign-in data in a way yt-dlp can't read; close the browser if reading fails.
+- **More settings** (under **Save to**) holds **Parallel downloads** (1–4 at a time, default 2; more rarely helps because YouTube limits speed per network), **Default format** (the format new links start with), and **YouTube sign-in**. Changes apply right away.
+- **YouTube sign-in** (in **More settings**) is off by default. If YouTube keeps blocking downloads even after the automatic pauses, choose your browser there: yt-dlp then uses that browser's YouTube sign-in. YTGrab never reads or stores the sign-in itself. Heavy use can get an account flagged, so a secondary account is safer. On Windows, Firefox works best, because recent Chrome and Edge versions protect their sign-in data in a way yt-dlp can't read; close the browser if reading fails.
 - The suggested folder is `Downloads\ytgrab` in your user folder; it is created when you pick it.
 - The job history is stored in `%AppData%\ytgrab\jobs.db` on Windows (`~/.config/ytgrab` on Linux, `~/Library/Application Support/ytgrab` on macOS).
 

@@ -783,7 +783,7 @@ function showPresets(checkedValue) {
   $('#format-choices').hidden = true;
   $('#preset-choices').hidden = false;
   for (const r of $('#preset-choices').querySelectorAll('input')) r.disabled = false;
-  const want = checkedValue?.startsWith('preset:') ? checkedValue : 'preset:video-best';
+  const want = checkedValue?.startsWith('preset:') ? checkedValue : `preset:${settings?.default_preset || 'video-best'}`;
   $('#preset-choices').querySelector(`input[value="${want}"]`).checked = true;
 }
 
@@ -1068,6 +1068,7 @@ function applySettings(next) {
   $('#dir-path').textContent = next.downloads_dir;
   $('#dir-type').hidden = !next.can_pick;
   renderSignIn(next);
+  renderPreferences(next);
   $('#output-dir').hidden = !configured && $('#dir-form').hidden;
   if (configured) setSetupError('');
 }
@@ -1185,6 +1186,47 @@ async function onDirSubmit(e) {
   }
 }
 
+// Parallel downloads and the default format; both apply right away.
+let presetApplied = false;
+
+function renderPreferences(next) {
+  const parallel = $('#pref-parallel');
+  $('#pref-parallel-row').hidden = !next.max_downloads;
+  $('#pref-preset-row').hidden = !next.default_preset;
+  if (next.max_downloads) {
+    const limit = next.max_downloads_limit || 4;
+    if (parallel.options.length !== limit) {
+      parallel.replaceChildren(
+        ...Array.from({ length: limit }, (_, i) =>
+          el('option', { value: String(i + 1), textContent: i === 0 ? '1 at a time' : `${i + 1} at a time` }),
+        ),
+      );
+    }
+    parallel.value = String(next.max_downloads);
+  }
+  if (next.default_preset) {
+    $('#pref-preset').value = next.default_preset;
+    // Select the default once on load, unless a link is already being worked on.
+    if (!presetApplied && !$('#url').value) {
+      presetApplied = true;
+      showPresets(`preset:${next.default_preset}`);
+    }
+  }
+}
+
+async function savePreference(select, body, message) {
+  select.disabled = true;
+  try {
+    applySettings(await client.setPreferences(body));
+    toast(message);
+  } catch (err) {
+    applySettings(settings);
+    toast(err.message, true);
+  } finally {
+    select.disabled = false;
+  }
+}
+
 const BROWSER_NAMES = {
   firefox: 'Firefox', chrome: 'Chrome', edge: 'Edge', brave: 'Brave',
   chromium: 'Chromium', opera: 'Opera', vivaldi: 'Vivaldi', safari: 'Safari',
@@ -1254,6 +1296,14 @@ function init() {
   renderNotifyToggle();
   $('#notify-toggle').addEventListener('click', toggleNotifications);
   $('#signin-browser').addEventListener('change', onSignInChange);
+  $('#pref-parallel').addEventListener('change', (e) => {
+    const n = Number(e.currentTarget.value);
+    savePreference(e.currentTarget, { max_downloads: n }, n === 1 ? 'Downloads will run one at a time.' : `Up to ${n} downloads will run at once.`);
+  });
+  $('#pref-preset').addEventListener('change', (e) => {
+    const label = e.currentTarget.selectedOptions[0].textContent;
+    savePreference(e.currentTarget, { default_preset: e.currentTarget.value }, `New links will start with ${label}.`);
+  });
   $('#playlist-items').addEventListener('change', updatePlaylistCount);
   $('#playlist-all').addEventListener('change', (e) => {
     for (const box of document.querySelectorAll('#playlist-items input')) box.checked = e.target.checked;

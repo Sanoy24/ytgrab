@@ -202,8 +202,18 @@ class FixtureClient {
       default_dir: String.raw`C:\Users\me\Downloads\ytgrab`,
       can_pick: this.scenario !== 'no-picker',
       cookies_browser: this.cookiesBrowser ?? '',
+      max_downloads: this.maxDownloads ?? 2,
+      max_downloads_limit: 4,
+      default_preset: this.defaultPreset ?? 'video-best',
       cookie_browsers: ['firefox', 'chrome', 'edge', 'brave', 'chromium', 'opera', 'vivaldi', 'safari'],
     };
+  }
+
+  async setPreferences({ max_downloads, default_preset }) {
+    await delay(200);
+    if (max_downloads !== undefined) this.maxDownloads = max_downloads;
+    if (default_preset !== undefined) this.defaultPreset = default_preset;
+    return this.settingsBody();
   }
 
   async setCookiesBrowser(browser) {
@@ -380,6 +390,10 @@ class HttpClient {
   }
   updateSettings(body) {
     return this.request('PUT', '/api/settings', body);
+  }
+  // Saves { max_downloads, default_preset } (either or both).
+  setPreferences(body) {
+    return this.request('PUT', '/api/settings/preferences', body);
   }
   // Turns browser sign-in on for one of the listed browsers, or off with ''.
   setCookiesBrowser(browser) {

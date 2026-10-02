@@ -2,6 +2,12 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **More settings** under Save to: choose how many downloads run at once (1–4, applies immediately) and the format new links start with.
+
 ## [1.4.0] - 2026-10-02
 
 ### Added

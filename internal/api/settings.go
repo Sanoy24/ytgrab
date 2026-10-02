@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/picker"
 	settingspkg "github.com/Sanoy24/ytgrab/internal/settings"
 )
@@ -33,6 +34,14 @@ type cookieSettings interface {
 	SetCookiesBrowser(context.Context, string) error
 }
 
+// preferenceSettings is implemented by settings with download preferences.
+type preferenceSettings interface {
+	MaxDownloads() int
+	SetMaxDownloads(context.Context, int) error
+	DefaultPreset() domain.Preset
+	SetDefaultPreset(context.Context, domain.Preset) error
+}
+
 // FolderPicker is optionally implemented by the settings value to open the operating
 // system's folder window on this computer.
 type FolderPicker interface {
@@ -48,6 +57,11 @@ func settingsBody(settings Settings) map[string]any {
 	}
 	if folders, ok := settings.(FolderPicker); ok {
 		body["can_pick"] = folders.Available()
+	}
+	if prefs, ok := settings.(preferenceSettings); ok {
+		body["max_downloads"] = prefs.MaxDownloads()
+		body["max_downloads_limit"] = settingspkg.MaxDownloadsCap
+		body["default_preset"] = prefs.DefaultPreset()
 	}
 	if cookies, ok := settings.(cookieSettings); ok {
 		body["cookies_browser"] = cookies.CookiesBrowser()
@@ -89,6 +103,37 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 		}
 		writeJSON(w, http.StatusOK, settingsBody(settings))
 	})
+	if prefs, ok := settings.(preferenceSettings); ok {
+		mux.HandleFunc("PUT /api/settings/preferences", func(w http.ResponseWriter, r *http.Request) {
+			var input struct {
+				MaxDownloads  *int           `json:"max_downloads"`
+				DefaultPreset *domain.Preset `json:"default_preset"`
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, 1024)
+			decoder := json.NewDecoder(r.Body)
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&input); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_request", "Send preferences as JSON.")
+				return
+			}
+			var err error
+			if input.MaxDownloads != nil {
+				err = prefs.SetMaxDownloads(r.Context(), *input.MaxDownloads)
+			}
+			if err == nil && input.DefaultPreset != nil {
+				err = prefs.SetDefaultPreset(r.Context(), *input.DefaultPreset)
+			}
+			if errors.Is(err, settingspkg.ErrInvalidPreference) {
+				writeError(w, http.StatusBadRequest, "invalid_preference", err.Error())
+				return
+			}
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "storage", "Could not save the setting.")
+				return
+			}
+			writeJSON(w, http.StatusOK, settingsBody(settings))
+		})
+	}
 	if cookies, ok := settings.(cookieSettings); ok {
 		mux.HandleFunc("PUT /api/settings/cookies", func(w http.ResponseWriter, r *http.Request) {
 			var input struct {

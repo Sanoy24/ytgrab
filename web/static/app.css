@@ -497,6 +497,20 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .playlist-items small { color: var(--muted); font-variant-numeric: tabular-nums; }
 .playlist-items input, .playlist-all input { accent-color: var(--accent); }
 
+/* More settings */
+.more-settings { margin-top: 12px; }
+.more-settings summary { cursor: pointer; font-size: 0.85rem; color: var(--info); }
+.pref-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 0.875rem; }
+.pref-row select, .signin select {
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
 /* Browser sign-in */
 .signin { margin-top: 12px; }
 .signin select {
