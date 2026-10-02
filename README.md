@@ -11,11 +11,13 @@ A local YouTube downloader with a clean browser interface. Paste a link, pick th
 ## Features
 
 - **Pick the real quality.** Paste a link and choose from the video's actual resolutions and audio streams, with sizes — or use a quick preset (best, 1080p, 720p, M4A, MP3).
-- **Playlists, with a review step.** Browse any length of playlist 50 at a time, untick what you don't want, and confirm before anything is queued (up to 200 at once).
+- **Playlists, with a review step.** Browse any length of playlist 50 at a time, untick what you don't want, and confirm before anything is queued (up to 200 at once), optionally into a folder named after the playlist. Or paste a whole list of video links at once.
+- **Just the part you need.** Download a section of a video by start and end time, add subtitles in your language, and cap the download speed.
 - **Live progress.** Speed, size, and time left for every download, updated as it happens.
 - **Resume instead of restart.** Cancel, retry, or close the app mid-download — a retry continues from the partial file.
 - **Sensible files.** Names include the quality (`Title [id] 1080p.mp4`); H.264 picks are saved as MP4.
-- **Easy setup.** `ytgrab setup` installs everything it needs, asking first. `ytgrab doctor` explains what's missing.
+- **Lives in your tray.** On Windows, macOS, and Linux desktops with a tray, YTGrab runs without a terminal window, shows download progress and notifications from its icon, and can start when you sign in.
+- **Easy setup.** Install with Scoop, Homebrew, or a one-line installer. `ytgrab setup` installs what it needs, asking first; `ytgrab doctor` explains what's missing. The page tells you when a new version is out.
 - **Private by design.** The server listens only on `127.0.0.1` and keeps history in a local SQLite file. No accounts, no telemetry.
 
 YTGrab is a single Go program. Downloading is done by [yt-dlp](https://github.com/yt-dlp/yt-dlp) and merging by [FFmpeg](https://ffmpeg.org/).
