@@ -1,6 +1,6 @@
 import { createClient, isActive } from './api.js';
 import { formatDuration, groupFormats, matchPreset, readSection } from './formats.js';
-import { parseLinks, validateUrl } from './links.js';
+import { parseLinks, validateUrl, videoIdOf } from './links.js';
 
 const client = createClient();
 const $ = (sel) => document.querySelector(sel);
@@ -64,6 +64,24 @@ function formatWhen(iso) {
   return rtf.format(Math.round(diff / 86400), 'day');
 }
 
+// YouTube's standard preview image for a video. Loaded straight from YouTube's image
+// server, without sending which page asked for it.
+function thumbnailUrl(videoId) {
+  return /^[A-Za-z0-9_-]{11}$/.test(videoId || '') ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : '';
+}
+
+// The image stays in place but invisible until it loads: a hidden lazy image never loads.
+function setThumbnail(img, videoId) {
+  const src = thumbnailUrl(videoId);
+  if (img.dataset.src === src) return;
+  img.dataset.src = src;
+  img.classList.remove('loaded');
+  if (!src) return img.removeAttribute('src');
+  img.onload = () => img.classList.toggle('loaded', img.naturalWidth > 120); // YouTube's "no thumbnail" image is 120 px
+  img.onerror = () => img.classList.remove('loaded');
+  img.src = src;
+}
+
 function jobTitle(job) {
   if (job.title) return job.title;
   return job.video_id ? `Video ${job.video_id}` : job.url;
@@ -83,7 +101,8 @@ function renderJob(job) {
   }
   const title = el.querySelector('.job-title');
   title.textContent = jobTitle(job);
-  title.title = job.url;
+  title.title = job.title || job.url;
+  setThumbnail(el.querySelector('.job-thumb img'), job.video_id);
 
   const badge = el.querySelector('.badge');
   badge.dataset.state = job.state;
@@ -100,6 +119,7 @@ function renderJob(job) {
   const path = el.querySelector('.job-path');
   path.hidden = !(job.state === 'completed' && job.output_path);
   path.textContent = job.output_path || '';
+  path.title = job.output_path || '';
 
   const err = el.querySelector('.job-error');
   err.hidden = !(job.state === 'failed' && job.error);
@@ -164,6 +184,15 @@ function renderProgress(el, job) {
 // Finished downloads whose Remove button was pressed; they show the removal choices.
 const confirmingRemove = new Set();
 
+// Row actions shown as icons; the removal choices stay as labelled buttons.
+const ICONS = {
+  cancel: '<path d="M6 6l12 12M18 6 6 18"/>',
+  retry: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3.5v4.8h4.8"/>',
+  reveal: '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5z"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
+  remove: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+};
+
 function renderActions(box, job) {
   const want = [];
   if (isActive(job.state)) want.push(['cancel', 'Cancel', 'btn-danger']);
@@ -182,10 +211,16 @@ function renderActions(box, job) {
       ...want.map(([action, label, cls]) => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = `btn btn-small ${cls}`.trim();
         b.dataset.action = action;
-        b.textContent = label;
         b.setAttribute('aria-label', `${label}: ${jobTitle(job)}`);
+        if (ICONS[action]) {
+          b.className = 'act';
+          b.title = label;
+          b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[action]}</svg>`;
+        } else {
+          b.className = `btn btn-small ${cls}`.trim();
+          b.textContent = label;
+        }
         return b;
       }),
     );
@@ -270,6 +305,9 @@ function renderNotifyToggle() {
   button.hidden = !notificationsSupported();
   button.setAttribute('aria-pressed', String(notifyOn));
   $('#notify-label').textContent = notifyOn ? 'Notifying' : 'Notify me';
+  button.title = notifyOn
+    ? 'Notifications on: you get one when a download finishes while this tab is in the background'
+    : 'Notify me when downloads finish while this tab is in the background';
 }
 
 async function toggleNotifications() {
@@ -936,13 +974,15 @@ function showFormats(grouped, previous) {
     el('strong', { className: 'inspect-title', textContent: grouped.title || 'Video' }),
     el('small', { textContent: meta }),
   ];
-  const { playlistUrl } = validateUrl($('#url').value);
+  const { url, playlistUrl } = validateUrl($('#url').value);
   if (playlistUrl) {
     const whole = el('button', { type: 'button', className: 'btn-link', textContent: 'Download the whole playlist instead' });
     whole.addEventListener('click', () => enterPlaylist(playlistUrl));
     parts.push(el('br'), whole);
   }
-  setInspectStatus(...parts);
+  const thumb = el('img', { className: 'inspect-thumb', alt: '', referrerPolicy: 'no-referrer' });
+  setThumbnail(thumb, url ? videoIdOf(url) : '');
+  setInspectStatus(thumb, el('div', { className: 'inspect-text' }, ...parts));
 }
 
 // ---------- playlists ----------
@@ -1536,6 +1576,13 @@ function init() {
   loadNotifyPreference();
   renderNotifyToggle();
   $('#notify-toggle').addEventListener('click', toggleNotifications);
+  const sheet = $('#settings');
+  $('#open-settings').addEventListener('click', () => sheet.showModal());
+  $('#close-settings').addEventListener('click', () => sheet.close());
+  // A click on the dimmed backdrop (outside the panel) closes it.
+  sheet.addEventListener('click', (e) => {
+    if (e.target === sheet) sheet.close();
+  });
   $('#signin-browser').addEventListener('change', onSignInChange);
   $('#pref-login').addEventListener('change', onStartAtLoginChange);
   $('#pref-speed').addEventListener('change', (e) => {

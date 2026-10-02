@@ -82,7 +82,7 @@ test('fits a phone screen without sideways scrolling', async ({ page }) => {
 
 test('turns Start with Windows on and off from More settings', async ({ page }) => {
   await page.goto('/?fixture=empty');
-  await page.getByText('More settings').click();
+  await page.getByRole('button', { name: 'Settings' }).click();
   const box = page.getByLabel('Start with Windows');
   await expect(box).not.toBeChecked();
   await box.check();
@@ -126,7 +126,7 @@ test('queues several pasted links at once', async ({ page }) => {
 
 test('turns on subtitles in a chosen language', async ({ page }) => {
   await page.goto('/?fixture=empty');
-  await page.getByText('More settings').click();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('#pref-subs-lang-row')).toBeHidden();
   await page.getByLabel('Subtitles', { exact: true }).selectOption('embed');
   await expect(page.locator('#toast')).toContainText('English subtitles will be added');
@@ -139,7 +139,7 @@ test('turns on subtitles in a chosen language', async ({ page }) => {
 
 test('sets a per-download speed limit', async ({ page }) => {
   await page.goto('/?fixture=empty');
-  await page.getByText('More settings').click();
+  await page.getByRole('button', { name: 'Settings' }).click();
   const select = page.getByLabel('Speed limit (per download)');
   await expect(select).toHaveValue('0');
   await select.selectOption({ label: '2 MB/s' });
