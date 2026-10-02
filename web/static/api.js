@@ -216,6 +216,7 @@ class FixtureClient {
       max_downloads: this.maxDownloads ?? 2,
       max_downloads_limit: 4,
       default_preset: this.defaultPreset ?? 'video-best',
+      start_at_login: this.startAtLogin ?? false,
       cookie_browsers: ['firefox', 'chrome', 'edge', 'brave', 'chromium', 'opera', 'vivaldi', 'safari'],
     };
   }
@@ -224,6 +225,12 @@ class FixtureClient {
     await delay(200);
     if (max_downloads !== undefined) this.maxDownloads = max_downloads;
     if (default_preset !== undefined) this.defaultPreset = default_preset;
+    return this.settingsBody();
+  }
+
+  async setStartAtLogin(enabled) {
+    await delay(200);
+    this.startAtLogin = enabled;
     return this.settingsBody();
   }
 
@@ -405,6 +412,10 @@ class HttpClient {
   // Saves { max_downloads, default_preset } (either or both).
   setPreferences(body) {
     return this.request('PUT', '/api/settings/preferences', body);
+  }
+  // Starts YTGrab in the tray when the user signs in to Windows, or stops doing so.
+  setStartAtLogin(enabled) {
+    return this.request('PUT', '/api/settings/startup', { enabled });
   }
   // Turns browser sign-in on for one of the listed browsers, or off with ''.
   setCookiesBrowser(browser) {

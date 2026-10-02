@@ -10,4 +10,8 @@ type Serve func(ctx context.Context, ready func(url string)) error
 // Actions are what the tray menu does.
 type Actions struct {
 	Open func(url string) // show the page in the browser
+	// StartAtLogin and SetStartAtLogin back the "Start with Windows" item; leave them
+	// nil to hide it.
+	StartAtLogin    func() bool
+	SetStartAtLogin func(bool) error
 }

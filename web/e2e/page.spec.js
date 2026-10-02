@@ -79,3 +79,15 @@ test('fits a phone screen without sideways scrolling', async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('turns Start with Windows on and off from More settings', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.getByText('More settings').click();
+  const box = page.getByLabel('Start with Windows');
+  await expect(box).not.toBeChecked();
+  await box.check();
+  await expect(page.locator('#toast')).toContainText('start in the tray when you sign in');
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await expect(page.locator('#toast')).toContainText("won't start when you sign in");
+});

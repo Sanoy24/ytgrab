@@ -1175,6 +1175,9 @@ async function onDirSubmit(e) {
 let presetApplied = false;
 
 function renderPreferences(next) {
+  // Only sent where YTGrab can start at sign-in (Windows).
+  $('#pref-login-row').hidden = typeof next.start_at_login !== 'boolean';
+  if (!$('#pref-login-row').hidden) $('#pref-login').checked = next.start_at_login;
   const parallel = $('#pref-parallel');
   $('#pref-parallel-row').hidden = !next.max_downloads;
   $('#pref-preset-row').hidden = !next.default_preset;
@@ -1196,6 +1199,20 @@ function renderPreferences(next) {
       presetApplied = true;
       showPresets(`preset:${next.default_preset}`);
     }
+  }
+}
+
+async function onStartAtLoginChange(e) {
+  const box = e.currentTarget;
+  box.disabled = true;
+  try {
+    applySettings(await client.setStartAtLogin(box.checked));
+    toast(box.checked ? 'YTGrab will start in the tray when you sign in to Windows.' : "YTGrab won't start when you sign in.");
+  } catch (err) {
+    box.checked = !box.checked;
+    toast(err.message, true);
+  } finally {
+    box.disabled = false;
   }
 }
 
@@ -1281,6 +1298,7 @@ function init() {
   renderNotifyToggle();
   $('#notify-toggle').addEventListener('click', toggleNotifications);
   $('#signin-browser').addEventListener('change', onSignInChange);
+  $('#pref-login').addEventListener('change', onStartAtLoginChange);
   $('#pref-parallel').addEventListener('change', (e) => {
     const n = Number(e.currentTarget.value);
     savePreference(e.currentTarget, { max_downloads: n }, n === 1 ? 'Downloads will run one at a time.' : `Up to ${n} downloads will run at once.`);

@@ -42,6 +42,13 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// startupSettings is implemented by settings that can start YTGrab when the user signs in.
+type startupSettings interface {
+	StartAtLoginSupported() bool
+	StartAtLogin() bool
+	SetStartAtLogin(bool) error
+}
+
 // FolderPicker is optionally implemented by the settings value to open the operating
 // system's folder window on this computer.
 type FolderPicker interface {
@@ -66,6 +73,9 @@ func settingsBody(settings Settings) map[string]any {
 	if cookies, ok := settings.(cookieSettings); ok {
 		body["cookies_browser"] = cookies.CookiesBrowser()
 		body["cookie_browsers"] = settingspkg.CookieBrowsers
+	}
+	if startup, ok := settings.(startupSettings); ok && startup.StartAtLoginSupported() {
+		body["start_at_login"] = startup.StartAtLogin()
 	}
 	return body
 }
@@ -152,6 +162,25 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				writeError(w, http.StatusInternalServerError, "storage", "Could not save the setting.")
+				return
+			}
+			writeJSON(w, http.StatusOK, settingsBody(settings))
+		})
+	}
+	if startup, ok := settings.(startupSettings); ok && startup.StartAtLoginSupported() {
+		mux.HandleFunc("PUT /api/settings/startup", func(w http.ResponseWriter, r *http.Request) {
+			var input struct {
+				Enabled *bool `json:"enabled"`
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, 1024)
+			decoder := json.NewDecoder(r.Body)
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&input); err != nil || input.Enabled == nil {
+				writeError(w, http.StatusBadRequest, "invalid_request", `Send {"enabled": true} or {"enabled": false}.`)
+				return
+			}
+			if err := startup.SetStartAtLogin(*input.Enabled); err != nil {
+				writeError(w, http.StatusInternalServerError, "startup", "Could not change whether YTGrab starts when you sign in.")
 				return
 			}
 			writeJSON(w, http.StatusOK, settingsBody(settings))
