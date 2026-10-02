@@ -223,3 +223,11 @@ test('takes a link handed over by the Send to YTGrab bookmark', async ({ page })
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('#send-bookmark')).toHaveAttribute('href', /^javascript:/);
 });
+
+test('keeps yt-dlp up to date unless turned off', async ({ page }) => {
+  await page.goto('/?fixture=empty#settings');
+  const toggle = page.getByLabel('Keep yt-dlp up to date');
+  await expect(toggle).toBeChecked();
+  await toggle.uncheck();
+  await expect(page.locator('#toast')).toContainText("won't be updated automatically");
+});

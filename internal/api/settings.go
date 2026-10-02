@@ -42,6 +42,12 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// autoUpdateSettings is implemented by settings that can keep yt-dlp up to date.
+type autoUpdateSettings interface {
+	AutoUpdateYtdlp() bool
+	SetAutoUpdateYtdlp(context.Context, bool) error
+}
+
 // speedSettings is implemented by settings with a per-download speed limit.
 type speedSettings interface {
 	SpeedLimit() int
@@ -90,6 +96,9 @@ func settingsBody(settings Settings) map[string]any {
 	if startup, ok := settings.(startupSettings); ok && startup.StartAtLoginSupported() {
 		body["start_at_login"] = startup.StartAtLogin()
 		body["start_at_login_label"] = startup.StartAtLoginLabel()
+	}
+	if auto, ok := settings.(autoUpdateSettings); ok {
+		body["auto_update_ytdlp"] = auto.AutoUpdateYtdlp()
 	}
 	if speed, ok := settings.(speedSettings); ok {
 		body["speed_limit_kbps"] = speed.SpeedLimit()
@@ -141,6 +150,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				MaxDownloads  *int           `json:"max_downloads"`
 				DefaultPreset *domain.Preset `json:"default_preset"`
 				SpeedLimit    *int           `json:"speed_limit_kbps"`
+				AutoUpdate    *bool          `json:"auto_update_ytdlp"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -163,6 +173,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				err = speed.SetSpeedLimit(r.Context(), *input.SpeedLimit)
+			}
+			if err == nil && input.AutoUpdate != nil {
+				auto, ok := settings.(autoUpdateSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server can't update yt-dlp by itself.")
+					return
+				}
+				err = auto.SetAutoUpdateYtdlp(r.Context(), *input.AutoUpdate)
 			}
 			if errors.Is(err, settingspkg.ErrInvalidPreference) {
 				writeError(w, http.StatusBadRequest, "invalid_preference", err.Error())

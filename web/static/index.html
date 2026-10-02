@@ -273,10 +273,17 @@
           </section>
           <section class="card settings-card">
             <h3 class="card-title">This computer</h3>
-            <p class="card-desc">How YTGrab starts.</p>
+            <p class="card-desc">How YTGrab starts and stays working.</p>
             <div class="pref-row" id="pref-login-row" hidden>
               <label for="pref-login" id="pref-login-label">Start with Windows</label>
               <input type="checkbox" class="pref-check" id="pref-login" />
+            </div>
+            <div class="pref-row-block" id="pref-autoupdate-row" hidden>
+              <div class="pref-row">
+                <label for="pref-autoupdate">Keep yt-dlp up to date</label>
+                <input type="checkbox" class="pref-check" id="pref-autoupdate" />
+              </div>
+              <p class="hint pref-hint">YouTube changes often, and an old yt-dlp is the usual reason downloads stop working. YTGrab installs new versions between downloads.</p>
             </div>
           </section>
           <section class="card settings-card send-card">
