@@ -22,7 +22,9 @@ Scoop installs FFmpeg and Deno too and adds **YTGrab** to the Start menu; yt-dlp
    - **FFmpeg** (merges video and audio, converts MP3) and **Deno** (runs YouTube's JavaScript checks): installed with `winget`.
 3. Your browser opens `http://127.0.0.1:8787/`. Choose where downloads should go: **Choose folder…** opens the normal Windows folder window, or use the suggested `Downloads\ytgrab`.
 
-Keep the console window open while you use the app; close it or press Ctrl+C to stop. Next time, **Start YTGrab.cmd** opens the app straight away.
+YTGrab then keeps running without a window. Its icon sits in the notification area by the clock — on Windows 11, new icons start under the **^** arrow; drag it onto the taskbar to keep it in view. Click the icon to open the page; right-click it and choose **Quit YTGrab** to stop. Unfinished downloads continue from where they stopped next time. Next time, **Start YTGrab.cmd** opens the app straight away.
+
+Started from a terminal (`ytgrab --open`), YTGrab stays in that terminal and prints its log there; it shows the tray icon too, and Ctrl+C stops it. When it runs without a window, its log is written to `ytgrab.log` in the data folder, and anything that stops it from starting is shown in a message box.
 
 ### Check or repair the setup
 
@@ -143,7 +145,7 @@ Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and 
 | Starting YTGrab says "YTGrab is already running at …" | It is already open; the browser is brought to it (with `--open` or **Start YTGrab.cmd**). Only one copy runs at a time. |
 | "listen on 127.0.0.1:8787 … Another program is using this port" | A different program uses the port. Set `YTGRAB_LISTEN_ADDR=127.0.0.1:8788` and start again. |
 | "another YTGrab is using the data folder" | A second copy was started with a different port. Use the copy that is already running. |
-| The page says "The ytgrab server isn't responding" | The console window was closed. Start YTGrab again and reload the page. |
+| The page says "The ytgrab server isn't responding" | YTGrab was quit, or its terminal was closed. Start YTGrab again and reload the page. |
 | Antivirus warns about `yt-dlp.exe` | It is a packaged Python program, which some scanners flag. Compare its SHA-256 with `manifest.json` and the official release. |
 | "Only … free on the drive with your download folder" or "The drive … is full" | Free up space or choose a folder on another drive with **Change…**, then Retry. `ytgrab doctor` shows how much space is free. |
 | "Choose an existing, writable absolute folder." | Enter a full path like `D:\Videos` for a folder that already exists. |

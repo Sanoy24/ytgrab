@@ -124,6 +124,9 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 	}
 	served := make(chan error, 1)
 	go func() { served <- server.Serve(listener) }()
+	if cfg.Ready != nil {
+		cfg.Ready(url)
+	}
 
 	select {
 	case err := <-served:

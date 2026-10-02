@@ -106,7 +106,7 @@ Whichever way you install, choose a download folder in the page and paste a link
 | `ytgrab setup --update-ytdlp` | Get the latest yt-dlp — the usual fix when YouTube downloads start failing |
 | `ytgrab --version`            | Print the version                                                          |
 
-Keep the terminal (or console) window open while you use the app; press Ctrl+C to stop it. From a downloaded archive, run the commands from its folder as `./ytgrab …` (Windows: `.\ytgrab.exe …`). See the [user guide](docs/USER_GUIDE.md) for settings, environment variables, and troubleshooting.
+On Windows, YTGrab started from the Start menu or **Start YTGrab.cmd** runs without a window: click its icon in the notification area by the clock to open the page, or right-click it and choose **Quit YTGrab**. Started from a terminal — and always on macOS and Linux — keep the terminal open while you use the app and press Ctrl+C to stop it. From a downloaded archive, run the commands from its folder as `./ytgrab …` (Windows: `.\ytgrab.exe …`). See the [user guide](docs/USER_GUIDE.md) for settings, environment variables, and troubleshooting.
 
 ## How it works
 
