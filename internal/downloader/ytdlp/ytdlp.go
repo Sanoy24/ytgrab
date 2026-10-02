@@ -49,6 +49,7 @@ type Downloader struct {
 	Config         config.Config
 	DownloadsDir   func() string
 	CookiesBrowser func() string
+	Subtitles      func() (mode, lang string)
 }
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
@@ -61,6 +62,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if downloader.CookiesBrowser != nil {
 		cfg.CookiesBrowser = downloader.CookiesBrowser()
+	}
+	if downloader.Subtitles != nil {
+		cfg.SubtitlesMode, cfg.SubtitlesLang = downloader.Subtitles()
 	}
 	if err := checkFreeSpace(cfg.DownloadsDir); err != nil {
 		return Result{}, err
@@ -185,6 +189,9 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	if embedsCoverArt(job) {
 		args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
 	}
+	if isVideo(job) {
+		args = append(args, subtitleArgs(cfg.SubtitlesMode, cfg.SubtitlesLang)...)
+	}
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
 			args = append(args, "-f", videoSelector(*job.Format), "--merge-output-format", "mp4/webm/mkv")
@@ -209,6 +216,32 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "-f", "ba", "-x", "--audio-format", "mp3", "--audio-quality", "0")
 	}
 	return append(args, "--", job.URL)
+}
+
+func isVideo(job domain.Job) bool {
+	if job.Format != nil {
+		return job.Format.Kind == "video"
+	}
+	return job.Preset != nil && (*job.Preset == domain.VideoBest || *job.Preset == domain.Video1080 || *job.Preset == domain.Video720)
+}
+
+// languageCode matches the short codes in settings.SubtitleLanguages.
+var languageCode = regexp.MustCompile(`^[a-z]{2,3}$`)
+
+// subtitleArgs asks for subtitles in exactly lang: the creator's, or YouTube's automatic
+// ones when there are none. That is one request; a pattern like "en.*" would also fetch
+// every machine translation ("English from German", ...) and quickly hit YouTube's
+// limits. They are embedded in the video or saved beside it as .srt.
+func subtitleArgs(mode, lang string) []string {
+	if (mode != "embed" && mode != "file") || !languageCode.MatchString(lang) {
+		return nil
+	}
+	args := []string{"--write-subs", "--write-auto-subs", "--sub-langs", lang}
+	if mode == "embed" {
+		// With --write-subs given, yt-dlp would otherwise keep the file after embedding it.
+		return append(args, "--embed-subs", "--compat-options", "no-keep-subs")
+	}
+	return append(args, "--convert-subs", "srt")
 }
 
 func embedsCoverArt(job domain.Job) bool {

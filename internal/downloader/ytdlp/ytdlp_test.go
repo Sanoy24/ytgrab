@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -217,5 +218,33 @@ func TestOutOfSpaceDuringDownload(t *testing.T) {
 		if err, ok := classifyFailure(stderr).(*Error); !ok || err.Code != "disk_full" {
 			t.Errorf("classifyFailure(%q) = %v", stderr, err)
 		}
+	}
+}
+
+func TestSubtitlesOnlyForVideoWhenTurnedOn(t *testing.T) {
+	video, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.Video720)
+	picked, _ := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: "video", ID: "137", Ext: "mp4", Label: "1080p"})
+	audio, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioMP3)
+
+	if joined := strings.Join(buildArgs(video, config.Config{SubtitlesMode: "off", SubtitlesLang: "en"}), " "); strings.Contains(joined, "subs") {
+		t.Fatalf("subtitles requested while off: %s", joined)
+	}
+	embed := buildArgs(picked, config.Config{SubtitlesMode: "embed", SubtitlesLang: "am"})
+	if argAfter(embed, "--sub-langs") != "am" || !slices.Contains(embed, "--embed-subs") || !slices.Contains(embed, "--write-auto-subs") || argAfter(embed, "--compat-options") != "no-keep-subs" {
+		t.Fatalf("embed args = %v", embed)
+	}
+	file := buildArgs(video, config.Config{SubtitlesMode: "file", SubtitlesLang: "en"})
+	if argAfter(file, "--convert-subs") != "srt" || slices.Contains(file, "--embed-subs") {
+		t.Fatalf("file args = %v", file)
+	}
+	if joined := strings.Join(buildArgs(audio, config.Config{SubtitlesMode: "embed", SubtitlesLang: "en"}), " "); strings.Contains(joined, "subs") {
+		t.Fatalf("subtitles requested for audio: %s", joined)
+	}
+	// Defense in depth: anything but a short language code is ignored.
+	if joined := strings.Join(buildArgs(video, config.Config{SubtitlesMode: "embed", SubtitlesLang: "en --exec x"}), " "); strings.Contains(joined, "subs") {
+		t.Fatalf("unsafe language passed through: %s", joined)
+	}
+	if file[len(file)-1] != video.URL || file[len(file)-2] != "--" {
+		t.Fatal("URL must stay the final argument")
 	}
 }

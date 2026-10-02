@@ -19,7 +19,20 @@ const (
 	cookiesKey       = "cookies_browser"
 	maxDownloadsKey  = "max_downloads"
 	defaultPresetKey = "default_preset"
+	subtitlesKey     = "subtitles_mode"
+	subtitleLangKey  = "subtitles_lang"
 )
+
+// Subtitle modes: off, embedded in the video file, or saved next to it as .srt.
+const (
+	SubtitlesOff   = "off"
+	SubtitlesEmbed = "embed"
+	SubtitlesFile  = "file"
+)
+
+// SubtitleLanguages are the languages offered for subtitles. Only these codes are
+// accepted, so the setting can never become an arbitrary yt-dlp option.
+var SubtitleLanguages = []string{"en", "am", "ar", "de", "es", "fr", "hi", "id", "it", "ja", "ko", "nl", "pl", "pt", "ru", "sw", "tr", "uk", "vi", "zh"}
 
 // Parallel downloads are bounded: more rarely helps against YouTube's limits.
 const (
@@ -50,6 +63,8 @@ type Manager struct {
 	cookies      string
 	maxDownloads int
 	preset       domain.Preset
+	subtitles    string
+	subtitleLang string
 	defaultDir   string
 	configured   bool
 }
@@ -81,7 +96,42 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if saved, ok, err := store.GetSetting(ctx, defaultPresetKey); err == nil && ok && domain.Preset(saved).Valid() {
 		preset = domain.Preset(saved)
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	subtitles, subtitleLang := SubtitlesOff, "en"
+	if saved, ok, err := store.GetSetting(ctx, subtitlesKey); err == nil && ok && validSubtitleMode(saved) {
+		subtitles = saved
+	}
+	if saved, ok, err := store.GetSetting(ctx, subtitleLangKey); err == nil && ok && slices.Contains(SubtitleLanguages, saved) {
+		subtitleLang = saved
+	}
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+func validSubtitleMode(mode string) bool {
+	return mode == SubtitlesOff || mode == SubtitlesEmbed || mode == SubtitlesFile
+}
+
+// Subtitles returns the subtitle mode and language for video downloads.
+func (manager *Manager) Subtitles() (mode, lang string) {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.subtitles, manager.subtitleLang
+}
+
+// SetSubtitles saves the subtitle mode (off, embed, file) and language.
+func (manager *Manager) SetSubtitles(ctx context.Context, mode, lang string) error {
+	if !validSubtitleMode(mode) || !slices.Contains(SubtitleLanguages, lang) {
+		return ErrInvalidPreference
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, subtitlesKey, mode); err != nil {
+		return fmt.Errorf("save subtitles setting: %w", err)
+	}
+	if err := manager.store.PutSetting(ctx, subtitleLangKey, lang); err != nil {
+		return fmt.Errorf("save subtitles setting: %w", err)
+	}
+	manager.subtitles, manager.subtitleLang = mode, lang
+	return nil
 }
 
 // CookiesBrowser returns the browser whose YouTube sign-in yt-dlp should use, or "" (off).

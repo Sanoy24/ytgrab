@@ -140,3 +140,31 @@ func TestDownloadPreferences(t *testing.T) {
 		t.Fatalf("reloaded = %d, %q", reloaded.MaxDownloads(), reloaded.DefaultPreset())
 	}
 }
+
+func TestSubtitlesAreOffByDefaultAndAllowlisted(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := New(ctx, store, t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode, lang := manager.Subtitles(); mode != SubtitlesOff || lang != "en" {
+		t.Fatalf("default = %q %q", mode, lang)
+	}
+	for _, bad := range [][2]string{{"burn", "en"}, {"embed", "xx"}, {"embed", "en.*"}, {"file", "EN"}} {
+		if err := manager.SetSubtitles(ctx, bad[0], bad[1]); !errors.Is(err, ErrInvalidPreference) {
+			t.Errorf("SetSubtitles(%q, %q) = %v", bad[0], bad[1], err)
+		}
+	}
+	if err := manager.SetSubtitles(ctx, SubtitlesFile, "am"); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, _ := New(ctx, store, t.TempDir(), false)
+	if mode, lang := reloaded.Subtitles(); mode != SubtitlesFile || lang != "am" {
+		t.Fatalf("reloaded = %q %q", mode, lang)
+	}
+}

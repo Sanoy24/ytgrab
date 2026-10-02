@@ -61,7 +61,7 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	if err != nil {
 		return err
 	}
-	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg, DownloadsDir: appSettings.DownloadsDir, CookiesBrowser: appSettings.CookiesBrowser}, 2)
+	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg, DownloadsDir: appSettings.DownloadsDir, CookiesBrowser: appSettings.CookiesBrowser, Subtitles: appSettings.Subtitles}, 2)
 	// One pause gate for downloads and format checks: when YouTube limits this network,
 	// everything waits instead of retrying into a longer block.
 	jobQueue.SetCooldown(cooldown.New())

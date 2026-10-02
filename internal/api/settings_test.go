@@ -265,3 +265,33 @@ func TestDownloadPreferencesAPI(t *testing.T) {
 		t.Fatalf("set preset = %d %v", code, body)
 	}
 }
+
+func TestSubtitleSettingAPI(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := settings.New(ctx, store, t.TempDir(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil, manager)
+	request := func(method, target, body string) (int, map[string]any) {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, target, bytes.NewBufferString(body)))
+		var decoded map[string]any
+		_ = json.Unmarshal(response.Body.Bytes(), &decoded)
+		return response.Code, decoded
+	}
+	if _, body := request(http.MethodGet, "/api/settings", ""); body["subtitles_mode"] != "off" || body["subtitles_lang"] != "en" || len(body["subtitle_languages"].([]any)) == 0 {
+		t.Fatalf("settings = %v", body)
+	}
+	if code, _ := request(http.MethodPut, "/api/settings/subtitles", `{"mode":"embed","lang":"--exec"}`); code != http.StatusBadRequest {
+		t.Fatalf("bad language = %d", code)
+	}
+	if code, body := request(http.MethodPut, "/api/settings/subtitles", `{"mode":"embed","lang":"fr"}`); code != http.StatusOK || body["subtitles_mode"] != "embed" || body["subtitles_lang"] != "fr" {
+		t.Fatalf("set = %d %v", code, body)
+	}
+}

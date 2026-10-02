@@ -28,6 +28,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
 | `PUT` | `/api/settings/preferences` | Set `max_downloads` (1–4) and/or `default_preset`; applies immediately |
 | `GET` | `/api/system/version` | `{ version, latest, update_available, update_command, release_url }`; `latest` is checked against GitHub at most once a day, and `update_command` is empty for copies unpacked from a zip |
+| `PUT` | `/api/settings/subtitles` | `{ "mode": "off" \| "embed" \| "file", "lang": "en" }`; only codes in `subtitle_languages` (from `GET /api/settings`) are accepted |
 | `PUT` | `/api/settings/startup` | Windows only: start YTGrab in the tray at sign-in (`{ "enabled": true }`) or stop (`false`). `GET /api/settings` includes `start_at_login` only where this is supported |
 | `PUT` | `/api/settings/cookies` | Turn browser sign-in on (`{ "browser": "firefox" }`) or off (`""`); only listed browsers are accepted |
 | `POST` | `/api/settings/use-default` | Create and use the suggested folder |
