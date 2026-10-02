@@ -100,6 +100,22 @@ h1, h2, h3, p { margin: 0; }
   padding: 4px 12px;
   cursor: pointer;
 }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.notify-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.notify-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+@media (max-width: 520px) { #notify-label { display: none; } }
 .health .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .health[data-status="ok"] .dot { background: var(--ok); }
 .health[data-status="degraded"] .dot { background: var(--warn); }
