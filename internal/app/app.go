@@ -12,6 +12,7 @@ import (
 
 	"github.com/Sanoy24/ytgrab/internal/api"
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/autostart"
 	"github.com/Sanoy24/ytgrab/internal/config"
 	"github.com/Sanoy24/ytgrab/internal/cooldown"
 	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
@@ -69,15 +70,24 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	latest.Get() // look up the newest yt-dlp now, so the first page load can show it
 	updater := &ytdlpUpdater{cfg: cfg, running: jobQueue.Running, latest: latest}
 	serving = true
-	return serve(ctx, cfg, output, listener, store, jobQueue, serverSettings{Manager: appSettings, Picker: picker.New(), ytdlpUpdater: updater})
+	return serve(ctx, cfg, output, listener, store, jobQueue, serverSettings{Manager: appSettings, Picker: picker.New(), ytdlpUpdater: updater, loginStart: loginStart{autostart.ForThisProgram()}})
 }
 
-// serverSettings adds the desktop folder window and yt-dlp updates to the settings routes.
+// serverSettings adds the desktop folder window, yt-dlp updates, and starting at sign-in
+// to the settings routes.
 type serverSettings struct {
 	*settings.Manager
 	picker.Picker
 	*ytdlpUpdater
+	loginStart
 }
+
+// loginStart offers the Windows sign-in entry to the settings page.
+type loginStart struct{ entry autostart.Entry }
+
+func (l loginStart) StartAtLoginSupported() bool   { return l.entry.Supported() }
+func (l loginStart) StartAtLogin() bool            { return l.entry.Enabled() }
+func (l loginStart) SetStartAtLogin(on bool) error { return l.entry.Set(on) }
 
 func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController, settings ...api.Settings) error {
 	inspector := ytdlp.NewInspector(cfg)

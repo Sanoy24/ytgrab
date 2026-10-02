@@ -13,6 +13,7 @@ import (
 
 	"github.com/Sanoy24/ytgrab/internal/app"
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/autostart"
 	"github.com/Sanoy24/ytgrab/internal/config"
 	"github.com/Sanoy24/ytgrab/internal/setup"
 	"github.com/Sanoy24/ytgrab/internal/tray"
@@ -74,7 +75,15 @@ func run(args []string) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	err := tray.Run(ctx, tray.Actions{Open: openPage}, func(ctx context.Context, ready func(string)) error {
+	actions := tray.Actions{Open: openPage}
+	if login := autostart.ForThisProgram(); login.Supported() {
+		// Keep "Start with Windows" pointing at this copy after a move or Scoop update.
+		if err := login.Refresh(); err != nil {
+			fmt.Fprintf(os.Stderr, "could not update the sign-in entry: %v\n", err)
+		}
+		actions.StartAtLogin, actions.SetStartAtLogin = login.Enabled, login.Set
+	}
+	err := tray.Run(ctx, actions, func(ctx context.Context, ready func(string)) error {
 		serverCfg := cfg
 		serverCfg.Ready = ready
 		return app.Run(ctx, serverCfg, os.Stdout)

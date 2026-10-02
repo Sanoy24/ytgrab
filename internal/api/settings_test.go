@@ -174,6 +174,65 @@ func TestBrowserSignInSetting(t *testing.T) {
 	}
 }
 
+// startupManager adds a sign-in switch, kept in memory, to real settings.
+type startupManager struct {
+	*settings.Manager
+	supported, on bool
+}
+
+func (s *startupManager) StartAtLoginSupported() bool { return s.supported }
+func (s *startupManager) StartAtLogin() bool          { return s.on }
+func (s *startupManager) SetStartAtLogin(on bool) error {
+	s.on = on
+	return nil
+}
+
+func TestStartAtLoginSetting(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := settings.New(ctx, store, t.TempDir(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := func(handler http.Handler, method, target, body string) (int, map[string]any) {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(method, target, bytes.NewBufferString(body)))
+		var decoded map[string]any
+		_ = json.Unmarshal(response.Body.Bytes(), &decoded)
+		return response.Code, decoded
+	}
+	health := func(context.Context) deps.Report { return deps.Report{} }
+
+	unsupported := NewHandler(health, store, nil, &startupManager{Manager: manager})
+	if _, body := request(unsupported, http.MethodGet, "/api/settings", ""); body["start_at_login"] != nil {
+		t.Fatalf("unsupported system shows start_at_login: %v", body)
+	}
+	if code, _ := request(unsupported, http.MethodPut, "/api/settings/startup", `{"enabled":true}`); code == http.StatusOK {
+		t.Fatal("unsupported system accepted the setting")
+	}
+
+	startup := &startupManager{Manager: manager, supported: true}
+	handler := NewHandler(health, store, nil, startup)
+	if _, body := request(handler, http.MethodGet, "/api/settings", ""); body["start_at_login"] != false {
+		t.Fatalf("settings = %v", body)
+	}
+	for _, bad := range []string{`{}`, `{"enabled":"yes"}`, `{"enabled":true,"x":1}`} {
+		if code, _ := request(handler, http.MethodPut, "/api/settings/startup", bad); code != http.StatusBadRequest {
+			t.Fatalf("%s = %d", bad, code)
+		}
+	}
+	if code, body := request(handler, http.MethodPut, "/api/settings/startup", `{"enabled":true}`); code != http.StatusOK || body["start_at_login"] != true || !startup.on {
+		t.Fatalf("turn on = %d %v", code, body)
+	}
+	if code, body := request(handler, http.MethodPut, "/api/settings/startup", `{"enabled":false}`); code != http.StatusOK || body["start_at_login"] != false {
+		t.Fatalf("turn off = %d %v", code, body)
+	}
+}
+
 func TestDownloadPreferencesAPI(t *testing.T) {
 	ctx := context.Background()
 	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))

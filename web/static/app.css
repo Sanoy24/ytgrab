@@ -518,6 +518,7 @@ input[aria-invalid="true"] { border-color: var(--err); }
   max-width: 60%;
 }
 .pref-hint { margin: 6px 0 0; font-size: 0.8rem; }
+.pref-check { width: 18px; height: 18px; margin: 0 4px; accent-color: var(--accent); cursor: pointer; }
 
 /* First-run folder choice */
 .setup-folder {
