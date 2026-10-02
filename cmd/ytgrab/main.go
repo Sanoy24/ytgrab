@@ -15,6 +15,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/config"
 	"github.com/Sanoy24/ytgrab/internal/setup"
+	"github.com/Sanoy24/ytgrab/internal/tray"
 )
 
 func main() {
@@ -61,26 +62,47 @@ func run(args []string) int {
 	}
 	cfg.OpenBrowser = *open
 
+	// Started from a shortcut on Windows: carry on without a console window, with the
+	// tray icon as the way to open or quit YTGrab.
+	if startedFromShortcut() {
+		if err := startInBackground(cfg, args); err == nil {
+			return 0
+		}
+		// Otherwise keep running in this window.
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := app.Run(ctx, cfg, os.Stdout); err != nil {
+	err := tray.Run(ctx, tray.Actions{Open: openPage}, func(ctx context.Context, ready func(string)) error {
+		serverCfg := cfg
+		serverCfg.Ready = ready
+		return app.Run(ctx, serverCfg, os.Stdout)
+	})
+	if err != nil {
 		var running *app.AlreadyRunningError
 		if errors.As(err, &running) {
 			// Starting YTGrab again (for example double-clicking the start script twice)
 			// just brings up the copy that is already running.
 			fmt.Printf("YTGrab is already running at %s\n", running.URL)
-			if *open {
-				if err := app.OpenBrowser(running.URL); err != nil {
-					fmt.Printf("Open %s in your browser.\n", running.URL)
-				}
+			if *open || inBackground() {
+				openPage(running.URL)
 			}
 			return 0
 		}
 		fmt.Fprintf(os.Stderr, "server error: %v\n", err)
+		if inBackground() {
+			showError(fmt.Sprintf("YTGrab could not start:\n\n%v", err))
+		}
 		return 1
 	}
 	return 0
+}
+
+func openPage(url string) {
+	if err := app.OpenBrowser(url); err != nil {
+		fmt.Printf("Open %s in your browser.\n", url)
+	}
 }
 
 func loadConfig() (config.Config, bool) {

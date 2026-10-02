@@ -26,6 +26,8 @@ type Config struct {
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
 	OpenBrowser bool
+	// Ready, if set, is called with the page URL once the server is listening.
+	Ready func(url string)
 }
 
 // Load reads local configuration from the environment and validates it.

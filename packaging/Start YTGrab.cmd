@@ -8,5 +8,5 @@ if errorlevel 1 (
   ytgrab.exe setup
   echo.
 )
-ytgrab.exe --open
-if errorlevel 1 pause
+rem "start" gives YTGrab its own window, which it hides; look for its icon by the clock.
+start "" ytgrab.exe --open
