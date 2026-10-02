@@ -10,6 +10,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Send to YTGrab.** A bookmark (drag it from Settings to your bookmarks bar) opens YTGrab from any YouTube page with that video ready to add.
 - **Paste or drop anywhere.** Press Ctrl+V anywhere on the page, or drop a link onto it, to start a download.
 
 ## [1.8.0] - 2026-10-02

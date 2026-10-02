@@ -98,6 +98,12 @@ Files include the video's title, channel, upload date, and chapters; M4A and MP3
 
 Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`), so different qualities of one video never overwrite each other.
 
+## Send to YTGrab from YouTube
+
+In **Settings**, drag the **Send to YTGrab** button to your browser's bookmarks bar (press Ctrl+Shift+B, or Cmd+Shift+B on a Mac, if the bar is hidden). Then, on any YouTube video or playlist page, click the bookmark: YTGrab opens, in the same tab each time, with that link in the field and its formats loading. Choose a format and press **Add to queue**. The bookmark only fills in the link; nothing is downloaded until you add it.
+
+You can also press Ctrl+V anywhere on the YTGrab page, or drag a link from another window onto it.
+
 ## Download part of a video
 
 For a single video, open **Only part of the video** below the formats and enter a **Start** and **End** time, like `1:05` and `2:30` (or `1:02:30` for longer videos). Leave Start empty to begin at the start, or End empty to go to the end. The clip is cut exactly at those times, which takes a little extra processing, and its file name includes the range (`Title [id] 720p 1m05s-2m30s.mp4`), so it never replaces a full download. A video can be in the queue once at a time, so add the full video and a clip of it one after the other.

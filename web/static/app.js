@@ -556,6 +556,32 @@ function syncKind() {
   setKind(kindOf(selectedChoice()));
 }
 
+// ---------- send to YTGrab ----------
+
+// The bookmark opens this page (in one reused tab) with the YouTube page's address in
+// ?url=. The page only fills the link field; nothing is queued until Add is pressed.
+function setupSendBookmark() {
+  const target = `${location.origin}/?url=`;
+  const code = `javascript:(()=>{window.open(${JSON.stringify(target)}+encodeURIComponent(location.href),'ytgrab')})()`;
+  const link = $('#send-bookmark');
+  link.href = code;
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    toast('Drag this button to your bookmarks bar, then click it on a YouTube page.');
+  });
+}
+
+// A link handed over by the bookmark (or any ?url= address) goes into the link field.
+function takeLinkFromAddress() {
+  const params = new URLSearchParams(location.search);
+  const handed = params.get('url');
+  if (!handed) return;
+  params.delete('url');
+  const rest = params.toString();
+  history.replaceState(null, '', `${location.pathname}${rest ? `?${rest}` : ''}${location.hash}`);
+  takeLinks(handed);
+}
+
 // ---------- paste or drop a link anywhere ----------
 
 function takeLinks(text) {
@@ -1712,6 +1738,7 @@ function init() {
     render();
   });
   setupPasteAndDrop();
+  setupSendBookmark();
   $('#signin-browser').addEventListener('change', onSignInChange);
   $('#pref-login').addEventListener('change', onStartAtLoginChange);
   $('#pref-speed').addEventListener('change', (e) => {
@@ -1803,6 +1830,7 @@ function init() {
   loadSettings();
   loadJobs();
   loadVersion();
+  takeLinkFromAddress();
   setInterval(loadVersion, 6 * 60 * 60 * 1000); // the server checks GitHub at most daily
 }
 
