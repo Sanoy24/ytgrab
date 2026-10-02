@@ -121,6 +121,7 @@ Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 
 - **Cancel** stops a download and keeps its partial file. **Retry** resumes from that partial file.
 - If YTGrab closes while downloading, the job appears as failed with "The app closed while this download was running"; **Retry** resumes it.
 - Network hiccups are retried automatically up to three attempts.
+- The **Library** lists finished, failed, and cancelled downloads, with a search box and filters. For a finished download, the play button opens it in your default player, the folder button shows it in its folder, and **Download again** puts its link back on the Download page so you can choose another format. **Retry failed** queues every failed and cancelled download again at once.
 - **Show in folder** opens your file manager with the finished file selected. **Copy path** copies its full path.
 - **Remove** takes an entry off the list. For a finished download it asks first: **Remove from list** keeps the file, **Delete file too** deletes it.
 - **Clear** (next to the History heading) removes all finished, failed, and cancelled entries at once. Your files are kept.

@@ -71,6 +71,12 @@ class FixtureClient {
     this.pausedUntil = null;
   }
 
+  async openJob(id) {
+    await delay(200);
+    const job = this.jobs.find((j) => j.id === id);
+    if (!job?.output_path) throw new ApiError('file_missing', 'The file was moved or deleted.');
+  }
+
   async revealJob(id) {
     await delay(200);
     const job = this.jobs.find((j) => j.id === id);
@@ -388,6 +394,10 @@ class HttpClient {
       this.pausedUntil = r.paused_until ?? null;
       return r.jobs ?? r;
     });
+  }
+  // Opens a finished download with its default app.
+  openJob(id) {
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/open`);
   }
   // Opens the system file manager at a finished download.
   revealJob(id) {
