@@ -231,3 +231,16 @@ test('keeps yt-dlp up to date unless turned off', async ({ page }) => {
   await toggle.uncheck();
   await expect(page.locator('#toast')).toContainText("won't be updated automatically");
 });
+
+test('retries every failed download and offers to download one again', async ({ page }) => {
+  await page.goto('/?fixture=default#library');
+  const retry = page.getByRole('button', { name: /^Retry failed/ });
+  await expect(retry).toHaveText('Retry failed (3)');
+  await retry.click();
+  await expect(page.locator('#toast')).toContainText('Queued 3 downloads again.');
+  await expect(retry).toBeHidden();
+  const done = page.locator('#history .job', { hasText: 'Lecture 1' });
+  await done.getByRole('button', { name: /^Download again/ }).click();
+  await expect(page.locator('#view-download')).toBeVisible();
+  await expect(page.locator('#url')).toHaveValue(/YE7VzlLtp-4/);
+});

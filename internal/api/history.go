@@ -16,6 +16,9 @@ import (
 // showFile opens the file manager at a file; replaced in tests.
 var showFile = reveal.Show
 
+// openFile opens a file with its default app; replaced in tests.
+var openFile = reveal.OpenFile
+
 // jobDeleter is implemented by stores that can remove finished jobs.
 type jobDeleter interface {
 	Delete(context.Context, string) error
@@ -49,6 +52,29 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		}
 		if err := showFile(*job.OutputPath); err != nil {
 			writeError(w, http.StatusInternalServerError, "reveal_failed", "The folder could not be opened.")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	mux.HandleFunc("POST /api/jobs/{id}/open", func(w http.ResponseWriter, r *http.Request) {
+		job, err := store.Get(r.Context(), r.PathValue("id"))
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		// Only the file this download saved: the same check as deleting it.
+		path, owned := ownedOutput(job)
+		if !owned {
+			writeError(w, http.StatusConflict, "not_completed", "Only finished downloads can be opened.")
+			return
+		}
+		if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+			writeError(w, http.StatusNotFound, "file_missing", "The file was moved or deleted.")
+			return
+		}
+		if err := openFile(path); err != nil {
+			writeError(w, http.StatusInternalServerError, "open_failed", "The file could not be opened.")
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)

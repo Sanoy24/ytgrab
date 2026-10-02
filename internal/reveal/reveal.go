@@ -27,6 +27,21 @@ func Show(path string) error {
 	}
 }
 
+// OpenFile opens a file with its default app (a video in the default player). path must
+// be absolute; callers pass a file YTGrab saved, never one from the browser.
+func OpenFile(path string) error {
+	path = filepath.Clean(path)
+	switch runtime.GOOS {
+	case "windows":
+		// Explorer opens a file with the program Windows associates with it.
+		return startWindows(`explorer.exe "` + path + `"`)
+	case "darwin":
+		return start([]string{"open", path})
+	default:
+		return start([]string{"xdg-open", path})
+	}
+}
+
 // OpenFolder opens dir in the system's file manager, creating it first if needed.
 func OpenFolder(dir string) error {
 	dir = filepath.Clean(dir)

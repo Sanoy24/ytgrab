@@ -191,6 +191,8 @@ const ICONS = {
   retry: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3.5v4.8h4.8"/>',
   reveal: '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5z"/>',
   copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
+  open: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/>',
+  again: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   remove: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
 };
 
@@ -201,7 +203,8 @@ function renderActions(box, job) {
   if (job.state === 'completed' && confirmingRemove.has(job.id)) {
     want.push(['remove-list', 'Remove from list', ''], ['remove-file', 'Delete file too', 'btn-danger'], ['remove-keep', 'Keep', '']);
   } else if (job.state === 'completed') {
-    if (job.output_path) want.push(['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
+    if (job.output_path) want.push(['open', 'Play', ''], ['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
+    want.push(['again', 'Download again', '']);
     want.push(['remove', 'Remove', '']);
   }
 
@@ -390,6 +393,26 @@ async function clearHistory() {
   }
 }
 
+// Queues every failed and cancelled download again; each resumes from its partial file.
+async function retryFailed(button) {
+  const failed = jobs.filter((j) => j.state === 'failed' || j.state === 'cancelled');
+  if (!failed.length) return;
+  button.disabled = true;
+  let queued = 0;
+  for (const job of failed) {
+    try {
+      await client.retryJob(job.id);
+      queued++;
+    } catch {
+      // Already queued again elsewhere, or removed: skip it.
+    }
+  }
+  if (!client.isFixture) jobs = await client.listJobs();
+  button.disabled = false;
+  render();
+  toast(queued === 1 ? 'Queued 1 download again.' : `Queued ${queued} downloads again.`);
+}
+
 // ---------- YouTube pause ----------
 
 // While YouTube limits this network the server pauses downloads and format checks;
@@ -443,6 +466,9 @@ function render() {
       (historyFilter === 'all' ? true : historyFilter === 'completed' ? j.state === 'completed' : j.state !== 'completed') &&
       (!historyQuery || jobTitle(j).toLowerCase().includes(historyQuery)),
   );
+  const failed = history.filter((j) => j.state === 'failed' || j.state === 'cancelled');
+  $('#retry-failed').hidden = !failed.length;
+  $('#retry-failed').textContent = `Retry failed (${failed.length})`;
   $('#queue-nav-count').textContent = queue.length || '';
   $('#library-nav-count').textContent = history.length || '';
   renderNow(queue);
@@ -776,6 +802,19 @@ async function runAction(id, action) {
     } catch {
       toast("Couldn't copy. Select the path text and copy it manually.", true);
     }
+    return;
+  }
+  if (action === 'open') {
+    try {
+      await client.openJob(id);
+    } catch (err) {
+      toast(err.message, true);
+    }
+    return;
+  }
+  if (action === 'again') {
+    takeLinks(job.url);
+    toast('Choose a format, then add it again.');
     return;
   }
   if (action === 'reveal') {
@@ -1727,6 +1766,7 @@ function init() {
   });
   $('#pause-resume').addEventListener('click', (e) => resumeNow(e.currentTarget));
   $('#clear-history').addEventListener('click', clearHistory);
+  $('#retry-failed').addEventListener('click', (e) => retryFailed(e.currentTarget));
   loadNotifyPreference();
   renderNotifyToggle();
   $('#notify-toggle').addEventListener('click', toggleNotifications);
