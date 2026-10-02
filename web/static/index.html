@@ -13,71 +13,72 @@
     <script type="module" src="app.js"></script>
   </head>
   <body>
-    <header class="topbar">
-      <div class="wrap topbar-inner">
-        <h1 class="brand"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="var(--accent)"/><path d="M44 18h12v26h16L50 66 28 44h16zM20 60h10v12h40V60h10v22H20z" fill="#fff"/></svg><span class="brand-name">YTGrab</span><span class="brand-sub">local downloader</span></h1>
-        <div class="header-actions">
-          <button type="button" class="health" id="health" aria-controls="health-detail" aria-expanded="false" hidden>
-            <span class="dot" aria-hidden="true"></span><span id="health-label">Checking tools…</span>
+    <div class="app">
+      <aside class="sidebar">
+        <h1 class="brand"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a4e"/><stop offset="1" stop-color="#c4302b"/></linearGradient></defs><rect width="100" height="100" rx="24" fill="url(#logo-g)"/><path d="M44 18h12v26h16L50 66 28 44h16zM20 60h10v12h40V60h10v22H20z" fill="#fff"/></svg><span>YTGrab</span></h1>
+        <nav class="nav" aria-label="Sections">
+          <button type="button" class="nav-item" data-view="download" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Download</span><span class="nav-count" id="queue-nav-count"></span></button>
+          <button type="button" class="nav-item" data-view="library"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 4v16M3 9h5M3 14h5"/></svg><span>Library</span><span class="nav-count" id="library-nav-count"></span></button>
+          <button type="button" class="nav-item" data-view="settings" id="open-settings"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Settings</span></button>
+        </nav>
+        <div class="sidebar-foot">
+          <button type="button" class="now" id="now" hidden>
+            <span class="now-text"><strong id="now-title"></strong><small id="now-meta"></small></span>
+            <span class="now-bar"><span id="now-fill"></span></span>
           </button>
-          <button type="button" class="icon-btn notify-toggle" id="notify-toggle" aria-pressed="false" title="Notify me when downloads finish while this tab is in the background" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-            <span class="visually-hidden" id="notify-label">Notify me</span>
-          </button>
-          <button type="button" class="icon-btn" id="open-settings" aria-haspopup="dialog" aria-controls="settings" title="Settings">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
-            <span class="visually-hidden">Settings</span>
-          </button>
+          <button type="button" class="foot-btn notify-toggle" id="notify-toggle" aria-pressed="false" title="Notify me when downloads finish while this tab is in the background" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span id="notify-label">Notify me</span></button>
+          <button type="button" class="foot-btn health" id="health" aria-controls="health-detail" aria-expanded="false" hidden><span class="dot" aria-hidden="true"></span><span id="health-label">Checking tools…</span></button>
         </div>
-      </div>
-    </header>
+      </aside>
 
-    <div class="wrap notices">
-      <div class="banner" id="health-detail" role="status" hidden></div>
-      <div class="banner pause-banner" id="pause-banner" role="status" hidden>
-        <div>
-          <strong>YouTube is limiting requests from this network.</strong>
-          <span id="pause-text"></span>
-          <span class="hint">Queued downloads wait and nothing is lost. Retrying sooner usually makes the block last longer.</span>
-        </div>
-        <button type="button" class="btn btn-small" id="pause-resume">Resume now</button>
-      </div>
-      <div class="banner banner-info update-banner" id="update-banner" role="status" hidden>
-        <div class="update-text">
-          <strong id="update-title"></strong>
-          <span id="update-how"></span>
-          <code class="update-command" id="update-command" hidden></code>
-        </div>
-        <div class="update-actions">
-          <button type="button" class="btn btn-small" id="update-copy" hidden>Copy command</button>
-          <a class="btn btn-small" id="update-notes" target="_blank" rel="noopener noreferrer">What's new</a>
-          <button type="button" class="btn-link" id="update-dismiss">Not now</button>
-        </div>
-      </div>
-      <div class="banner banner-info" id="fixture-note" hidden>
-        Showing sample data. The download server is not connected yet.
-      </div>
-    </div>
-
-    <main class="wrap layout">
-      <section class="panel add" aria-labelledby="add-title">
-        <div class="add-scroll">
-          <h2 id="add-title">New download</h2>
-        <div class="setup-folder" id="setup-folder" role="region" aria-labelledby="setup-title" hidden>
-          <strong id="setup-title">Choose where to save downloads</strong>
-          <p class="hint">Pick a folder once. You can change it any time.</p>
-          <div class="setup-actions">
-            <button type="button" class="btn btn-primary" id="setup-pick">Choose folder…</button>
-            <button type="button" class="btn" id="setup-default">
-              Use <span class="setup-default-path" id="setup-default-path"></span>
-            </button>
+      <main class="main" id="main">
+        <div class="notices">
+          <div class="banner" id="health-detail" role="status" hidden></div>
+          <div class="banner pause-banner" id="pause-banner" role="status" hidden>
+            <div>
+              <strong>YouTube is limiting requests from this network.</strong>
+              <span id="pause-text"></span>
+              <span class="hint">Queued downloads wait and nothing is lost. Retrying sooner usually makes the block last longer.</span>
+            </div>
+            <button type="button" class="btn btn-small" id="pause-resume">Resume now</button>
           </div>
-          <button type="button" class="btn-link" id="setup-type">Type a folder path instead</button>
-          <p class="field-error" id="setup-error" role="alert" hidden></p>
+          <div class="banner banner-info update-banner" id="update-banner" role="status" hidden>
+            <div class="update-text">
+              <strong id="update-title"></strong>
+              <span id="update-how"></span>
+              <code class="update-command" id="update-command" hidden></code>
+            </div>
+            <div class="update-actions">
+              <button type="button" class="btn btn-small" id="update-copy" hidden>Copy command</button>
+              <a class="btn btn-small" id="update-notes" target="_blank" rel="noopener noreferrer">What's new</a>
+              <button type="button" class="btn-link" id="update-dismiss">Not now</button>
+            </div>
+          </div>
+          <div class="banner banner-info" id="fixture-note" hidden>
+            Showing sample data. The download server is not connected yet.
+          </div>
         </div>
-          <form id="add-form" novalidate>
+
+        <section class="view view-download" id="view-download" aria-labelledby="add-title">
+          <header class="view-head hero">
+            <h2 id="add-title">What do you want to download?</h2>
+            <p class="view-sub">Paste a YouTube link: a video, a playlist, or several videos at once. You can also drop a link anywhere on this page.</p>
+          </header>
+          <div class="setup-folder" id="setup-folder" role="region" aria-labelledby="setup-title" hidden>
+            <strong id="setup-title">Choose where to save downloads</strong>
+            <p class="hint">Pick a folder once. You can change it any time.</p>
+            <div class="setup-actions">
+              <button type="button" class="btn btn-primary" id="setup-pick">Choose folder…</button>
+              <button type="button" class="btn" id="setup-default">
+                Use <span class="setup-default-path" id="setup-default-path"></span>
+              </button>
+            </div>
+            <button type="button" class="btn-link" id="setup-type">Type a folder path instead</button>
+            <p class="field-error" id="setup-error" role="alert" hidden></p>
+          </div>
+          <form id="add-form" class="composer card" novalidate>
             <label for="url" class="visually-hidden">Video link</label>
-            <div class="url-row">
+            <div class="url-row" id="dropzone">
               <svg class="url-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
               <input
                 id="url"
@@ -86,149 +87,130 @@
                 inputmode="url"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="Paste a YouTube link"
+                placeholder="https://youtube.com/watch?v=…"
                 aria-describedby="url-hint url-error"
                 required
               />
               <button type="button" class="btn btn-ghost" id="paste" hidden>Paste</button>
             </div>
-            <p class="hint" id="url-hint">
-              A video, a playlist, or several video links at once.
-            </p>
+            <p class="hint visually-hidden" id="url-hint">A video, a playlist, or several video links at once.</p>
             <p class="field-error" id="url-error" role="alert" hidden></p>
 
-          <fieldset class="playlist" id="playlist" hidden>
-            <legend class="field-label">Playlist videos</legend>
-            <div class="playlist-head">
-              <strong class="inspect-title" id="playlist-title"></strong>
-              <small id="playlist-meta"></small>
-            </div>
-            <label class="playlist-all">
-              <input type="checkbox" id="playlist-all" checked /> Select all
-            </label>
-            <ul class="playlist-items" id="playlist-items"></ul>
-            <button type="button" class="btn btn-small playlist-more" id="playlist-more" hidden>Load next 50</button>
-            <p class="hint" id="playlist-note" hidden></p>
-            <label class="playlist-folder" id="playlist-folder-row" hidden>
-              <input type="checkbox" id="playlist-folder" />
-              <span id="playlist-folder-label">Save in a folder named after the playlist</span>
-            </label>
-          </fieldset>
-
-          <fieldset class="presets">
-            <legend class="visually-hidden">Format</legend>
             <div class="inspect" id="inspect" role="status" aria-live="polite"></div>
 
-            <div id="preset-choices">
-              <div class="preset-group" role="presentation">
-                <span class="preset-group-title">Video</span>
-                <label class="preset"
-                  ><input type="radio" name="choice" value="preset:video-best" checked />
-                  <span
-                    ><strong>Best quality</strong
-                    ><small>Highest available, merged to MP4/MKV</small></span
-                  ></label
-                >
-                <label class="preset"
-                  ><input type="radio" name="choice" value="preset:video-1080" />
-                  <span
-                    ><strong>Up to 1080p</strong
-                    ><small>Good balance of size and quality</small></span
-                  ></label
-                >
-                <label class="preset"
-                  ><input type="radio" name="choice" value="preset:video-720" />
-                  <span><strong>Up to 720p</strong><small>Smaller files</small></span></label
-                >
+            <fieldset class="playlist" id="playlist" hidden>
+              <legend class="field-label">Playlist videos</legend>
+              <div class="playlist-head">
+                <strong class="inspect-title" id="playlist-title"></strong>
+                <small id="playlist-meta"></small>
               </div>
-              <div class="preset-group" role="presentation">
-                <span class="preset-group-title">Audio only</span>
-                <label class="preset"
-                  ><input type="radio" name="choice" value="preset:audio-m4a" />
-                  <span
-                    ><strong>M4A</strong><small>Original audio, no re-encoding</small></span
-                  ></label
-                >
-                <label class="preset"
-                  ><input type="radio" name="choice" value="preset:audio-mp3" />
-                  <span
-                    ><strong>MP3</strong><small>Converted with ffmpeg; uses more CPU</small></span
-                  ></label
-                >
-              </div>
-            </div>
+              <label class="playlist-all">
+                <input type="checkbox" id="playlist-all" checked /> Select all
+              </label>
+              <ul class="playlist-items" id="playlist-items"></ul>
+              <button type="button" class="btn btn-small playlist-more" id="playlist-more" hidden>Load next 50</button>
+              <p class="hint" id="playlist-note" hidden></p>
+              <label class="playlist-folder" id="playlist-folder-row" hidden>
+                <input type="checkbox" id="playlist-folder" />
+                <span id="playlist-folder-label">Save in a folder named after the playlist</span>
+              </label>
+            </fieldset>
 
-            <div id="format-choices" hidden>
-              <div class="preset-group" role="presentation">
-                <span class="preset-group-title">Video <small>(with best audio)</small></span>
-                <div class="format-list" id="video-formats"></div>
+            <fieldset class="presets">
+              <legend class="visually-hidden">Format</legend>
+              <div class="kind-tabs" role="group" aria-label="Kind of download">
+                <button type="button" class="kind-tab" data-kind="video" aria-pressed="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg>Video</button>
+                <button type="button" class="kind-tab" data-kind="audio" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>Audio only</button>
               </div>
-              <div class="preset-group" role="presentation">
-                <span class="preset-group-title">Audio only</span>
-                <div class="format-list" id="audio-formats"></div>
+              <div id="preset-choices">
+                <div class="preset-group" data-kind="video" role="presentation">
+                  <span class="preset-group-title visually-hidden">Video</span>
+                  <label class="preset"><input type="radio" name="choice" value="preset:video-best" checked /><span><strong>Best quality</strong><small>Highest available</small></span></label>
+                  <label class="preset"><input type="radio" name="choice" value="preset:video-1080" /><span><strong>Up to 1080p</strong><small>Full HD</small></span></label>
+                  <label class="preset"><input type="radio" name="choice" value="preset:video-720" /><span><strong>Up to 720p</strong><small>Smaller files</small></span></label>
+                </div>
+                <div class="preset-group" data-kind="audio" role="presentation" hidden>
+                  <span class="preset-group-title visually-hidden">Audio only</span>
+                  <label class="preset"><input type="radio" name="choice" value="preset:audio-m4a" /><span><strong>M4A</strong><small>Original audio</small></span></label>
+                  <label class="preset"><input type="radio" name="choice" value="preset:audio-mp3" /><span><strong>MP3</strong><small>Converted, plays anywhere</small></span></label>
+                </div>
               </div>
-              <button type="button" class="btn-link" id="use-presets">
-                Use standard presets instead
-              </button>
-            </div>
-          </fieldset>
+              <div id="format-choices" hidden>
+                <div class="preset-group" data-kind="video" role="presentation">
+                  <span class="preset-group-title visually-hidden">Video (with best audio)</span>
+                  <div class="format-list" id="video-formats"></div>
+                </div>
+                <div class="preset-group" data-kind="audio" role="presentation" hidden>
+                  <span class="preset-group-title visually-hidden">Audio only</span>
+                  <div class="format-list" id="audio-formats"></div>
+                </div>
+                <button type="button" class="btn-link" id="use-presets">Use standard presets instead</button>
+              </div>
+            </fieldset>
 
-          <details class="clip" id="clip" hidden>
-            <summary>Only part of the video</summary>
-            <div class="clip-fields">
-              <label>Start <input type="text" id="clip-start" inputmode="decimal" placeholder="0:00" autocomplete="off" spellcheck="false" /></label>
-              <label>End <input type="text" id="clip-end" inputmode="decimal" placeholder="end" autocomplete="off" spellcheck="false" /></label>
+            <details class="clip" id="clip" hidden>
+              <summary>Only part of the video</summary>
+              <div class="clip-fields">
+                <label>Start <input type="text" id="clip-start" inputmode="decimal" placeholder="0:00" autocomplete="off" spellcheck="false" /></label>
+                <label>End <input type="text" id="clip-end" inputmode="decimal" placeholder="end" autocomplete="off" spellcheck="false" /></label>
+              </div>
+              <p class="hint">Times like 1:05 or 1:02:30. Leave End empty to go to the end of the video.</p>
+              <p class="field-error" id="clip-error" role="alert" hidden></p>
+            </details>
+
+            <div class="compose-actions">
+              <button type="submit" class="btn btn-primary btn-cta" id="submit">Add to queue</button>
             </div>
-            <p class="hint">Times like 1:05 or 1:02:30. Leave End empty to go to the end of the video.</p>
-            <p class="field-error" id="clip-error" role="alert" hidden></p>
-          </details>
           </form>
-        </div>
 
-        <div class="add-footer">
-          <button type="submit" form="add-form" class="btn btn-primary btn-block" id="submit">Add to queue</button>
           <div class="output-dir" id="output-dir" hidden>
             <div class="output-dir-view" id="dir-view">
-              <span class="output-dir-label">Save to</span>
+              <span class="output-dir-label">Saving to</span>
               <code class="output-dir-path" id="dir-path"></code>
               <button type="button" class="btn-link" id="dir-edit">Change…</button>
               <button type="button" class="btn-link" id="dir-type">Type a path</button>
             </div>
-          <form class="output-dir-edit" id="dir-form" novalidate hidden>
-            <label for="dir-input" class="field-label">Output folder</label>
-            <input
-              id="dir-input"
-              type="text"
-              autocomplete="off"
-              spellcheck="false"
-              aria-describedby="dir-hint dir-error"
-              required
-            />
-            <p class="hint" id="dir-hint">
-              Full path to an existing folder, for example <code>D:\Videos</code>. Applies to
-              downloads that start after saving.
-            </p>
-            <p class="field-error" id="dir-error" role="alert" hidden></p>
-            <div class="form-actions">
-              <button type="submit" class="btn btn-small btn-primary" id="dir-save">Save</button>
-              <button type="button" class="btn btn-small" id="dir-cancel">Cancel</button>
-            </div>
-          </form>
+            <form class="output-dir-edit" id="dir-form" novalidate hidden>
+              <label for="dir-input" class="field-label">Output folder</label>
+              <input
+                id="dir-input"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="dir-hint dir-error"
+                required
+              />
+              <p class="hint" id="dir-hint">
+                Full path to an existing folder, for example <code>D:\Videos</code>. Applies to
+                downloads that start after saving.
+              </p>
+              <p class="field-error" id="dir-error" role="alert" hidden></p>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-small btn-primary" id="dir-save">Save</button>
+                <button type="button" class="btn btn-small" id="dir-cancel">Cancel</button>
+              </div>
+            </form>
           </div>
-        </div>
-      </section>
 
-      <div class="lists">
-        <section class="panel list-panel queue-panel" aria-labelledby="queue-title">
-          <div class="panel-head">
-            <h2 id="queue-title">Queue <span class="count" id="queue-count"></span></h2>
-          </div>
-          <div class="list" id="queue" aria-live="polite" aria-busy="true"></div>
+          <section class="queue-block" aria-labelledby="queue-title">
+            <div class="block-head">
+              <h2 id="queue-title">Queue <span class="count" id="queue-count"></span></h2>
+            </div>
+            <div class="list queue-list" id="queue" aria-live="polite" aria-busy="true"></div>
+          </section>
         </section>
 
-        <section class="panel list-panel history-panel" aria-labelledby="history-title">
-          <div class="panel-head">
-            <h2 id="history-title">History <span class="count" id="history-count"></span></h2>
+        <section class="view view-library" id="view-library" aria-labelledby="history-title" hidden>
+          <header class="view-head">
+            <h2 id="history-title">Library <span class="count" id="history-count"></span></h2>
+            <p class="view-sub">Finished, failed, and cancelled downloads.</p>
+          </header>
+          <div class="library-tools">
+            <label class="search">
+              <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <span class="visually-hidden">Search the library</span>
+              <input type="search" id="history-search" placeholder="Search by title" autocomplete="off" />
+            </label>
             <div class="filters" role="group" aria-label="Filter history">
               <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
               <button type="button" class="chip" data-filter="completed" aria-pressed="false">Completed</button>
@@ -236,21 +218,18 @@
             </div>
             <button type="button" class="btn-link history-clear" id="clear-history">Clear</button>
           </div>
-          <div class="list" id="history" aria-busy="true"></div>
+          <div class="list card library-list" id="history" aria-busy="true"></div>
         </section>
-      </div>
-    </main>
 
-    <dialog class="sheet" id="settings" aria-labelledby="settings-title">
-      <div class="sheet-head">
-        <h2 id="settings-title">Settings</h2>
-        <button type="button" class="icon-btn" id="close-settings" title="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-          <span class="visually-hidden">Close settings</span>
-        </button>
-      </div>
-      <div class="sheet-body">
-        <p class="hint sheet-intro">Changes are saved right away.</p>
+        <section class="view view-settings" id="view-settings" aria-labelledby="settings-title" hidden>
+          <header class="view-head">
+            <h2 id="settings-title">Settings</h2>
+            <p class="view-sub">Changes are saved right away.</p>
+          </header>
+          <div class="settings-grid">
+          <section class="card settings-card">
+            <h3 class="card-title">Downloads</h3>
+            <p class="card-desc">How YTGrab downloads and names your files.</p>
             <div class="pref-row" id="pref-parallel-row" hidden>
               <label for="pref-parallel">Parallel downloads</label>
               <select id="pref-parallel"></select>
@@ -269,6 +248,10 @@
               <label for="pref-speed">Speed limit (per download)</label>
               <select id="pref-speed"></select>
             </div>
+          </section>
+          <section class="card settings-card">
+            <h3 class="card-title">Subtitles</h3>
+            <p class="card-desc">Added to video downloads, never to audio.</p>
             <div class="pref-row" id="pref-subs-row" hidden>
               <label for="pref-subs">Subtitles</label>
               <select id="pref-subs">
@@ -287,10 +270,18 @@
                 there are none; videos without either download without subtitles.
               </p>
             </div>
+          </section>
+          <section class="card settings-card">
+            <h3 class="card-title">This computer</h3>
+            <p class="card-desc">How YTGrab starts.</p>
             <div class="pref-row" id="pref-login-row" hidden>
               <label for="pref-login" id="pref-login-label">Start with Windows</label>
               <input type="checkbox" class="pref-check" id="pref-login" />
             </div>
+          </section>
+          <section class="card settings-card">
+            <h3 class="card-title">YouTube</h3>
+            <p class="card-desc">Only if YouTube keeps blocking downloads.</p>
             <div class="signin" id="signin" hidden>
               <div class="pref-row">
                 <label for="signin-browser">YouTube sign-in</label>
@@ -302,9 +293,13 @@
                 account is safer, since heavy use can get an account flagged.
               </p>
             </div>
-      </div>
-    </dialog>
+          </section>
+          </div>
+        </section>
+      </main>
+    </div>
 
+    <div class="drop-overlay" id="drop-overlay" hidden><div>Drop the link to download it</div></div>
     <div class="toast-region" id="toast" role="status" aria-live="polite"></div>
 
     <template id="job-template">

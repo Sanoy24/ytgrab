@@ -8,6 +8,7 @@ test('shows the queue with live progress and the history', async ({ page }) => {
   await expect(page.locator('#queue .job')).toHaveCount(3);
   await expect(page.locator('#history .job')).toHaveCount(5);
   await expect(page).toHaveTitle(/downloading · ytgrab/);
+  await page.getByRole('button', { name: /^Library/ }).click();
   await page.getByRole('button', { name: 'Failed / cancelled' }).click();
   await expect(page.locator('#history .badge[data-state="completed"]')).toHaveCount(0);
 });
@@ -64,7 +65,7 @@ test('shows the YouTube pause with a countdown and resumes on request', async ({
 });
 
 test('asks before deleting a downloaded file', async ({ page }) => {
-  await page.goto('/?fixture=default');
+  await page.goto('/?fixture=default#library');
   const done = page.locator('#history .job', { hasText: 'Lecture 1' });
   await done.getByRole('button', { name: /^Remove/ }).click();
   await expect(done.getByRole('button', { name: /Delete file too/ })).toBeVisible();
@@ -187,4 +188,28 @@ test('downloads only part of a video', async ({ page }) => {
   await page.locator('#url').fill('https://www.youtube.com/playlist?list=PLbig0000000000');
   await expect(page.locator('#playlist-items li')).toHaveCount(50);
   await expect(page.locator('#clip')).toBeHidden();
+});
+
+test('switches between video and audio and remembers each choice', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.locator('#url').fill('https://youtu.be/aBcDeFgHiJk');
+  await expect(page.locator('#video-formats .preset')).toHaveCount(10);
+  await page.locator('#video-formats label', { hasText: '720p 60fps' }).click();
+  await page.getByRole('button', { name: 'Audio only' }).click();
+  await expect(page.locator('#audio-formats .preset').first()).toBeVisible();
+  await expect(page.locator('#video-formats')).toBeHidden();
+  await page.getByRole('button', { name: 'Video', exact: true }).click();
+  await expect(page.locator('#video-formats label', { hasText: '720p 60fps' }).locator('input')).toBeChecked();
+});
+
+test('takes a link pasted anywhere on the page', async ({ page }) => {
+  await page.goto('/?fixture=empty#library');
+  await page.evaluate(() => {
+    const data = new DataTransfer();
+    data.setData('text/plain', 'https://youtu.be/aBcDeFgHiJk');
+    document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  });
+  await expect(page.locator('#view-download')).toBeVisible();
+  await expect(page.locator('#url')).toHaveValue('https://youtu.be/aBcDeFgHiJk');
+  await expect(page.locator('#inspect')).toContainText('full walkthrough');
 });
