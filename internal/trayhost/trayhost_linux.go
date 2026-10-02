@@ -4,9 +4,9 @@ package trayhost
 
 import "github.com/godbus/dbus/v5"
 
-// Available reports whether a tray host (a StatusNotifierWatcher, as on KDE, Ubuntu, and
+// available reports whether a tray host (a StatusNotifierWatcher, as on KDE, Ubuntu, and
 // GNOME with the AppIndicator extension) is running on the session bus.
-func Available() bool {
+func available() bool {
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		return false
