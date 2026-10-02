@@ -20,6 +20,8 @@ import (
 const (
 	ytdlpReleaseURL  = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
 	ytdlpReleasesURL = "https://github.com/yt-dlp/yt-dlp/releases"
+	// YTGrabReleasesURL lists YTGrab's own releases.
+	YTGrabReleasesURL = "https://github.com/Sanoy24/ytgrab/releases"
 )
 
 // LatestYtdlpVersion returns the newest yt-dlp release version without downloading it:
@@ -29,6 +31,22 @@ func LatestYtdlpVersion(ctx context.Context, client *http.Client, releasesURL st
 	if releasesURL == "" {
 		releasesURL = ytdlpReleasesURL
 	}
+	return latestTag(ctx, client, releasesURL, "yt-dlp")
+}
+
+// LatestYTGrabVersion returns the newest stable YTGrab release, without the tag's "v".
+// Pass "" for releasesURL to use GitHub.
+func LatestYTGrabVersion(ctx context.Context, client *http.Client, releasesURL string) (string, error) {
+	if releasesURL == "" {
+		releasesURL = YTGrabReleasesURL
+	}
+	tag, err := latestTag(ctx, client, releasesURL, "YTGrab")
+	return strings.TrimPrefix(tag, "v"), err
+}
+
+// latestTag follows GitHub's releases/latest redirect, which skips pre-releases, to the
+// latest release's tag.
+func latestTag(ctx context.Context, client *http.Client, releasesURL, name string) (string, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodHead, releasesURL+"/latest", nil)
 	if err != nil {
 		return "", err
@@ -36,12 +54,12 @@ func LatestYtdlpVersion(ctx context.Context, client *http.Client, releasesURL st
 	request.Header.Set("User-Agent", "ytgrab-setup")
 	response, err := client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("check the latest yt-dlp: %w", err)
+		return "", fmt.Errorf("check the latest %s: %w", name, err)
 	}
 	response.Body.Close()
 	version := path.Base(response.Request.URL.Path)
 	if response.StatusCode != http.StatusOK || version == "latest" || version == "" {
-		return "", fmt.Errorf("check the latest yt-dlp: unexpected response %s", response.Status)
+		return "", fmt.Errorf("check the latest %s: unexpected response %s", name, response.Status)
 	}
 	return version, nil
 }

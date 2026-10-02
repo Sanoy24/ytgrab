@@ -23,7 +23,11 @@ func Run(ctx context.Context, actions Actions, serve Serve) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	done := make(chan error, 1)
-	listening := make(chan string, 1)
+	type server struct {
+		url          string
+		downloadsDir func() string
+	}
+	listening := make(chan server, 1)
 
 	// Queue reports can arrive before the icon exists; keep the latest for its tooltip.
 	var mu sync.Mutex
@@ -42,15 +46,19 @@ func Run(ctx context.Context, actions Actions, serve Serve) error {
 			notify(n.Title, n.Text)
 		}
 	}
-	hooks := Hooks{Ready: func(url string) { listening <- url }, Activity: onActivity}
+	hooks := Hooks{
+		Ready:    func(url string, downloadsDir func() string) { listening <- server{url, downloadsDir} },
+		Activity: onActivity,
+	}
 	go func() { done <- serve(ctx, hooks) }()
 
-	var url string
+	var running server
 	select {
 	case err := <-done:
 		return err // never listened: no icon
-	case url = <-listening:
+	case running = <-listening:
 	}
+	url := running.url
 
 	result := make(chan error, 1)
 	systray.Run(func() {
@@ -61,6 +69,7 @@ func Run(ctx context.Context, actions Actions, serve Serve) error {
 		mu.Unlock()
 		systray.SetOnTapped(func() { actions.Open(url) })
 		open := systray.AddMenuItem("Open YTGrab", "Show YTGrab in your browser")
+		folder := systray.AddMenuItem("Open downloads folder", "Show the folder YTGrab saves to")
 		systray.AddSeparator()
 		var login *systray.MenuItem
 		var loginClicked <-chan struct{}
@@ -90,6 +99,10 @@ func Run(ctx context.Context, actions Actions, serve Serve) error {
 				select {
 				case <-open.ClickedCh:
 					actions.Open(url)
+				case <-folder.ClickedCh:
+					if actions.OpenFolder != nil {
+						actions.OpenFolder(running.downloadsDir())
+					}
 				case <-loginClicked:
 					on := !actions.StartAtLogin()
 					if err := actions.SetStartAtLogin(on); err == nil {

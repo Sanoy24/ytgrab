@@ -12,9 +12,9 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/setup"
 )
 
-// latestYtdlp remembers the newest yt-dlp release, refreshed in the background at most
-// once a day so health checks never wait on the network.
-type latestYtdlp struct {
+// latestRelease remembers the newest release of a program, refreshed in the background
+// at most once a day so requests never wait on the network.
+type latestRelease struct {
 	mu       sync.Mutex
 	version  string
 	checked  time.Time
@@ -22,15 +22,21 @@ type latestYtdlp struct {
 	lookup   func(context.Context) (string, error)
 }
 
-func newLatestYtdlp() *latestYtdlp {
-	return &latestYtdlp{lookup: func(ctx context.Context) (string, error) {
+func newLatestYtdlp() *latestRelease {
+	return &latestRelease{lookup: func(ctx context.Context) (string, error) {
 		return setup.LatestYtdlpVersion(ctx, http.DefaultClient, "")
+	}}
+}
+
+func newLatestYTGrab() *latestRelease {
+	return &latestRelease{lookup: func(ctx context.Context) (string, error) {
+		return setup.LatestYTGrabVersion(ctx, http.DefaultClient, "")
 	}}
 }
 
 // Get returns the last known latest version ("" if unknown) and starts a refresh when
 // the value is more than a day old.
-func (latest *latestYtdlp) Get() string {
+func (latest *latestRelease) Get() string {
 	latest.mu.Lock()
 	defer latest.mu.Unlock()
 	if !latest.fetching && time.Since(latest.checked) > 24*time.Hour {
@@ -40,7 +46,7 @@ func (latest *latestYtdlp) Get() string {
 	return latest.version
 }
 
-func (latest *latestYtdlp) refresh() {
+func (latest *latestRelease) refresh() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	version, err := latest.lookup(ctx)
@@ -53,7 +59,7 @@ func (latest *latestYtdlp) refresh() {
 	}
 }
 
-func (latest *latestYtdlp) set(version string) {
+func (latest *latestRelease) set(version string) {
 	latest.mu.Lock()
 	latest.version, latest.checked = version, time.Now()
 	latest.mu.Unlock()
@@ -64,7 +70,7 @@ func (latest *latestYtdlp) set(version string) {
 type ytdlpUpdater struct {
 	cfg     config.Config
 	running func() int
-	latest  *latestYtdlp
+	latest  *latestRelease
 	mu      sync.Mutex
 }
 

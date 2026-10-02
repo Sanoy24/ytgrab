@@ -28,8 +28,9 @@ type Config struct {
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
 	OpenBrowser bool
-	// Ready, if set, is called with the page URL once the server is listening.
-	Ready func(url string)
+	// Ready, if set, is called once the server is listening, with the page URL and a way
+	// to read the current download folder.
+	Ready func(url string, downloadsDir func() string)
 	// Activity, if set, receives queue summaries for the tray.
 	Activity func(activity.Summary)
 }

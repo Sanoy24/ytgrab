@@ -3,6 +3,7 @@ package reveal
 
 import (
 	"net/url"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -23,6 +24,22 @@ func Show(path string) error {
 			return nil
 		}
 		return start(linuxOpenFolder(path))
+	}
+}
+
+// OpenFolder opens dir in the system's file manager, creating it first if needed.
+func OpenFolder(dir string) error {
+	dir = filepath.Clean(dir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	switch runtime.GOOS {
+	case "windows":
+		return startWindows(`explorer.exe "` + dir + `"`)
+	case "darwin":
+		return start([]string{"open", dir})
+	default:
+		return start([]string{"xdg-open", dir})
 	}
 }
 

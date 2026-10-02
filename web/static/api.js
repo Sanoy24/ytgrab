@@ -32,6 +32,18 @@ class FixtureClient {
     this.timer = null;
   }
 
+  async version() {
+    await delay(150);
+    const update = this.scenario === 'default';
+    return {
+      version: '1.7.0',
+      latest: update ? '1.8.0' : '1.7.0',
+      update_available: update,
+      update_command: update ? 'scoop update ytgrab' : undefined,
+      release_url: 'https://github.com/Sanoy24/ytgrab/releases/latest',
+    };
+  }
+
   async health() {
     await delay(150);
     if (this.scenario === 'error')
@@ -346,6 +358,10 @@ class FixtureClient {
 class HttpClient {
   isFixture = false;
 
+  // { version, latest, update_available, update_command, release_url }
+  version() {
+    return this.request('GET', '/api/system/version');
+  }
   health() {
     return this.request('GET', '/api/system/health');
   }
