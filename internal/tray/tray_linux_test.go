@@ -56,14 +56,18 @@ func TestLinuxTrayRegistersIconAndMenu(t *testing.T) {
 		t.Fatal("the tray icon never registered")
 	}
 
-	// Read the menu the icon offers.
+	// Read the menu the icon offers, found the way a tray host finds it.
+	menuPath, err := conn.Object(item, "/StatusNotifierItem").GetProperty("org.kde.StatusNotifierItem.Menu")
+	if err != nil {
+		t.Fatalf("Menu property: %v", err)
+	}
 	var revision uint32
 	var layout struct {
 		ID       int32
 		Props    map[string]dbus.Variant
 		Children []dbus.Variant
 	}
-	call := conn.Object(item, "/StatusNotifierMenu").Call("com.canonical.dbusmenu.GetLayout", 0, int32(0), int32(-1), []string{})
+	call := conn.Object(item, menuPath.Value().(dbus.ObjectPath)).Call("com.canonical.dbusmenu.GetLayout", 0, int32(0), int32(-1), []string{})
 	if err := call.Store(&revision, &layout); err != nil {
 		t.Fatalf("GetLayout: %v", err)
 	}
