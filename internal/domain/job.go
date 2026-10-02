@@ -33,6 +33,9 @@ const (
 	Video720  Preset = "video-720"
 	AudioM4A  Preset = "audio-m4a"
 	AudioMP3  Preset = "audio-mp3"
+	AudioOpus Preset = "audio-opus"
+	AudioFLAC Preset = "audio-flac"
+	AudioWAV  Preset = "audio-wav"
 )
 
 var ErrInvalidURL = errors.New("enter a valid single YouTube video URL")
@@ -136,7 +139,7 @@ func newBaseJob(rawURL string) (Job, error) {
 
 func (preset Preset) Valid() bool {
 	switch preset {
-	case VideoBest, Video1080, Video720, AudioM4A, AudioMP3:
+	case VideoBest, Video1080, Video720, AudioM4A, AudioMP3, AudioOpus, AudioFLAC, AudioWAV:
 		return true
 	default:
 		return false

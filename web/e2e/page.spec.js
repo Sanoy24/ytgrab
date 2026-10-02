@@ -256,3 +256,16 @@ test('pauses, resumes, and reorders downloads', async ({ page }) => {
   // "Me at the zoo" is the only waiting download, so it needs no move.
   await expect(page.locator('#queue .job', { hasText: 'Me at the zoo' }).getByRole('button', { name: /^Move to top/ })).toHaveCount(0);
 });
+
+test('offers Opus, FLAC, and WAV for audio', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.getByRole('button', { name: 'Audio only' }).click();
+  for (const name of ['M4A', 'MP3', 'Opus', 'FLAC', 'WAV']) {
+    await expect(page.locator('#preset-choices .preset', { hasText: name }).first()).toBeVisible();
+  }
+  await page.locator('#url').fill('https://youtu.be/aBcDeFgHiJk');
+  await expect(page.locator('#audio-formats .preset', { hasText: 'FLAC' })).toHaveCount(1);
+  await page.locator('#audio-formats .preset', { hasText: 'FLAC' }).click();
+  await page.locator('#submit').click();
+  await expect(page.locator('#queue .job-meta').first()).toContainText('Audio · FLAC');
+});

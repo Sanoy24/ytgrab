@@ -10,6 +10,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **More audio formats.** Opus (YouTube's own audio, usually without re-encoding), FLAC, and WAV, next to M4A and MP3.
 - **Pause and resume.** Pause a download and resume it later from where it stopped; it keeps its place in the queue, even across restarts. Waiting downloads can be moved to the top of the queue.
 - **Library actions.** Play a finished download in your default player, **Download again** in another format, and **Retry failed** to queue every failed or cancelled download at once.
 - **Automatic yt-dlp updates.** YTGrab installs new yt-dlp releases by itself between downloads (on by default; turn it off in Settings), so YouTube changes break downloads less often.
