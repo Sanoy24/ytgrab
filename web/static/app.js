@@ -1,6 +1,6 @@
 import { createClient, isActive } from './api.js';
 import { formatDuration, groupFormats, matchPreset } from './formats.js';
-import { validateUrl } from './links.js';
+import { parseLinks, validateUrl } from './links.js';
 
 const client = createClient();
 const $ = (sel) => document.querySelector(sel);
@@ -654,6 +654,8 @@ function setUrlError(message) {
 async function onSubmit(e) {
   e.preventDefault();
   if (!requireFolder()) return;
+  const several = parseLinks($('#url').value);
+  if (several && !playlist?.batch) enterBatch(several);
   if (playlist) {
     if (playlist.list) submitPlaylist();
     return;
@@ -753,6 +755,11 @@ function resetFormats() {
 
 function scheduleInspect(immediate = false) {
   clearTimeout(inspectTimer);
+  const several = parseLinks($('#url').value);
+  if (several) {
+    inspectTimer = setTimeout(() => enterBatch(several), immediate ? 0 : 500);
+    return;
+  }
   const result = validateUrl($('#url').value);
   if (result.error) {
     if (inspectedUrl || playlist) resetFormats();
@@ -950,6 +957,32 @@ async function enterPlaylist(url) {
   }
 }
 
+// Several pasted links reuse the playlist review: untick any, pick a format, add them all.
+function enterBatch({ videos, skipped }) {
+  const key = `links:${videos.map((v) => v.id).join(',')}:${skipped}`;
+  if (playlist?.url === key) return;
+  clearTimeout(inspectTimer);
+  inspectCtl?.abort();
+  playlistCtl?.abort();
+  inspectedUrl = '';
+  setInspectStatus();
+  showPresets(selectedChoice());
+  setUrlError(videos.length ? '' : 'None of these are links to single YouTube videos.');
+  if (!videos.length) {
+    if (playlist) exitPlaylist();
+    return;
+  }
+  const list = {
+    title: 'Several links',
+    batch: true,
+    entries: videos.map((v) => ({ video_id: v.id, title: v.url.replace(/^https:\/\/(www\.)?/, '') })),
+    skippedLinks: skipped,
+  };
+  playlist = { url: key, list, batch: true };
+  $('#playlist').hidden = false;
+  renderPlaylist(list);
+}
+
 // One confirmation adds at most this many videos (the server enforces the same cap).
 const MAX_PLAYLIST_JOBS = 200;
 
@@ -957,12 +990,18 @@ const MAX_PLAYLIST_JOBS = 200;
 function renderPlaylist(list, append = false) {
   $('#playlist-title').textContent = list.title || 'Playlist';
   const n = list.entries.length;
-  const shown = list.next && list.total ? `Showing ${n} of ${list.total} videos` : `${n} video${n === 1 ? '' : 's'}`;
+  const unit = list.batch ? 'link' : 'video';
+  const shown = list.next && list.total ? `Showing ${n} of ${list.total} videos` : `${n} ${unit}${n === 1 ? '' : 's'}`;
   $('#playlist-meta').textContent = shown;
   const notes = [];
   if (list.total > MAX_PLAYLIST_JOBS) notes.push(`Up to ${MAX_PLAYLIST_JOBS} videos can be added at a time.`);
   if (list.unavailable) {
     notes.push(`${list.unavailable} private or deleted video${list.unavailable === 1 ? ' is' : 's are'} skipped.`);
+  }
+  if (list.skippedLinks) {
+    notes.push(
+      `${list.skippedLinks} ${list.skippedLinks === 1 ? "isn't a video link" : "aren't video links"} and ${list.skippedLinks === 1 ? 'is' : 'are'} skipped; paste playlists on their own.`,
+    );
   }
   $('#playlist-note').textContent = notes.join(' ');
   $('#playlist-note').hidden = !notes.length;
@@ -1015,6 +1054,10 @@ function exitPlaylist() {
   playlist = null;
   $('#playlist').hidden = true;
   updatePlaylistCount();
+}
+
+function oneLine(text) {
+  return text.trim().split(/\s+/).join(' ');
 }
 
 async function submitPlaylist() {
@@ -1342,6 +1385,15 @@ function init() {
     if (e.key === 'Escape') setDirEditing(false);
   });
   $('#add-form').addEventListener('submit', onSubmit);
+  // A text field drops line breaks, which would run several pasted links together.
+  $('#url').addEventListener('paste', (e) => {
+    const text = e.clipboardData?.getData('text') || '';
+    if (!/\s/.test(text.trim())) return;
+    e.preventDefault();
+    const input = e.currentTarget;
+    input.setRangeText(oneLine(text), input.selectionStart, input.selectionEnd, 'end');
+    input.dispatchEvent(new InputEvent('input', { inputType: 'insertFromPaste' }));
+  });
   $('#url').addEventListener('input', (e) => {
     if ($('#url').getAttribute('aria-invalid') === 'true') setUrlError('');
     scheduleInspect(e.inputType === 'insertFromPaste');
@@ -1387,7 +1439,7 @@ function init() {
     paste.hidden = false;
     paste.addEventListener('click', async () => {
       try {
-        $('#url').value = (await navigator.clipboard.readText()).trim();
+        $('#url').value = oneLine(await navigator.clipboard.readText());
         setUrlError('');
         scheduleInspect(true);
         $('#url').focus();

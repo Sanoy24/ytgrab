@@ -50,3 +50,38 @@ export function validateUrl(raw) {
   const note = listId ? 'Only this video will be downloaded, not the whole playlist.' : '';
   return { url: u.toString(), note, playlistUrl };
 }
+
+const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+
+// The 11-character video ID of a single-video link checked by validateUrl, or ''.
+export function videoIdOf(url) {
+  const u = new URL(url);
+  const id =
+    u.hostname.toLowerCase() === 'youtu.be'
+      ? u.pathname.slice(1).split('/')[0]
+      : u.searchParams.get('v') || (u.pathname.match(/^\/(?:shorts|live|embed)\/([^/]+)/) || [])[1] || '';
+  return VIDEO_ID.test(id) ? id : '';
+}
+
+// Splits pasted text into links. Returns null for a single link (or nothing), so the
+// usual one-link flow handles it; otherwise { videos: [{ id, url }], skipped }, where
+// videos are unique single-video links in order and skipped counts everything else
+// (playlists, other sites, typos).
+export function parseLinks(text) {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return null;
+  const videos = [];
+  const seen = new Set();
+  let skipped = 0;
+  for (const token of tokens) {
+    const result = validateUrl(token);
+    const id = result.url ? videoIdOf(result.url) : '';
+    if (!id) {
+      skipped++;
+    } else if (!seen.has(id)) {
+      seen.add(id);
+      videos.push({ id, url: result.url });
+    }
+  }
+  return { videos, skipped };
+}
