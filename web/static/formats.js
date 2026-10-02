@@ -103,7 +103,7 @@ export function matchPreset(preset, { video, audio }) {
   if (preset === 'video-best') return video[0];
   if (cap) return video.find((v) => v.height <= cap);
   if (preset === 'audio-m4a') return audio.find((a) => a.ext === 'm4a') || audio[0];
-  return null; // audio-mp3 stays a conversion preset
+  return null; // MP3, Opus, FLAC, and WAV stay conversion presets
 }
 
 // Reads "75", "1:15", or "1:02:30" (seconds may have a decimal part) as seconds.

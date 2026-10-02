@@ -234,6 +234,13 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "-f", "ba[ext=m4a]")
 	case domain.AudioMP3:
 		args = append(args, "-f", "ba", "-x", "--audio-format", "mp3", "--audio-quality", "0")
+	case domain.AudioOpus:
+		// YouTube's own audio is usually Opus already: this repackages it without re-encoding.
+		args = append(args, "-f", "ba[acodec=opus]/ba", "-x", "--audio-format", "opus")
+	case domain.AudioFLAC:
+		args = append(args, "-f", "ba", "-x", "--audio-format", "flac")
+	case domain.AudioWAV:
+		args = append(args, "-f", "ba", "-x", "--audio-format", "wav")
 	}
 	return append(args, "--", job.URL)
 }

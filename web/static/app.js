@@ -11,6 +11,9 @@ const PRESET_LABELS = {
   'video-720': 'Video · 720p',
   'audio-m4a': 'Audio · M4A',
   'audio-mp3': 'Audio · MP3',
+  'audio-opus': 'Audio · Opus',
+  'audio-flac': 'Audio · FLAC',
+  'audio-wav': 'Audio · WAV',
 };
 
 const STATE_LABELS = {
@@ -607,7 +610,9 @@ function setKind(kind, { pickFirst = false } = {}) {
 // The last choice made on each side of the switch.
 const lastChoice = {};
 document.addEventListener('change', (e) => {
-  if (e.target.name === 'choice') lastChoice[kindOf(e.target.value)] = e.target.value;
+  if (e.target.name !== 'choice') return;
+  lastChoice[kindOf(e.target.value)] = e.target.value;
+  if (e.isTrusted) formatTouched = true;
 });
 
 function syncKind() {
@@ -1161,12 +1166,13 @@ function formatRow(choice, checked) {
   return el('label', { className: 'preset' }, input, text);
 }
 
-const MP3_CHOICE = {
-  kind: 'preset',
-  id: 'audio-mp3',
-  label: 'MP3 · converted',
-  detail: 'Re-encoded with ffmpeg; uses more CPU',
-};
+// Conversions offered next to the video's own audio formats.
+const AUDIO_CONVERSIONS = [
+  { kind: 'preset', id: 'audio-mp3', label: 'MP3', detail: 'Converted, plays anywhere' },
+  { kind: 'preset', id: 'audio-opus', label: 'Opus', detail: '.opus file, no quality loss' },
+  { kind: 'preset', id: 'audio-flac', label: 'FLAC', detail: 'Lossless copy for editing' },
+  { kind: 'preset', id: 'audio-wav', label: 'WAV', detail: 'Uncompressed, large' },
+];
 
 function showFormats(grouped, previous) {
   const { video, audio } = grouped;
@@ -1175,7 +1181,7 @@ function showFormats(grouped, previous) {
     return;
   }
   // Carry a choice made before the list loaded over to the closest real format.
-  const all = [...video, ...audio, MP3_CHOICE].map((c) => `${c.kind}:${c.id}`);
+  const all = [...video, ...audio, ...AUDIO_CONVERSIONS].map((c) => `${c.kind}:${c.id}`);
   const [kind, value] = previous.split(':');
   const match = kind === 'preset' ? matchPreset(value, grouped) : null;
   let checked = match ? `${match.kind}:${match.id}` : previous;
@@ -1187,7 +1193,7 @@ function showFormats(grouped, previous) {
       : [el('p', { className: 'hint', textContent: 'No video formats available.' })]),
   );
   $('#audio-formats').replaceChildren(
-    ...[...audio, MP3_CHOICE].map((c) => formatRow(c, `${c.kind}:${c.id}` === checked)),
+    ...[...audio, ...AUDIO_CONVERSIONS].map((c) => formatRow(c, `${c.kind}:${c.id}` === checked)),
   );
 
   for (const r of $('#preset-choices').querySelectorAll('input')) r.disabled = true;
@@ -1549,6 +1555,8 @@ async function onDirSubmit(e) {
 
 // Parallel downloads and the default format; both apply right away.
 let presetApplied = false;
+// Set once the user picks a format or kind, so a late-loading default never overrides it.
+let formatTouched = false;
 
 // Language names in English, from the browser where it knows them.
 const languageNames = (() => {
@@ -1643,7 +1651,7 @@ function renderPreferences(next) {
   if (next.default_preset) {
     $('#pref-preset').value = next.default_preset;
     // Select the default once on load, unless a link is already being worked on.
-    if (!presetApplied && !$('#url').value) {
+    if (!presetApplied && !formatTouched && !$('#url').value) {
       presetApplied = true;
       showPresets(`preset:${next.default_preset}`);
     }
@@ -1814,7 +1822,11 @@ function init() {
   $('#now').addEventListener('click', () => showView('download'));
   window.addEventListener('hashchange', () => showView(location.hash.slice(1)));
   showView(location.hash.slice(1));
-  for (const tab of document.querySelectorAll('.kind-tab')) tab.addEventListener('click', () => setKind(tab.dataset.kind, { pickFirst: true }));
+  for (const tab of document.querySelectorAll('.kind-tab'))
+    tab.addEventListener('click', () => {
+      formatTouched = true;
+      setKind(tab.dataset.kind, { pickFirst: true });
+    });
   $('#history-search').addEventListener('input', (e) => {
     historyQuery = e.currentTarget.value.trim().toLowerCase();
     render();
