@@ -5,9 +5,12 @@ package tray
 import (
 	"context"
 	_ "embed"
+	"sync"
 	"time"
 
 	"fyne.io/systray"
+
+	"github.com/Sanoy24/ytgrab/internal/activity"
 )
 
 //go:embed ytgrab.ico
@@ -21,7 +24,26 @@ func Run(ctx context.Context, actions Actions, serve Serve) error {
 	defer cancel()
 	done := make(chan error, 1)
 	listening := make(chan string, 1)
-	go func() { done <- serve(ctx, func(url string) { listening <- url }) }()
+
+	// Queue reports can arrive before the icon exists; keep the latest for its tooltip.
+	var mu sync.Mutex
+	showing := false
+	tooltip := "YTGrab is running"
+	onActivity := func(summary activity.Summary) {
+		mu.Lock()
+		tooltip = summary.Tooltip()
+		ready := showing
+		mu.Unlock()
+		if !ready {
+			return
+		}
+		systray.SetTooltip(summary.Tooltip())
+		for _, n := range notifications(summary) {
+			notify(n.Title, n.Text)
+		}
+	}
+	hooks := Hooks{Ready: func(url string) { listening <- url }, Activity: onActivity}
+	go func() { done <- serve(ctx, hooks) }()
 
 	var url string
 	select {
@@ -33,7 +55,10 @@ func Run(ctx context.Context, actions Actions, serve Serve) error {
 	result := make(chan error, 1)
 	systray.Run(func() {
 		systray.SetIcon(icon)
-		systray.SetTooltip("YTGrab is running")
+		mu.Lock()
+		showing = true
+		systray.SetTooltip(tooltip)
+		mu.Unlock()
 		systray.SetOnTapped(func() { actions.Open(url) })
 		open := systray.AddMenuItem("Open YTGrab", "Show YTGrab in your browser")
 		systray.AddSeparator()

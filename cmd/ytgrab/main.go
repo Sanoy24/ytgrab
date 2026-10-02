@@ -83,9 +83,9 @@ func run(args []string) int {
 		}
 		actions.StartAtLogin, actions.SetStartAtLogin = login.Enabled, login.Set
 	}
-	err := tray.Run(ctx, actions, func(ctx context.Context, ready func(string)) error {
+	err := tray.Run(ctx, actions, func(ctx context.Context, hooks tray.Hooks) error {
 		serverCfg := cfg
-		serverCfg.Ready = ready
+		serverCfg.Ready, serverCfg.Activity = hooks.Ready, hooks.Activity
 		return app.Run(ctx, serverCfg, os.Stdout)
 	})
 	if err != nil {

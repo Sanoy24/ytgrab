@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/Sanoy24/ytgrab/internal/activity"
 )
 
 const defaultListenAddress = "127.0.0.1:8787"
@@ -28,6 +30,8 @@ type Config struct {
 	OpenBrowser bool
 	// Ready, if set, is called with the page URL once the server is listening.
 	Ready func(url string)
+	// Activity, if set, receives queue summaries for the tray.
+	Activity func(activity.Summary)
 }
 
 // Load reads local configuration from the environment and validates it.
