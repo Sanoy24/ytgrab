@@ -42,7 +42,7 @@ func (u *ytgrabUpdates) YTGrabVersion() api.VersionInfo {
 // updateCommand returns the command that updates a copy of YTGrab installed at exe, or
 // "" when it was unpacked from a release archive and is updated by downloading it again.
 func updateCommand(exe, goos string) string {
-	path := strings.ToLower(filepath.ToSlash(exe))
+	path := strings.ToLower(strings.ReplaceAll(exe, `\`, "/")) // same result on every system
 	switch {
 	case strings.Contains(path, "/scoop/apps/ytgrab/"):
 		return "scoop update ytgrab"
