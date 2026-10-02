@@ -149,3 +149,48 @@ func TestCookieFailuresAreExplained(t *testing.T) {
 		t.Fatalf("bot check classified as %v", err)
 	}
 }
+
+func TestMetadataIsEmbedded(t *testing.T) {
+	m4a, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioM4A)
+	mp3, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioMP3)
+	video, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.VideoBest)
+	opus, _ := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: "audio", ID: "251", Ext: "webm", Label: "Audio · WEBM"})
+	pickedM4A, _ := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: "audio", ID: "140", Ext: "m4a", Label: "Audio · M4A"})
+	for name, test := range map[string]struct {
+		job       domain.Job
+		thumbnail bool
+	}{
+		"m4a preset":   {m4a, true},
+		"mp3 preset":   {mp3, true},
+		"picked m4a":   {pickedM4A, true},
+		"picked opus":  {opus, false}, // WebM can't hold cover art; embedding would fail the job
+		"video preset": {video, false},
+	} {
+		joined := strings.Join(buildArgs(test.job, config.Config{}), " ")
+		if !strings.Contains(joined, "--embed-metadata") || !strings.Contains(joined, "--embed-chapters") {
+			t.Errorf("%s: metadata not embedded: %s", name, joined)
+		}
+		if got := strings.Contains(joined, "--embed-thumbnail"); got != test.thumbnail {
+			t.Errorf("%s: --embed-thumbnail = %v, want %v", name, got, test.thumbnail)
+		}
+	}
+}
+
+// yt-dlp converts thumbnails before downloading and reports it as post-processing; that
+// must not move the job to "processing" before the download has started.
+func TestProcessingBeforeTheDownloadIsIgnored(t *testing.T) {
+	var filter stateFilter
+	before := filter.apply(Event{State: domain.Processing})
+	if before.State != "" {
+		t.Fatalf("processing before download = %q, want ignored", before.State)
+	}
+	if got := filter.apply(Event{State: domain.Downloading, Progress: &domain.Progress{DownloadedBytes: 1}}); got.State != domain.Downloading {
+		t.Fatalf("download event = %q", got.State)
+	}
+	if got := filter.apply(Event{State: domain.Processing}); got.State != domain.Processing {
+		t.Fatalf("processing after download = %q", got.State)
+	}
+	if got := filter.apply(Event{Title: "x"}); got.Title != "x" {
+		t.Fatal("other fields must pass through")
+	}
+}

@@ -280,6 +280,93 @@ function fillList(container, list, empty) {
 
 const RUN_ORDER = { processing: 0, downloading: 1, inspecting: 2, queued: 3 };
 
+// ---------- finish notifications and tab title ----------
+
+// Notifications are opt-in (the browser asks for permission) and only fire while the
+// YTGrab tab is in the background. The choice is remembered in this browser.
+const NOTIFY_KEY = 'ytgrab.notify';
+let notifyOn = false;
+let lastStates = null; // job id -> state at the previous render
+
+function notificationsSupported() {
+  return 'Notification' in window;
+}
+
+function loadNotifyPreference() {
+  try {
+    notifyOn = notificationsSupported() && Notification.permission === 'granted' && localStorage.getItem(NOTIFY_KEY) === '1';
+  } catch {
+    notifyOn = false;
+  }
+}
+
+function renderNotifyToggle() {
+  const button = $('#notify-toggle');
+  button.hidden = !notificationsSupported();
+  button.setAttribute('aria-pressed', String(notifyOn));
+  $('#notify-label').textContent = notifyOn ? 'Notifying' : 'Notify me';
+}
+
+async function toggleNotifications() {
+  if (notifyOn) {
+    notifyOn = false;
+    toast('Notifications turned off.');
+  } else {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      toast('Notifications are blocked for this page. Allow them in your browser settings to use this.', true);
+      return;
+    }
+    notifyOn = true;
+    toast("You'll get a notification when a download finishes while YTGrab is in the background.");
+  }
+  try {
+    localStorage.setItem(NOTIFY_KEY, notifyOn ? '1' : '0');
+  } catch {
+    // Storage unavailable (private window): the choice lasts for this page only.
+  }
+  renderNotifyToggle();
+}
+
+function notify(title, body, tag) {
+  try {
+    const n = new Notification(title, { body, tag });
+    n.onclick = () => {
+      window.focus();
+      n.close();
+    };
+  } catch {
+    // Some browsers only allow notifications from a service worker; skip quietly.
+  }
+}
+
+// Compares this render's job states with the last one and announces finished downloads.
+function announceFinished() {
+  const previous = lastStates;
+  lastStates = new Map(jobs.map((j) => [j.id, j.state]));
+  if (!previous || !notifyOn || !document.hidden) return;
+  for (const job of jobs) {
+    const before = previous.get(job.id);
+    if (!before || !isActive(before)) continue;
+    if (job.state === 'completed') notify('Download finished', jobTitle(job), job.id);
+    else if (job.state === 'failed') notify('Download failed', `${jobTitle(job)}: ${job.error?.message || ''}`.trim(), job.id);
+  }
+}
+
+// The tab title shows progress, so it can be followed from another tab.
+function updateTitle() {
+  const running = jobs.filter((j) => j.state === 'downloading' || j.state === 'processing');
+  const queued = jobs.filter((j) => j.state === 'queued').length;
+  let status = '';
+  if (client.pausedUntil && new Date(client.pausedUntil) > new Date()) status = 'Paused';
+  else if (running.length === 1) {
+    const p = running[0].progress;
+    status = p?.total_bytes ? `↓ ${Math.floor((p.downloaded_bytes / p.total_bytes) * 100)}%` : '↓ Downloading';
+  } else if (running.length > 1) status = `↓ ${running.length} downloading`;
+  else if (queued) status = `${queued} queued`;
+  document.title = status ? `${status} · ytgrab` : 'ytgrab';
+}
+
 // ---------- history ----------
 
 async function clearHistory() {
@@ -337,6 +424,8 @@ async function resumeNow(button) {
 
 function render() {
   renderPause();
+  announceFinished();
+  updateTitle();
   const queue = jobs
     .filter((j) => isActive(j.state))
     .sort(
@@ -1161,6 +1250,9 @@ function init() {
   });
   $('#pause-resume').addEventListener('click', (e) => resumeNow(e.currentTarget));
   $('#clear-history').addEventListener('click', clearHistory);
+  loadNotifyPreference();
+  renderNotifyToggle();
+  $('#notify-toggle').addEventListener('click', toggleNotifications);
   $('#signin-browser').addEventListener('change', onSignInChange);
   $('#playlist-items').addEventListener('change', updatePlaylistCount);
   $('#playlist-all').addEventListener('change', (e) => {

@@ -69,6 +69,8 @@ Other processor types can install with Go: `go install github.com/Sanoy24/ytgrab
 3. When the check finishes, the presets are replaced by the real options: one row per resolution with its codec and estimated size, and each audio stream. H.264 picks are saved as `.mp4`. Use **Use standard presets instead** to switch back.
 4. Press **Add to queue**. The queue shows live progress; merged downloads show the video part, then the audio part.
 
+Files include the video's title, channel, upload date, and chapters; M4A and MP3 files also get the thumbnail as cover art. The browser tab title shows progress, and **Notify me** (top right) sends a notification when a download finishes while YTGrab is in the background.
+
 Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`), so different qualities of one video never overwrite each other.
 
 ## Download a playlist

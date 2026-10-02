@@ -2,6 +2,13 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [1.4.0] - 2026-10-02
+
+### Added
+
+- The browser tab title shows download progress, and an optional **Notify me** button (top right) sends a notification when a download finishes or fails while YTGrab is in the background.
+- Downloads now include the title, artist, upload date, and chapters; M4A and MP3 files also get the thumbnail as cover art.
+
 ## [1.3.0] - 2026-10-01
 
 ### Added
@@ -37,6 +44,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.4.0]: https://github.com/Sanoy24/ytgrab/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Sanoy24/ytgrab/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Sanoy24/ytgrab/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Sanoy24/ytgrab/compare/v1.0.0...v1.1.0

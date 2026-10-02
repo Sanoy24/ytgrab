@@ -97,11 +97,13 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	var callbackErr error
 	var stderrTail string
 	var eventMu sync.Mutex
+	var filter stateFilter
 	consumeEvent := func(line string) bool {
 		event, recognized := parseEvent(line)
 		if !recognized {
 			return false
 		}
+		event = filter.apply(event)
 		eventMu.Lock()
 		defer eventMu.Unlock()
 		if event.Title != "" {
@@ -173,6 +175,12 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"-o", outputTemplate(job),
 	}
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
+	// Title, artist, date, and chapters go into the file; cover art only where every
+	// player supports it (M4A, MP3), since a failed embed would fail the whole job.
+	args = append(args, "--embed-metadata", "--embed-chapters")
+	if embedsCoverArt(job) {
+		args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
+	}
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
 			args = append(args, "-f", videoSelector(*job.Format), "--merge-output-format", "mp4/webm/mkv")
@@ -197,6 +205,13 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "-f", "ba", "-x", "--audio-format", "mp3", "--audio-quality", "0")
 	}
 	return append(args, "--", job.URL)
+}
+
+func embedsCoverArt(job domain.Job) bool {
+	if job.Format != nil {
+		return job.Format.Kind == "audio" && job.Format.Ext == "m4a"
+	}
+	return job.Preset != nil && (*job.Preset == domain.AudioM4A || *job.Preset == domain.AudioMP3)
 }
 
 // browserName matches the plain lowercase names in settings.CookieBrowsers.
@@ -246,6 +261,23 @@ func videoSelector(format domain.FormatSelection) string {
 	default:
 		return id + "+ba/" + id
 	}
+}
+
+// stateFilter drops "processing" reports that arrive before the download starts: yt-dlp
+// converts thumbnails ahead of the download and reports that as post-processing, and a
+// job cannot go back from processing to downloading.
+type stateFilter struct{ downloading bool }
+
+func (filter *stateFilter) apply(event Event) Event {
+	switch event.State {
+	case domain.Downloading:
+		filter.downloading = true
+	case domain.Processing:
+		if !filter.downloading {
+			event.State = ""
+		}
+	}
+	return event
 }
 
 func parseEvent(line string) (Event, bool) {
