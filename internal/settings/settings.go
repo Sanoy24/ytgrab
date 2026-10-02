@@ -22,6 +22,7 @@ const (
 	subtitlesKey     = "subtitles_mode"
 	subtitleLangKey  = "subtitles_lang"
 	speedLimitKey    = "speed_limit_kbps"
+	autoUpdateKey    = "auto_update_ytdlp"
 )
 
 // SpeedLimits are the offered per-download limits in kB/s; 0 means no limit.
@@ -70,6 +71,7 @@ type Manager struct {
 	subtitles    string
 	subtitleLang string
 	speedLimit   int
+	autoUpdate   bool
 	defaultDir   string
 	configured   bool
 }
@@ -114,7 +116,33 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 			speedLimit = n
 		}
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	// On unless turned off: an old yt-dlp is the usual reason YouTube downloads fail.
+	autoUpdate := true
+	if saved, ok, err := store.GetSetting(ctx, autoUpdateKey); err == nil && ok {
+		autoUpdate = saved != "0"
+	}
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// AutoUpdateYtdlp reports whether YTGrab keeps yt-dlp up to date by itself.
+func (manager *Manager) AutoUpdateYtdlp() bool {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.autoUpdate
+}
+
+func (manager *Manager) SetAutoUpdateYtdlp(ctx context.Context, on bool) error {
+	value := "0"
+	if on {
+		value = "1"
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, autoUpdateKey, value); err != nil {
+		return fmt.Errorf("save automatic updates: %w", err)
+	}
+	manager.autoUpdate = on
+	return nil
 }
 
 // SpeedLimit is the most each download may use, in kB/s; 0 means no limit.

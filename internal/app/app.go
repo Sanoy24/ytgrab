@@ -75,6 +75,13 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	latest := newLatestYtdlp()
 	latest.Get() // look up the newest yt-dlp now, so the first page load can show it
 	updater := &ytdlpUpdater{cfg: cfg, running: jobQueue.Running, latest: latest}
+	go ytdlpAutoUpdate{
+		enabled:  appSettings.AutoUpdateYtdlp,
+		running:  jobQueue.Running,
+		versions: installedAndLatest(updater),
+		update:   updater.UpdateYtdlp,
+		output:   output,
+	}.run(ctx)
 	serving = true
 	return serve(ctx, cfg, output, listener, store, jobQueue, serverSettings{Manager: appSettings, Picker: picker.New(), ytdlpUpdater: updater, ytgrabUpdates: ytgrabUpdatesFor(cfg.Version), loginStart: loginStart{autostart.ForThisProgram()}})
 }

@@ -196,3 +196,22 @@ func TestSpeedLimitIsAllowlisted(t *testing.T) {
 		t.Fatalf("reloaded = %d", reloaded.SpeedLimit())
 	}
 }
+
+func TestAutoUpdateIsOnUntilTurnedOff(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, _ := New(ctx, store, t.TempDir(), false)
+	if !manager.AutoUpdateYtdlp() {
+		t.Fatal("automatic updates should be on by default")
+	}
+	if err := manager.SetAutoUpdateYtdlp(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	if reloaded, _ := New(ctx, store, t.TempDir(), false); reloaded.AutoUpdateYtdlp() {
+		t.Fatal("turning it off didn't stick")
+	}
+}

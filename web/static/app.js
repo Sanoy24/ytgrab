@@ -1537,6 +1537,8 @@ function renderSpeed(next) {
 }
 
 function renderPreferences(next) {
+  $('#pref-autoupdate-row').hidden = typeof next.auto_update_ytdlp !== 'boolean';
+  $('#pref-autoupdate').checked = Boolean(next.auto_update_ytdlp);
   renderSubtitles(next);
   renderSpeed(next);
   // Only sent where YTGrab can start at sign-in (Windows).
@@ -1747,6 +1749,14 @@ function init() {
       e.currentTarget,
       { speed_limit_kbps: kbps },
       kbps ? `New downloads will each use at most ${speedLabel(kbps)}.` : 'New downloads will run at full speed.',
+    );
+  });
+  $('#pref-autoupdate').addEventListener('change', (e) => {
+    const on = e.currentTarget.checked;
+    savePreference(
+      e.currentTarget,
+      { auto_update_ytdlp: on },
+      on ? 'YTGrab will keep yt-dlp up to date.' : "yt-dlp won't be updated automatically. Update it from the tools status when downloads fail.",
     );
   });
   $('#pref-subs').addEventListener('change', (e) => saveSubtitles(e.currentTarget));

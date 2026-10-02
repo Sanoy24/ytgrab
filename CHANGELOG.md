@@ -10,6 +10,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Automatic yt-dlp updates.** YTGrab installs new yt-dlp releases by itself between downloads (on by default; turn it off in Settings), so YouTube changes break downloads less often.
 - **Send to YTGrab.** A bookmark (drag it from Settings to your bookmarks bar) opens YTGrab from any YouTube page with that video ready to add.
 - **Paste or drop anywhere.** Press Ctrl+V anywhere on the page, or drop a link onto it, to start a download.
 
