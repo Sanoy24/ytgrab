@@ -48,6 +48,10 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Keep room for the scrollbar, so the page doesn't shift sideways when it grows past the
+   window (for example when More settings opens). */
+html { scrollbar-gutter: stable; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -502,7 +506,7 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .more-settings { margin-top: 12px; }
 .more-settings summary { cursor: pointer; font-size: 0.85rem; color: var(--info); }
 .pref-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 0.875rem; }
-.pref-row select, .signin select {
+.pref-row select {
   font: inherit;
   font-size: 0.875rem;
   color: var(--text);
@@ -510,19 +514,10 @@ input[aria-invalid="true"] { border-color: var(--err); }
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px 8px;
+  width: 12rem; /* one width, so the settings line up */
+  max-width: 60%;
 }
-
-/* Browser sign-in */
-.signin { margin-top: 12px; }
-.signin select {
-  font: inherit;
-  font-size: 0.875rem;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 8px;
-}
+.pref-hint { margin: 6px 0 0; font-size: 0.8rem; }
 
 /* First-run folder choice */
 .setup-folder {
