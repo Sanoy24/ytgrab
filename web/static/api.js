@@ -139,7 +139,7 @@ class FixtureClient {
     return { ...structuredClone(fx.playlist), start: 1, next: null };
   }
 
-  async createPlaylistJobs({ video_ids, preset }) {
+  async createPlaylistJobs({ video_ids, preset, folder }) {
     await delay(500);
     const created = [];
     let skipped = 0;
@@ -154,6 +154,7 @@ class FixtureClient {
       const job = {
         id: `job_${this.nextId++}`, url, video_id: id, title: entry?.title ?? null, preset, format: null,
         state: 'queued', attempt: 1, progress: null, output_path: null, error: null, created_at: at, updated_at: at,
+        ...(folder ? { folder } : {}),
       };
       this.jobs.unshift(job);
       created.push(job);

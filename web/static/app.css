@@ -505,7 +505,9 @@ input[aria-invalid="true"] { border-color: var(--err); }
 }
 .playlist-items label span { flex: 1; min-width: 0; }
 .playlist-items small { color: var(--muted); font-variant-numeric: tabular-nums; }
-.playlist-items input, .playlist-all input { accent-color: var(--accent); }
+.playlist-items input, .playlist-all input, .playlist-folder input { accent-color: var(--accent); }
+.playlist-folder { display: flex; gap: 6px; align-items: flex-start; font-size: 0.85rem; margin-top: 10px; }
+.playlist-folder input { margin-top: 2px; }
 
 /* More settings */
 .more-settings { margin-top: 12px; }
