@@ -248,3 +248,13 @@ func TestSubtitlesOnlyForVideoWhenTurnedOn(t *testing.T) {
 		t.Fatal("URL must stay the final argument")
 	}
 }
+
+func TestSpeedLimitIsPassedWhenSet(t *testing.T) {
+	job, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.VideoBest)
+	if joined := strings.Join(buildArgs(job, config.Config{}), " "); strings.Contains(joined, "--limit-rate") {
+		t.Fatalf("limited without a limit: %s", joined)
+	}
+	if got := argAfter(buildArgs(job, config.Config{SpeedLimitKBps: 2000}), "--limit-rate"); got != "2000K" {
+		t.Fatalf("--limit-rate = %q", got)
+	}
+}

@@ -28,6 +28,8 @@ type Config struct {
 	// SubtitlesMode ("off", "embed", "file") and SubtitlesLang are filled in per download.
 	SubtitlesMode string
 	SubtitlesLang string
+	// SpeedLimitKBps caps each download in kB/s (0: no limit); filled in per download.
+	SpeedLimitKBps int
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
 	OpenBrowser bool

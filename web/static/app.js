@@ -1268,8 +1268,24 @@ async function saveSubtitles(control) {
   }
 }
 
+function speedLabel(kbps) {
+  return kbps ? `${kbps / 1000} MB/s` : 'No limit';
+}
+
+function renderSpeed(next) {
+  const row = $('#pref-speed-row');
+  row.hidden = !Array.isArray(next.speed_limits);
+  if (row.hidden) return;
+  const select = $('#pref-speed');
+  if (select.options.length !== next.speed_limits.length) {
+    select.replaceChildren(...next.speed_limits.map((k) => el('option', { value: String(k), textContent: speedLabel(k) })));
+  }
+  select.value = String(next.speed_limit_kbps);
+}
+
 function renderPreferences(next) {
   renderSubtitles(next);
+  renderSpeed(next);
   // Only sent where YTGrab can start at sign-in (Windows).
   $('#pref-login-row').hidden = typeof next.start_at_login !== 'boolean';
   if (!$('#pref-login-row').hidden) $('#pref-login').checked = next.start_at_login;
@@ -1456,6 +1472,14 @@ function init() {
   $('#notify-toggle').addEventListener('click', toggleNotifications);
   $('#signin-browser').addEventListener('change', onSignInChange);
   $('#pref-login').addEventListener('change', onStartAtLoginChange);
+  $('#pref-speed').addEventListener('change', (e) => {
+    const kbps = Number(e.currentTarget.value);
+    savePreference(
+      e.currentTarget,
+      { speed_limit_kbps: kbps },
+      kbps ? `New downloads will each use at most ${speedLabel(kbps)}.` : 'New downloads will run at full speed.',
+    );
+  });
   $('#pref-subs').addEventListener('change', (e) => saveSubtitles(e.currentTarget));
   $('#pref-subs-lang').addEventListener('change', (e) => saveSubtitles(e.currentTarget));
   $('#pref-parallel').addEventListener('change', (e) => {

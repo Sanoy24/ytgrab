@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -50,6 +51,7 @@ type Downloader struct {
 	DownloadsDir   func() string
 	CookiesBrowser func() string
 	Subtitles      func() (mode, lang string)
+	SpeedLimit     func() int // kB/s, 0 for none
 }
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
@@ -65,6 +67,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if downloader.Subtitles != nil {
 		cfg.SubtitlesMode, cfg.SubtitlesLang = downloader.Subtitles()
+	}
+	if downloader.SpeedLimit != nil {
+		cfg.SpeedLimitKBps = downloader.SpeedLimit()
 	}
 	if err := checkFreeSpace(cfg.DownloadsDir); err != nil {
 		return Result{}, err
@@ -183,6 +188,9 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"-o", outputTemplate(job),
 	}
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
+	if cfg.SpeedLimitKBps > 0 {
+		args = append(args, "--limit-rate", strconv.Itoa(cfg.SpeedLimitKBps)+"K")
+	}
 	// Title, artist, date, and chapters go into the file; cover art only where every
 	// player supports it (M4A, MP3), since a failed embed would fail the whole job.
 	args = append(args, "--embed-metadata", "--embed-chapters")

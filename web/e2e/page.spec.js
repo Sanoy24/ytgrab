@@ -136,3 +136,14 @@ test('turns on subtitles in a chosen language', async ({ page }) => {
   await page.getByLabel('Subtitles', { exact: true }).selectOption('off');
   await expect(page.locator('#pref-subs-lang-row')).toBeHidden();
 });
+
+test('sets a per-download speed limit', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.getByText('More settings').click();
+  const select = page.getByLabel('Speed limit (per download)');
+  await expect(select).toHaveValue('0');
+  await select.selectOption({ label: '2 MB/s' });
+  await expect(page.locator('#toast')).toContainText('each use at most 2 MB/s');
+  await select.selectOption({ label: 'No limit' });
+  await expect(page.locator('#toast')).toContainText('full speed');
+});

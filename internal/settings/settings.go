@@ -21,7 +21,11 @@ const (
 	defaultPresetKey = "default_preset"
 	subtitlesKey     = "subtitles_mode"
 	subtitleLangKey  = "subtitles_lang"
+	speedLimitKey    = "speed_limit_kbps"
 )
+
+// SpeedLimits are the offered per-download limits in kB/s; 0 means no limit.
+var SpeedLimits = []int{0, 500, 1000, 2000, 5000, 10000}
 
 // Subtitle modes: off, embedded in the video file, or saved next to it as .srt.
 const (
@@ -65,6 +69,7 @@ type Manager struct {
 	preset       domain.Preset
 	subtitles    string
 	subtitleLang string
+	speedLimit   int
 	defaultDir   string
 	configured   bool
 }
@@ -103,7 +108,35 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if saved, ok, err := store.GetSetting(ctx, subtitleLangKey); err == nil && ok && slices.Contains(SubtitleLanguages, saved) {
 		subtitleLang = saved
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	speedLimit := 0
+	if saved, ok, err := store.GetSetting(ctx, speedLimitKey); err == nil && ok {
+		if n, err := strconv.Atoi(saved); err == nil && slices.Contains(SpeedLimits, n) {
+			speedLimit = n
+		}
+	}
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// SpeedLimit is the most each download may use, in kB/s; 0 means no limit.
+func (manager *Manager) SpeedLimit() int {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.speedLimit
+}
+
+// SetSpeedLimit sets the per-download limit to one of SpeedLimits; it applies to
+// downloads that start afterwards.
+func (manager *Manager) SetSpeedLimit(ctx context.Context, kbps int) error {
+	if !slices.Contains(SpeedLimits, kbps) {
+		return ErrInvalidPreference
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, speedLimitKey, strconv.Itoa(kbps)); err != nil {
+		return fmt.Errorf("save speed limit: %w", err)
+	}
+	manager.speedLimit = kbps
+	return nil
 }
 
 func validSubtitleMode(mode string) bool {
