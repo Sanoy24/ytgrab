@@ -157,7 +157,8 @@ func (store *Store) List(ctx context.Context, limit int) ([]domain.Job, error) {
 }
 
 func (store *Store) Queued(ctx context.Context, limit int) ([]domain.Job, error) {
-	return store.list(ctx, "SELECT payload FROM jobs WHERE state='queued' ORDER BY created_at LIMIT ?", limit)
+	// Moved-to-top downloads first (highest priority), then oldest first.
+	return store.list(ctx, "SELECT payload FROM jobs WHERE state='queued' ORDER BY COALESCE(json_extract(payload, '$.priority'), 0) DESC, created_at LIMIT ?", limit)
 }
 
 func (store *Store) list(ctx context.Context, query string, limit int) ([]domain.Job, error) {

@@ -21,6 +21,7 @@ const STATE_LABELS = {
   completed: 'Done',
   failed: 'Failed',
   cancelled: 'Cancelled',
+  paused: 'Paused',
 };
 
 // Extra guidance appended to server error messages; only where the server's text lacks it.
@@ -142,8 +143,21 @@ function renderProgress(el, job) {
   const bar = box.querySelector('progress');
   const text = box.querySelector('.job-progress-text');
   const showStates = ['downloading', 'processing', 'inspecting'];
-  box.hidden = !showStates.includes(job.state);
+  const pausedWithProgress = job.state === 'paused' && job.progress?.downloaded_bytes;
+  box.hidden = !showStates.includes(job.state) && !pausedWithProgress;
   if (box.hidden) return;
+  if (job.state === 'paused') {
+    const p = job.progress;
+    const pct = p.total_bytes ? Math.min(100, (p.downloaded_bytes / p.total_bytes) * 100) : null;
+    if (pct == null) bar.removeAttribute('value');
+    else bar.value = pct;
+    text.textContent = ['Paused', pct != null ? `${Math.floor(pct)}%` : '', p.total_bytes ? `${formatBytes(p.downloaded_bytes)} of ${formatBytes(p.total_bytes)}` : `${formatBytes(p.downloaded_bytes)} downloaded`]
+      .filter(Boolean)
+      .join(' · ');
+    box.dataset.paused = 'true';
+    return;
+  }
+  delete box.dataset.paused;
 
   const p = job.progress || {};
   // Merged downloads fetch video, then audio; naming the part keeps the second 0% from
@@ -192,12 +206,26 @@ const ICONS = {
   reveal: '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5z"/>',
   copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
   open: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/>',
+  resume: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/>',
+  pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
+  top: '<path d="M12 20V6M6 12l6-6 6 6M5 3h14"/>',
   again: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   remove: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
 };
 
+// The waiting download that will start next needs no "move to top".
+function firstWaiting(job) {
+  const waiting = jobs
+    .filter((j) => j.state === 'queued' || j.state === 'paused')
+    .sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.created_at.localeCompare(b.created_at));
+  return waiting[0]?.id === job.id;
+}
+
 function renderActions(box, job) {
   const want = [];
+  if (job.state === 'paused') want.push(['resume', 'Resume', '']);
+  else if (isActive(job.state)) want.push(['pause', 'Pause', '']);
+  if ((job.state === 'queued' || job.state === 'paused') && !firstWaiting(job)) want.push(['top', 'Move to top', '']);
   if (isActive(job.state)) want.push(['cancel', 'Cancel', 'btn-danger']);
   if (job.state === 'failed' || job.state === 'cancelled') want.push(['retry', 'Retry', ''], ['remove', 'Remove', '']);
   if (job.state === 'completed' && confirmingRemove.has(job.id)) {
@@ -271,7 +299,7 @@ function fillList(container, list, empty) {
   }
 }
 
-const RUN_ORDER = { processing: 0, downloading: 1, inspecting: 2, queued: 3 };
+const RUN_ORDER = { processing: 0, downloading: 1, inspecting: 2, queued: 3, paused: 3 };
 
 // ---------- finish notifications and tab title ----------
 
@@ -456,7 +484,11 @@ function render() {
   const queue = jobs
     .filter((j) => isActive(j.state))
     .sort(
-      (a, b) => RUN_ORDER[a.state] - RUN_ORDER[b.state] || a.created_at.localeCompare(b.created_at),
+      // Waiting downloads in the order they will start: moved-to-top first, then oldest.
+      (a, b) =>
+        RUN_ORDER[a.state] - RUN_ORDER[b.state] ||
+        (b.priority || 0) - (a.priority || 0) ||
+        a.created_at.localeCompare(b.created_at),
     );
   const history = jobs
     .filter((j) => !isActive(j.state))
@@ -854,10 +886,18 @@ async function runAction(id, action) {
   }
   pending.add(id);
   render();
+  const calls = {
+    cancel: [() => client.cancelJob(id), 'Download cancelled.'],
+    retry: [() => client.retryJob(id), 'Download queued again.'],
+    pause: [() => client.pauseJob(id), 'Paused. Resume continues from where it stopped.'],
+    resume: [() => client.resumeJob(id), 'Resumed.'],
+    top: [() => client.moveToTop(id), 'Moved to the top of the queue.'],
+  };
   try {
-    await (action === 'cancel' ? client.cancelJob(id) : client.retryJob(id));
+    const [call, done] = calls[action] || calls.retry;
+    await call();
     if (!client.isFixture) jobs = await client.listJobs();
-    toast(action === 'cancel' ? 'Download cancelled.' : 'Download queued again.');
+    toast(done);
   } catch (err) {
     toast(err.message, true);
   } finally {

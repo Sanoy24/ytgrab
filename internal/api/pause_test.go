@@ -1,57 +1,58 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/domain"
 	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
-type pausingController struct {
-	until   time.Time
-	resumed bool
-}
+type countingController struct{ wakes, cancels int }
 
-func (*pausingController) Wake()         {}
-func (*pausingController) Cancel(string) {}
-func (c *pausingController) PausedUntil() (time.Time, bool) {
-	return c.until, !c.resumed && time.Now().Before(c.until)
-}
-func (c *pausingController) Resume() { c.resumed = true }
+func (c *countingController) Wake()         { c.wakes++ }
+func (c *countingController) Cancel(string) { c.cancels++ }
 
-func TestJobListReportsPauseAndResumeEndsIt(t *testing.T) {
-	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+func TestPauseResumeAndMoveToTop(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer store.Close()
-	controller := &pausingController{until: time.Now().Add(14 * time.Minute)}
+	job, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioM4A)
+	job.State = domain.Downloading
+	if err := store.Create(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+	controller := &countingController{}
 	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, controller)
-	list := func() map[string]any {
-		t.Helper()
+	post := func(action string) (int, domain.Job) {
 		response := httptest.NewRecorder()
-		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/jobs", nil))
-		var body map[string]any
-		if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
-			t.Fatal(err)
-		}
-		return body
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/jobs/"+job.ID+"/"+action, bytes.NewReader(nil)))
+		var got domain.Job
+		_ = json.Unmarshal(response.Body.Bytes(), &got)
+		return response.Code, got
 	}
-	if body := list(); body["paused_until"] == nil {
-		t.Fatalf("paused list = %v", body)
+	if code, got := post("pause"); code != http.StatusOK || got.State != domain.Paused || controller.cancels != 1 {
+		t.Fatalf("pause = %d %s, cancels %d", code, got.State, controller.cancels)
 	}
-	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/system/resume", nil))
-	if response.Code != http.StatusNoContent || !controller.resumed {
-		t.Fatalf("resume = %d, resumed %v", response.Code, controller.resumed)
+	if code, _ := post("pause"); code != http.StatusConflict {
+		t.Fatalf("pausing twice = %d", code)
 	}
-	if body := list(); body["paused_until"] != nil {
-		t.Fatalf("list after resume = %v", body)
+	if code, got := post("top"); code != http.StatusOK || got.Priority == 0 {
+		t.Fatalf("top = %d priority %d", code, got.Priority)
+	}
+	if code, got := post("resume"); code != http.StatusOK || got.State != domain.Queued || controller.wakes == 0 {
+		t.Fatalf("resume = %d %s, wakes %d", code, got.State, controller.wakes)
+	}
+	if code, _ := post("resume"); code != http.StatusConflict {
+		t.Fatalf("resuming a queued job = %d", code)
 	}
 }

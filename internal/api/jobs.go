@@ -225,6 +225,71 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 		}
 		writeJSON(w, http.StatusOK, job)
 	})
+	mux.HandleFunc("POST /api/jobs/{id}/pause", func(w http.ResponseWriter, r *http.Request) {
+		job, err := store.Get(r.Context(), r.PathValue("id"))
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if !job.State.Active() || job.State == domain.Paused {
+			writeError(w, http.StatusConflict, "invalid_state", "Only queued or running downloads can be paused.")
+			return
+		}
+		previous := job.State
+		if err := job.Transition(domain.Paused); err != nil {
+			writeError(w, http.StatusConflict, "invalid_state", err.Error())
+			return
+		}
+		if err := store.Update(r.Context(), job, previous); err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if controller != nil {
+			controller.Cancel(job.ID) // stops yt-dlp; the partial file stays for resuming
+		}
+		writeJSON(w, http.StatusOK, job)
+	})
+	mux.HandleFunc("POST /api/jobs/{id}/resume", func(w http.ResponseWriter, r *http.Request) {
+		job, err := store.Get(r.Context(), r.PathValue("id"))
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if job.State != domain.Paused {
+			writeError(w, http.StatusConflict, "invalid_state", "Only paused downloads can be resumed.")
+			return
+		}
+		if err := job.Transition(domain.Queued); err != nil {
+			writeError(w, http.StatusConflict, "invalid_state", err.Error())
+			return
+		}
+		if err := store.Update(r.Context(), job, domain.Paused); err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if controller != nil {
+			controller.Wake()
+		}
+		writeJSON(w, http.StatusOK, job)
+	})
+	mux.HandleFunc("POST /api/jobs/{id}/top", func(w http.ResponseWriter, r *http.Request) {
+		job, err := store.Get(r.Context(), r.PathValue("id"))
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if job.State != domain.Queued && job.State != domain.Paused {
+			writeError(w, http.StatusConflict, "invalid_state", "Only waiting downloads can be moved.")
+			return
+		}
+		job.Priority = time.Now().UnixNano()
+		job.UpdatedAt = time.Now().UTC()
+		if err := store.Update(r.Context(), job, job.State); err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, job)
+	})
 	mux.HandleFunc("POST /api/jobs/{id}/retry", func(w http.ResponseWriter, r *http.Request) {
 		job, err := store.Get(r.Context(), r.PathValue("id"))
 		if err != nil {

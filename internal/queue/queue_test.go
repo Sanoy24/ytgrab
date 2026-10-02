@@ -120,3 +120,53 @@ func TestQueueClaimsAndCancelsActiveJob(t *testing.T) {
 		t.Fatalf("final job = %+v, %v", final, err)
 	}
 }
+
+func TestPausedJobIsNotFailedAndResumes(t *testing.T) {
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	job, _ := domain.NewJob("https://youtu.be/dQw4w9WgXcQ", domain.VideoBest)
+	if err := store.Create(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+	fake := waitingDownloader{started: make(chan string, 2), cancelled: make(chan string, 2)}
+	queue := New(store, fake, 2)
+	queue.Start(ctx)
+	defer queue.Stop()
+	queue.Wake()
+	select {
+	case <-fake.started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("job was not started")
+	}
+	running, _ := store.Get(ctx, job.ID)
+	if err := running.Transition(domain.Paused); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(ctx, running, domain.Downloading); err != nil {
+		t.Fatal(err)
+	}
+	queue.Cancel(job.ID)
+	<-fake.cancelled
+	time.Sleep(100 * time.Millisecond)
+	if paused, _ := store.Get(ctx, job.ID); paused.State != domain.Paused {
+		t.Fatalf("after pausing, state = %s", paused.State)
+	}
+	resumed, _ := store.Get(ctx, job.ID)
+	if err := resumed.Transition(domain.Queued); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(ctx, resumed, domain.Paused); err != nil {
+		t.Fatal(err)
+	}
+	queue.Wake()
+	select {
+	case <-fake.started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("resumed job was not started again")
+	}
+}
