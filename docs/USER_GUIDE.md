@@ -22,7 +22,7 @@ Scoop installs FFmpeg and Deno too and adds **YTGrab** to the Start menu; yt-dlp
    - **FFmpeg** (merges video and audio, converts MP3) and **Deno** (runs YouTube's JavaScript checks): installed with `winget`.
 3. Your browser opens `http://127.0.0.1:8787/`. Choose where downloads should go: **Choose folder…** opens the normal Windows folder window, or use the suggested `Downloads\ytgrab`.
 
-YTGrab then keeps running without a window. Its icon sits in the notification area by the clock — on Windows 11, new icons start under the **^** arrow; drag it onto the taskbar to keep it in view. Click the icon to open the page; right-click it and choose **Quit YTGrab** to stop. Unfinished downloads continue from where they stopped next time. Next time, **Start YTGrab.cmd** opens the app straight away.
+YTGrab then keeps running without a window. Its icon sits in the notification area by the clock — on Windows 11, new icons start under the **^** arrow; drag it onto the taskbar to keep it in view. Click the icon to open the page; right-click it and choose **Quit YTGrab** to stop. Unfinished downloads continue from where they stopped next time. Point at the icon to see how many downloads are running and queued. When downloads finish or fail while no YTGrab page is open, Windows shows a notification; with the page open, use **Notify me** in the page instead, so you aren't told twice. Next time, **Start YTGrab.cmd** opens the app straight away.
 
 Started from a terminal (`ytgrab --open`), YTGrab stays in that terminal and prints its log there; it shows the tray icon too, and Ctrl+C stops it. When it runs without a window, its log is written to `ytgrab.log` in the data folder, and anything that stops it from starting is shown in a message box.
 

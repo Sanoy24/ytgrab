@@ -10,11 +10,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Sanoy24/ytgrab/internal/activity"
 	"github.com/Sanoy24/ytgrab/internal/api"
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/autostart"
 	"github.com/Sanoy24/ytgrab/internal/config"
 	"github.com/Sanoy24/ytgrab/internal/cooldown"
+	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
 	"github.com/Sanoy24/ytgrab/internal/picker"
 	"github.com/Sanoy24/ytgrab/internal/queue"
@@ -66,6 +68,10 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	jobQueue.SetLimit(appSettings.MaxDownloads)
 	jobQueue.Start(ctx)
 	defer jobQueue.Stop()
+	if cfg.Activity != nil {
+		list := func(ctx context.Context) ([]domain.Job, error) { return store.List(ctx, 200) }
+		go activity.Watch(ctx, 2*time.Second, list, api.PageOpen, cfg.Activity)
+	}
 	latest := newLatestYtdlp()
 	latest.Get() // look up the newest yt-dlp now, so the first page load can show it
 	updater := &ytdlpUpdater{cfg: cfg, running: jobQueue.Running, latest: latest}
