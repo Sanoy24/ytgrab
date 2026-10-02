@@ -25,6 +25,20 @@ jobs:
         run: test -z "$(gofmt -l .)" || { gofmt -l .; echo "Run gofmt -w on the files above."; exit 1; }
       - run: go vet ./...
       - run: go test ./...
+      - name: Build the Mac archive with the menu-bar icon and start it
+        if: runner.os == 'macOS'
+        run: |
+          pwsh -File scripts/package.ps1 -Version 0.0.0-ci -Platforms darwin -SkipTests -OutDir dist-ci
+          tar -xzf dist-ci/ytgrab-0.0.0-ci-darwin-arm64.tar.gz -C "$RUNNER_TEMP" ./ytgrab
+          otool -L "$RUNNER_TEMP/ytgrab" | grep AppKit
+          sh .github/scripts/smoke.sh "$RUNNER_TEMP/ytgrab"
+      - name: Installer adds YTGrab.app
+        if: runner.os == 'macOS'
+        run: |
+          YTGRAB_NO_SETUP=1 sh install.sh
+          plutil -lint ~/Applications/YTGrab.app/Contents/Info.plist
+          test -x ~/Applications/YTGrab.app/Contents/MacOS/YTGrab
+          cat ~/Applications/YTGrab.app/Contents/MacOS/YTGrab
       - name: Linux tray and autostart on a private D-Bus
         if: runner.os == 'Linux'
         run: |

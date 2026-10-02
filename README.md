@@ -45,7 +45,7 @@ ytgrab --open
 
 If `ytgrab` isn't found, the installer printed the line to add `~/.local/bin` to your `PATH`. Run the same command again to upgrade.
 
-- **macOS:** `setup` installs FFmpeg and Deno with [Homebrew](https://brew.sh).
+- **macOS:** `setup` installs FFmpeg and Deno with [Homebrew](https://brew.sh). The installer also adds **YTGrab** to `~/Applications`, so you can open it from Launchpad or Spotlight; it runs from the menu bar.
 - **Linux:** `setup` installs yt-dlp and prints the package commands for the rest, for example `sudo apt install ffmpeg zenity unzip` and `curl -fsSL https://deno.land/install.sh | sh`. `zenity` (or `kdialog` on KDE) provides the folder window. The installer also adds **YTGrab** to your applications menu; started from there it runs in the tray on desktops that have one (KDE, Ubuntu, GNOME with the AppIndicator extension).
 
 <details>

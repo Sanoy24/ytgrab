@@ -1,6 +1,6 @@
-//go:build !windows && !linux
+//go:build !windows && !linux && !(darwin && cgo)
 
 package trayhost
 
-// Available is false: YTGrab has no menu-bar icon on this system yet.
-func Available() bool { return false }
+// No tray or menu-bar icon on this system or build.
+func available() bool { return false }

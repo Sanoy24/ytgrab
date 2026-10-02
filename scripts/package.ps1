@@ -8,7 +8,9 @@ user guide, and tools\yt-dlp.exe. yt-dlp is bundled only when tools\yt-dlp.exe m
 the official checksum in tools\SHA2-256SUMS (download both from
 https://github.com/yt-dlp/yt-dlp/releases). Each archive carries manifest.json (versions
 and hashes) and SHA256SUMS. With -AllPlatforms it also builds Linux and macOS archives
-that contain only the program.
+that contain only the program; -Platforms picks the systems to build. macOS archives get
+the menu-bar icon only when built on a Mac (it needs cgo); the release workflow builds
+them there.
 
 .EXAMPLE
 powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Version 1.0.0
@@ -17,6 +19,8 @@ param(
     [string]$Version = '',
     [string]$OutDir = 'dist',
     [switch]$AllPlatforms,
+    # Comma-separated, for example "windows,linux"; works with -File, unlike an array.
+    [string]$Platforms = '',
     [switch]$SkipTests
 )
 
@@ -60,22 +64,29 @@ function New-Package([string]$Os, [string]$Arch, [bool]$BundleTools) {
     New-Item -ItemType Directory -Path $stage | Out-Null
 
     $exe = if ($Os -eq 'windows') { 'ytgrab.exe' } else { 'ytgrab' }
-    $env:GOOS = $Os; $env:GOARCH = $Arch; $env:CGO_ENABLED = '0'
+    # The macOS menu-bar icon needs cgo, which only works when building on a Mac.
+    $cgo = if ($Os -eq 'darwin' -and $IsMacOS) { '1' } else { '0' }
+    if ($Os -eq 'darwin' -and $cgo -eq '0') { Write-Warning "Building $name off a Mac: it will have no menu-bar icon." }
+    $env:GOOS = $Os; $env:GOARCH = $Arch; $env:CGO_ENABLED = $cgo
     try {
         Invoke-Checked 'go' @('build', '-trimpath', '-ldflags', $ldflags, '-o', (Join-Path $stage $exe), './cmd/ytgrab')
     } finally {
         Remove-Item Env:GOOS, Env:GOARCH, Env:CGO_ENABLED -ErrorAction SilentlyContinue
     }
-    Copy-Item (Join-Path $root 'docs\USER_GUIDE.md') (Join-Path $stage 'README.md')
+    Copy-Item (Join-Path $root 'docs/USER_GUIDE.md') (Join-Path $stage 'README.md')
     Copy-Item (Join-Path $root 'LICENSE') (Join-Path $stage 'LICENSE.txt')
     if ($Os -eq 'linux') {
         # The installer uses it for the applications menu and notifications.
-        Copy-Item (Join-Path $root 'packaging\icon\ytgrab.png') (Join-Path $stage 'ytgrab.png')
+        Copy-Item (Join-Path $root 'packaging/icon/ytgrab.png') (Join-Path $stage 'ytgrab.png')
+    }
+    if ($Os -eq 'darwin') {
+        # The installer uses it for the YTGrab.app it adds to ~/Applications.
+        Copy-Item (Join-Path $root 'packaging/icon/ytgrab.icns') (Join-Path $stage 'ytgrab.icns')
     }
 
     $tools = @()
     if ($Os -eq 'windows') {
-        Copy-Item (Join-Path $root 'packaging\Start YTGrab.cmd') $stage
+        Copy-Item (Join-Path $root 'packaging/Start YTGrab.cmd') $stage
     }
     if ($BundleTools) {
         $ytdlp = Join-Path $root 'tools\yt-dlp.exe'
@@ -136,10 +147,17 @@ function New-Package([string]$Os, [string]$Arch, [bool]$BundleTools) {
     Write-Host "Built $archive"
 }
 
-New-Package 'windows' 'amd64' $true
-if ($AllPlatforms) {
+$targets = if ($Platforms) { $Platforms -split ',' | ForEach-Object { $_.Trim() } } elseif ($AllPlatforms) { @('windows', 'linux', 'darwin') } else { @('windows') }
+$unknown = $targets | Where-Object { $_ -notin @('windows', 'linux', 'darwin') }
+if ($unknown) { throw "Unknown platform: $($unknown -join ', '). Use windows, linux, or darwin." }
+if ($targets -contains 'windows') {
+    New-Package 'windows' 'amd64' $true
+}
+if ($targets -contains 'linux') {
     New-Package 'linux' 'amd64' $false
     New-Package 'linux' 'arm64' $false
+}
+if ($targets -contains 'darwin') {
     New-Package 'darwin' 'arm64' $false
     New-Package 'darwin' 'amd64' $false
 }

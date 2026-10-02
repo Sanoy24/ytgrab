@@ -6,6 +6,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **macOS menu bar.** YTGrab gets a menu-bar icon on macOS with the same menu, notifications, and an **Open at login** option. The installer adds **YTGrab** to `~/Applications`, so it opens from Launchpad or Spotlight without a terminal. Mac builds are now made on a Mac so they can include the icon.
 - **Linux desktop.** The installer adds YTGrab to the applications menu, and on desktops with a tray (KDE, Ubuntu, GNOME with the AppIndicator extension) YTGrab gets the same tray icon, menu, notifications, and **Start when you log in** option as on Windows.
 - **Part of a video.** Enter a start and end time to download just that section, cut exactly; the file name includes the range.
 - **Playlist folders.** A playlist's videos can be saved into a folder named after the playlist (on by default, remembered if you turn it off).

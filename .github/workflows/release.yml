@@ -11,7 +11,9 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # Windows and Linux are cross-compiled on Windows, which also bundles the official
+  # yt-dlp.exe into the Windows zip.
+  build-windows-linux:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +32,56 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
-          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1 -Version $version -AllPlatforms
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1 -Version $version -Platforms "windows,linux"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: archives-windows-linux
+          path: dist/
+          if-no-files-found: error
+
+  # The macOS menu-bar icon needs cgo, so the Mac archives are built on a Mac.
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test and build archives
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          go test ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./scripts/package.ps1 -Version $version -Platforms darwin -SkipTests
+
+      - name: Check both builds have the menu-bar icon
+        run: |
+          for archive in dist/*.tar.gz; do
+            tar -xzf "$archive" -C "$RUNNER_TEMP" ./ytgrab
+            otool -L "$RUNNER_TEMP/ytgrab" | grep -q AppKit || { echo "$archive was built without the menu-bar icon"; exit 1; }
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: archives-macos
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    needs: [build-windows-linux, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: archives-*
+          path: dist
+          merge-multiple: true
 
       - name: Write release notes from CHANGELOG.md
         shell: pwsh
@@ -44,7 +94,7 @@ jobs:
           } else {
             $notes = "See the [changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)."
           }
-          $notes += "`n`n**Install:** on macOS and Linux run ``curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | sh``. On Windows, download the zip below, extract it, and double-click **Start YTGrab.cmd**. Each file has a matching ``.sha256`` checksum."
+          $notes += "`n`n**Install:** on macOS and Linux run ``curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | sh``, or ``brew install sanoy24/tap/ytgrab``. On Windows, ``scoop install sanoy24/ytgrab`` (after ``scoop bucket add sanoy24 https://github.com/Sanoy24/scoop-bucket``), or download the zip below, extract it, and double-click **Start YTGrab.cmd**. Each file has a matching ``.sha256`` checksum."
           Set-Content -Path release-notes.md -Value $notes.Trim() -Encoding utf8
 
       - name: Publish the release
