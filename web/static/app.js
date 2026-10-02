@@ -954,8 +954,13 @@ function updatePlaylistCount() {
   }
   const n = playlistIds().length;
   const total = playlist.list.entries.length;
-  button.textContent = n === 1 ? 'Add 1 video' : `Add ${n} videos`;
-  button.disabled = n === 0;
+  const tooMany = n > MAX_PLAYLIST_JOBS;
+  button.textContent = tooMany
+    ? `Choose up to ${MAX_PLAYLIST_JOBS} videos`
+    : n === 1
+      ? 'Add 1 video'
+      : `Add ${n} videos`;
+  button.disabled = n === 0 || tooMany;
   const all = $('#playlist-all');
   all.checked = n === total;
   all.indeterminate = n > 0 && n < total;
@@ -979,7 +984,7 @@ async function enterPlaylist(url) {
   $('#playlist-all').parentElement.hidden = true;
   $('#submit').disabled = true;
   try {
-    const list = await client.listPlaylist(url, { signal: ctl.signal });
+    const list = await client.listPlaylist(url, { signal: ctl.signal, start: 1 });
     if (ctl.signal.aborted) return;
     playlist.list = list;
     renderPlaylist(list);
@@ -991,22 +996,27 @@ async function enterPlaylist(url) {
   }
 }
 
-function renderPlaylist(list) {
+// One confirmation adds at most this many videos (the server enforces the same cap).
+const MAX_PLAYLIST_JOBS = 200;
+
+// playlist.list accumulates pages: entries grow, next points at the following page.
+function renderPlaylist(list, append = false) {
   $('#playlist-title').textContent = list.title || 'Playlist';
   const n = list.entries.length;
-  const shown =
-    list.truncated && list.total ? `first ${n} of ${list.total} videos` : `${n} video${n === 1 ? '' : 's'}`;
-  $('#playlist-meta').textContent = shown.charAt(0).toUpperCase() + shown.slice(1);
+  const shown = list.next && list.total ? `Showing ${n} of ${list.total} videos` : `${n} video${n === 1 ? '' : 's'}`;
+  $('#playlist-meta').textContent = shown;
   const notes = [];
-  if (list.truncated) notes.push(`Up to 50 videos can be added at once.`);
+  if (list.total > MAX_PLAYLIST_JOBS) notes.push(`Up to ${MAX_PLAYLIST_JOBS} videos can be added at a time.`);
   if (list.unavailable) {
     notes.push(`${list.unavailable} private or deleted video${list.unavailable === 1 ? ' is' : 's are'} skipped.`);
   }
   $('#playlist-note').textContent = notes.join(' ');
   $('#playlist-note').hidden = !notes.length;
+  $('#playlist-more').hidden = !list.next;
   $('#playlist-all').parentElement.hidden = false;
-  $('#playlist-items').replaceChildren(
-    ...list.entries.map((entry) =>
+  const items = append ? list.entries.slice($('#playlist-items').children.length) : list.entries;
+  $('#playlist-items')[append ? 'append' : 'replaceChildren'](
+    ...items.map((entry) =>
       el(
         'li',
         {},
@@ -1021,6 +1031,28 @@ function renderPlaylist(list) {
     ),
   );
   updatePlaylistCount();
+}
+
+async function loadMorePlaylist(button) {
+  const current = playlist?.list;
+  if (!current?.next) return;
+  button.disabled = true;
+  button.textContent = 'Loading…';
+  try {
+    const page = await client.listPlaylist(playlist.url, { start: current.next });
+    if (playlist?.list !== current) return; // the link changed meanwhile
+    const known = new Set(current.entries.map((e) => e.video_id));
+    current.entries.push(...page.entries.filter((e) => !known.has(e.video_id)));
+    current.next = page.next;
+    current.total = page.total ?? current.total;
+    current.unavailable = (current.unavailable || 0) + (page.unavailable || 0);
+    renderPlaylist(current, true);
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Load next 50';
+  }
 }
 
 function exitPlaylist() {
@@ -1305,6 +1337,7 @@ function init() {
     savePreference(e.currentTarget, { default_preset: e.currentTarget.value }, `New links will start with ${label}.`);
   });
   $('#playlist-items').addEventListener('change', updatePlaylistCount);
+  $('#playlist-more').addEventListener('click', (e) => loadMorePlaylist(e.currentTarget));
   $('#playlist-all').addEventListener('change', (e) => {
     for (const box of document.querySelectorAll('#playlist-items input')) box.checked = e.target.checked;
     updatePlaylistCount();

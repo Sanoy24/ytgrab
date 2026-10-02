@@ -485,6 +485,7 @@ input[aria-invalid="true"] { border-color: var(--err); }
   border-radius: 8px;
 }
 .playlist-items li + li { border-top: 1px solid var(--border); }
+.playlist-more { margin-top: 8px; }
 .playlist-items label {
   display: flex;
   align-items: baseline;

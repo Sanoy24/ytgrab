@@ -75,7 +75,7 @@ Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`
 
 ## Download a playlist
 
-Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists up to 50 videos, all ticked. Untick what you don't want, choose a preset (it applies to every video), and press **Add N videos**. Nothing is queued until you press that button. Private and deleted videos are skipped. For a link to one video inside a playlist, YTGrab downloads just that video and offers **Download the whole playlist instead**. YouTube Mixes (auto-generated radio lists) can't be downloaded as playlists.
+Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 50 videos, all ticked; **Load next 50** shows more. Up to 200 can be added at a time. Untick what you don't want, choose a preset (it applies to every video), and press **Add N videos**. Nothing is queued until you press that button. Private and deleted videos are skipped. For a link to one video inside a playlist, YTGrab downloads just that video and offers **Download the whole playlist instead**. YouTube Mixes (auto-generated radio lists) can't be downloaded as playlists.
 
 ## Queue and history
 

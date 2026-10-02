@@ -164,8 +164,12 @@ func ParseVideoURL(raw string) (string, string, error) {
 	return parsed.String(), videoID, nil
 }
 
-// MaxPlaylistItems bounds how many jobs one playlist confirmation can create.
-const MaxPlaylistItems = 50
+// Playlists are listed PlaylistPageSize entries at a time, and one confirmation creates
+// at most MaxPlaylistJobs jobs.
+const (
+	PlaylistPageSize = 50
+	MaxPlaylistJobs  = 200
+)
 
 var ErrInvalidPlaylistURL = errors.New("Enter a YouTube playlist link.")
 var ErrMixPlaylist = errors.New("YouTube Mixes are generated endlessly and can't be downloaded as a playlist. Open a single video instead.")

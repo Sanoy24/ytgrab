@@ -65,7 +65,7 @@ When a valid link is entered, the page asks the server to inspect it (`yt-dlp --
 
 ## Playlists
 
-A playlist link is listed with one `--flat-playlist` request (at most 50 entries, sharing the inspection throttle). The user reviews the list and confirms with a button that states the count. The server validates every video ID before creating any job, builds each URL itself, and skips videos that are already queued. YouTube Mixes are refused because they are generated endlessly.
+A playlist link is listed 50 entries at a time, each page one `--flat-playlist --playlist-items <start>:<end>` request sharing the inspection throttle. The user reviews the list and confirms with a button that states the count. The server validates every video ID before creating any job, builds each URL itself, and skips videos that are already queued. YouTube Mixes are refused because they are generated endlessly.
 
 ## Settings and the folder window
 
@@ -112,5 +112,6 @@ yt-dlp is the part most likely to need updating, because YouTube changes often. 
 | YouTube block pauses | 15, 30, then 60 minutes; up to 3 attempts per job |
 | Spacing between download starts | 3–8 seconds |
 | Inspection cache | 64 entries, 10 minutes |
-| Playlist limit | 50 videos |
+| Playlist page size | 50 videos |
+| Videos per playlist confirmation | 200 |
 | Shutdown timeout | 5 seconds |

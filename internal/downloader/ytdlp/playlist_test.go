@@ -19,29 +19,29 @@ func TestParsePlaylistSkipsUnavailableAndCaps(t *testing.T) {
 		{"_type":"url","id":"jNQXAC9IVRw","title":"[Private video]","duration":null},
 		{"_type":"url","id":"aqz-KE-bpKQ","title":"[Deleted video]"},
 		{"_type":"url","id":"bad id","title":"Broken"}]}`)
-	list, err := parsePlaylist(data, "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb")
+	list, err := parsePlaylist(data, "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb", 1)
 	if err != nil || list.Title != "Lectures" || len(list.Entries) != 1 || list.Entries[0].VideoID != "dQw4w9WgXcQ" || list.Unavailable != 3 || list.Truncated {
 		t.Fatalf("playlist = %+v, %v", list, err)
 	}
 
 	var entries []string
-	for i := range domain.MaxPlaylistItems + 1 {
+	for i := range domain.PlaylistPageSize + 1 {
 		entries = append(entries, fmt.Sprintf(`{"id":"video%06d","title":"Video %d"}`, i, i))
 	}
 	big := []byte(`{"id":"PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb","title":"Big","playlist_count":120,"entries":[` + strings.Join(entries, ",") + `]}`)
-	list, err = parsePlaylist(big, "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb")
-	if err != nil || len(list.Entries) != domain.MaxPlaylistItems || !list.Truncated || list.Total == nil || *list.Total != 120 {
+	list, err = parsePlaylist(big, "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb", 1)
+	if err != nil || len(list.Entries) != domain.PlaylistPageSize || !list.Truncated || list.Next == nil || *list.Next != 51 || list.Total == nil || *list.Total != 120 {
 		t.Fatalf("big playlist = %d entries, truncated %v, total %v, %v", len(list.Entries), list.Truncated, list.Total, err)
 	}
 
-	if _, err := parsePlaylist([]byte(`{"id":"PLother00000","entries":[]}`), "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb"); err == nil {
+	if _, err := parsePlaylist([]byte(`{"id":"PLother00000","entries":[]}`), "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb", 1); err == nil {
 		t.Fatal("mismatched playlist ID accepted")
 	}
 }
 
 func TestPlaylistArgumentsStayFlatAndBounded(t *testing.T) {
-	args := strings.Join(playlistArgs("https://www.youtube.com/playlist?list=PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb"), " ")
-	for _, want := range []string{"--flat-playlist", "--dump-single-json", fmt.Sprintf("--playlist-items 1:%d", domain.MaxPlaylistItems+1), "-- https://www.youtube.com/playlist?list="} {
+	args := strings.Join(playlistArgs("https://www.youtube.com/playlist?list=PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb", 1), " ")
+	for _, want := range []string{"--flat-playlist", "--dump-single-json", fmt.Sprintf("--playlist-items 1:%d", domain.PlaylistPageSize+1), "-- https://www.youtube.com/playlist?list="} {
 		if !strings.Contains(args, want) {
 			t.Errorf("playlist args missing %q: %s", want, args)
 		}
@@ -76,7 +76,7 @@ func TestChecksWaitDuringCooldown(t *testing.T) {
 			return err
 		},
 		"playlist": func() error {
-			_, err := inspector.ListPlaylist(context.Background(), "https://www.youtube.com/playlist?list=PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2")
+			_, err := inspector.ListPlaylist(context.Background(), "https://www.youtube.com/playlist?list=PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2", 1)
 			return err
 		},
 	} {
@@ -93,10 +93,25 @@ func TestDownloadsAndListingsPaceRequests(t *testing.T) {
 	job, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioM4A)
 	for name, args := range map[string][]string{
 		"download": buildArgs(job, config.Config{}),
-		"playlist": playlistArgs("https://www.youtube.com/playlist?list=PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2"),
+		"playlist": playlistArgs("https://www.youtube.com/playlist?list=PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2", 1),
 	} {
 		if !strings.Contains(strings.Join(args, " "), "--sleep-requests 0.5") {
 			t.Errorf("%s arguments do not pace requests: %v", name, args)
 		}
+	}
+}
+
+func TestLaterPlaylistPages(t *testing.T) {
+	if got := strings.Join(playlistArgs("https://www.youtube.com/playlist?list=PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb", 51), " "); !strings.Contains(got, "--playlist-items 51:101") {
+		t.Fatalf("second page args = %s", got)
+	}
+	var entries []string
+	for i := range 30 { // the last page of an 80-video playlist
+		entries = append(entries, fmt.Sprintf(`{"id":"video%06d","title":"Video %d"}`, 51+i, 51+i))
+	}
+	data := []byte(`{"id":"PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb","title":"Big","playlist_count":80,"entries":[` + strings.Join(entries, ",") + `]}`)
+	list, err := parsePlaylist(data, "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb", 51)
+	if err != nil || list.Start != 51 || len(list.Entries) != 30 || list.Next != nil || list.Truncated {
+		t.Fatalf("last page = start %d, %d entries, next %v, truncated %v, %v", list.Start, len(list.Entries), list.Next, list.Truncated, err)
 	}
 }

@@ -11,7 +11,7 @@ A local YouTube downloader with a clean browser interface. Paste a link, pick th
 ## Features
 
 - **Pick the real quality.** Paste a link and choose from the video's actual resolutions and audio streams, with sizes — or use a quick preset (best, 1080p, 720p, M4A, MP3).
-- **Playlists, with a review step.** See up to 50 videos, untick what you don't want, and confirm before anything is queued.
+- **Playlists, with a review step.** Browse any length of playlist 50 at a time, untick what you don't want, and confirm before anything is queued (up to 200 at once).
 - **Live progress.** Speed, size, and time left for every download, updated as it happens.
 - **Resume instead of restart.** Cancel, retry, or close the app mid-download — a retry continues from the partial file.
 - **Sensible files.** Names include the quality (`Title [id] 1080p.mp4`); H.264 picks are saved as MP4.

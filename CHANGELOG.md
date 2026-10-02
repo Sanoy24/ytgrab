@@ -7,6 +7,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 ### Added
 
 - **More settings** under Save to: choose how many downloads run at once (1–4, applies immediately) and the format new links start with.
+- Playlists of any length: the review list loads 50 videos at a time with **Load next 50**, and up to 200 can be added at once (previously 50).
 - A download doesn't start when the drive has less than 256 MB free, and "disk full" errors are explained. `ytgrab doctor` shows free space for the download folder.
 
 ## [1.4.0] - 2026-10-02

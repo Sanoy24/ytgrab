@@ -103,8 +103,8 @@ class FixtureClient {
     return structuredClone(fx.inspection);
   }
 
-  async listPlaylist(url, { signal } = {}) {
-    await delay(1200, signal);
+  async listPlaylist(url, { signal, start = 1 } = {}) {
+    await delay(start > 1 ? 600 : 1200, signal);
     if (this.scenario === 'error')
       throw new ApiError('unreachable', 'Could not reach the local server.');
     if (this.scenario === 'blocked') {
@@ -113,7 +113,18 @@ class FixtureClient {
         'YouTube is limiting requests from this network. Wait a while, then retry.',
       );
     }
-    return structuredClone(fx.playlist);
+    if (url.includes('list=PLbig')) {
+      // A 230-video playlist, served in pages of 50.
+      const total = 230;
+      const entries = Array.from({ length: Math.max(0, Math.min(50, total - start + 1)) }, (_, i) => ({
+        video_id: `big${String(start + i).padStart(8, '0')}`,
+        title: `Episode ${start + i}`,
+        duration_seconds: 600 + ((start + i) % 7) * 60,
+      }));
+      const next = start + 50 <= total ? start + 50 : null;
+      return { id: 'PLbig', title: 'A very long series', entries, total, start, next, truncated: next !== null, unavailable: 0 };
+    }
+    return { ...structuredClone(fx.playlist), start: 1, next: null };
   }
 
   async createPlaylistJobs({ video_ids, preset }) {
@@ -366,8 +377,8 @@ class HttpClient {
   inspect(url, { signal } = {}) {
     return this.request('GET', `/api/inspect?url=${encodeURIComponent(url)}`, undefined, signal);
   }
-  listPlaylist(url, { signal } = {}) {
-    return this.request('GET', `/api/playlist?url=${encodeURIComponent(url)}`, undefined, signal);
+  listPlaylist(url, { signal, start = 1 } = {}) {
+    return this.request('GET', `/api/playlist?url=${encodeURIComponent(url)}&start=${start}`, undefined, signal);
   }
   createPlaylistJobs(body) {
     return this.request('POST', '/api/playlist/jobs', body).then(this.afterChange);
