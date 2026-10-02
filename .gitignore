@@ -19,3 +19,8 @@ PROGRESS.md
 
 # Browser automation output.
 .playwright-mcp/
+
+# Browser UI test dependencies and output.
+web/node_modules/
+web/test-results/
+web/playwright-report/

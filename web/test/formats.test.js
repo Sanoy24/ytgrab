@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+import { codecName, formatDuration, formatSize, groupFormats, matchPreset } from '../static/formats.js';
+import { inspection } from '../static/fixtures.js';
+
+test('groups video by resolution and frame rate, preferring H.264', () => {
+  const { video } = groupFormats(inspection);
+  const labels = video.map((v) => v.label);
+  assert.deepEqual(labels.slice(0, 4), ['2160p', '1440p', '1080p 60fps', '1080p']);
+  assert.equal(new Set(labels).size, labels.length, 'one row per resolution');
+  const p1080 = video.find((v) => v.label === '1080p');
+  assert.equal(p1080.id, '137', 'H.264 MP4 chosen over VP9 and AV1');
+  assert.match(p1080.detail, /^H\.264/);
+});
+
+test('lists audio by codec and bitrate and hides DRC copies', () => {
+  const { audio } = groupFormats(inspection);
+  assert.ok(!audio.some((a) => a.id.endsWith('-drc')));
+  assert.deepEqual(audio.map((a) => a.label), ['Opus · 135 kbps', 'AAC · 130 kbps', 'Opus · 70 kbps', 'Opus · 50 kbps', 'AAC · 49 kbps']);
+  const drcOnly = groupFormats({ audio: [{ format_id: '140-drc', ext: 'm4a', acodec: 'mp4a.40.2', abr: 129 }] });
+  assert.equal(drcOnly.audio.length, 1, 'a DRC stream is kept when it is the only one');
+});
+
+test('maps quick presets to the closest real format', () => {
+  const grouped = groupFormats(inspection);
+  assert.equal(matchPreset('video-1080', grouped).label, '1080p 60fps');
+  assert.equal(matchPreset('video-720', grouped).label, '720p 60fps');
+  assert.equal(matchPreset('audio-m4a', grouped).id, '140');
+  assert.equal(matchPreset('audio-mp3', grouped), null, 'MP3 stays a conversion');
+});
+
+test('formats sizes, durations, and codec names', () => {
+  assert.equal(formatSize(426_000_000), '426 MB');
+  assert.equal(formatSize(1_200_000_000), '1.2 GB');
+  assert.equal(formatDuration(19), '0:19');
+  assert.equal(formatDuration(3725), '1:02:05');
+  assert.equal(codecName('vp09.00.10.08'), 'VP9');
+  assert.equal(codecName('none'), '');
+});

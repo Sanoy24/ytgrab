@@ -20,6 +20,7 @@ Download failures are often caused by YouTube changes rather than YTGrab. Update
    ```sh
    go vet ./...
    go test ./...
+   cd web && npm test && npx playwright test   # when you change the browser UI
    ```
 4. Update the docs (`README.md`, `docs/`) and add a line under a new heading at the top of `CHANGELOG.md` when users would notice the change.
 

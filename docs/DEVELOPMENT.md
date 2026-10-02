@@ -43,11 +43,17 @@ YTGRAB_INTEGRATION=1 go test ./internal/app -run TestIntegrationDownload -v
 YTGRAB_MANUAL_PICKER=1 go test ./internal/picker -run TestManualPick -v
 ```
 
-The browser scripts are ES modules. `node --check` treats `.js` files as classic scripts and misses module-only errors, so check `.mjs` copies:
+The browser UI has its own tests in `web/` (Node 22 or newer):
 
 ```sh
-mkdir -p /tmp/ytgrab-js && for f in web/static/*.js; do cp "$f" "/tmp/ytgrab-js/$(basename "$f" .js).mjs"; node --check "/tmp/ytgrab-js/$(basename "$f" .js).mjs"; done
+cd web
+npm ci
+npm test                          # unit tests for link checks and format grouping
+npx playwright install chromium   # once
+npx playwright test               # drives the page in Chromium using its sample data
 ```
+
+The end-to-end tests use the page's `?fixture=` modes, so they need no server, tools, or network. CI runs both on every push.
 
 ## Previewing the UI without the server
 

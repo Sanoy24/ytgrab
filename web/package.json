@@ -1,0 +1,13 @@
+{
+  "name": "ytgrab-web",
+  "private": true,
+  "type": "module",
+  "description": "Tests for the YTGrab browser UI. The UI itself has no build step or runtime dependencies.",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
