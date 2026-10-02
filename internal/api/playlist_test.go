@@ -19,7 +19,7 @@ import (
 
 type fakePlaylistInspector struct{ fakeInspector }
 
-func (fakePlaylistInspector) ListPlaylist(_ context.Context, url string) (ytdlp.Playlist, error) {
+func (fakePlaylistInspector) ListPlaylist(_ context.Context, url string, start int) (ytdlp.Playlist, error) {
 	if _, _, err := domain.ParsePlaylistURL(url); err != nil {
 		return ytdlp.Playlist{}, err
 	}
@@ -59,7 +59,7 @@ func TestPlaylistListingAndConfirmedJobs(t *testing.T) {
 		t.Fatalf("bad ID = %d: %s", got.Code, got.Body.String())
 	}
 	var tooMany []string
-	for i := range domain.MaxPlaylistItems + 1 {
+	for i := range domain.MaxPlaylistJobs + 1 {
 		tooMany = append(tooMany, fmt.Sprintf(`"video%06d"`, i))
 	}
 	if got := request(http.MethodPost, "/api/playlist/jobs", `{"video_ids":[`+strings.Join(tooMany, ",")+`],"preset":"audio-m4a"}`); got.Code != http.StatusBadRequest {

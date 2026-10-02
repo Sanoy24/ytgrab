@@ -1,12 +1,15 @@
 package ytdlp
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/diskspace"
 	"github.com/Sanoy24/ytgrab/internal/domain"
 )
 
@@ -192,5 +195,27 @@ func TestProcessingBeforeTheDownloadIsIgnored(t *testing.T) {
 	}
 	if got := filter.apply(Event{Title: "x"}); got.Title != "x" {
 		t.Fatal("other fields must pass through")
+	}
+}
+
+func TestDownloadRefusedWhenTheDriveIsNearlyFull(t *testing.T) {
+	freeSpace = func(string) (uint64, error) { return 120_000_000, nil }
+	defer func() { freeSpace = diskspace.Free }()
+	job, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioM4A)
+	_, err := Downloader{Config: config.Config{DownloadsDir: t.TempDir()}}.Download(context.Background(), job, nil)
+	var toolError *Error
+	if !errors.As(err, &toolError) || toolError.Code != "disk_full" || !strings.Contains(toolError.Message, "120 MB") {
+		t.Fatalf("Download on a full drive = %v", err)
+	}
+}
+
+func TestOutOfSpaceDuringDownload(t *testing.T) {
+	for _, stderr := range []string{
+		"ERROR: unable to write data: [Errno 28] No space left on device",
+		"ERROR: unable to write data: [WinError 112] There is not enough space on the disk",
+	} {
+		if err, ok := classifyFailure(stderr).(*Error); !ok || err.Code != "disk_full" {
+			t.Errorf("classifyFailure(%q) = %v", stderr, err)
+		}
 	}
 }

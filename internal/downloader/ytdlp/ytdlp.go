@@ -16,6 +16,7 @@ import (
 
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/diskspace"
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/process"
 )
@@ -60,6 +61,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if downloader.CookiesBrowser != nil {
 		cfg.CookiesBrowser = downloader.CookiesBrowser()
+	}
+	if err := checkFreeSpace(cfg.DownloadsDir); err != nil {
+		return Result{}, err
 	}
 	path, err := deps.Find(cfg, "yt-dlp")
 	if err != nil {
@@ -214,6 +218,24 @@ func embedsCoverArt(job domain.Job) bool {
 	return job.Preset != nil && (*job.Preset == domain.AudioM4A || *job.Preset == domain.AudioMP3)
 }
 
+// minFreeSpace is the least free space a download may start with; below it, a download
+// would likely fail part-way and leave a partial file behind.
+const minFreeSpace = 256_000_000
+
+// freeSpace reports free bytes on a folder's drive; replaced in tests.
+var freeSpace = diskspace.Free
+
+func checkFreeSpace(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return nil // the download itself reports folder problems
+	}
+	free, err := freeSpace(dir)
+	if err != nil || free >= minFreeSpace {
+		return nil
+	}
+	return &Error{Code: "disk_full", Message: fmt.Sprintf("Only %s free on the drive with your download folder. Free up space or choose another folder, then Retry.", diskspace.Format(free))}
+}
+
 // browserName matches the plain lowercase names in settings.CookieBrowsers.
 var browserName = regexp.MustCompile(`^[a-z]{2,16}$`)
 
@@ -360,6 +382,8 @@ func confirmOutput(directory string, reportedPath string) (string, error) {
 func classifyFailure(stderr string) error {
 	lower := strings.ToLower(stderr)
 	switch {
+	case strings.Contains(lower, "no space left on device"), strings.Contains(lower, "not enough space on the disk"):
+		return &Error{Code: "disk_full", Message: "The drive with your download folder is full. Free up space or choose another folder, then Retry."}
 	// Checked first and by specific phrases: YouTube's bot check also mentions cookies.
 	case strings.Contains(lower, "cookie database"), strings.Contains(lower, "cookies database"), strings.Contains(lower, "failed to decrypt"), strings.Contains(lower, "failed to load cookies"), strings.Contains(lower, "unsupported browser"):
 		return &Error{Code: "cookies_failed", Message: "YTGrab couldn't use your browser's YouTube sign-in. Close that browser and retry, or choose another browser in the settings (on Windows, Firefox works best)."}

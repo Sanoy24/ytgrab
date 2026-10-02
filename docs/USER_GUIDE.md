@@ -75,7 +75,7 @@ Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`
 
 ## Download a playlist
 
-Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists up to 50 videos, all ticked. Untick what you don't want, choose a preset (it applies to every video), and press **Add N videos**. Nothing is queued until you press that button. Private and deleted videos are skipped. For a link to one video inside a playlist, YTGrab downloads just that video and offers **Download the whole playlist instead**. YouTube Mixes (auto-generated radio lists) can't be downloaded as playlists.
+Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 50 videos, all ticked; **Load next 50** shows more. Up to 200 can be added at a time. Untick what you don't want, choose a preset (it applies to every video), and press **Add N videos**. Nothing is queued until you press that button. Private and deleted videos are skipped. For a link to one video inside a playlist, YTGrab downloads just that video and offers **Download the whole playlist instead**. YouTube Mixes (auto-generated radio lists) can't be downloaded as playlists.
 
 ## Queue and history
 
@@ -89,7 +89,8 @@ Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists up to 50 v
 ## Settings and data
 
 - The first time, the page asks where to save downloads; nothing is downloaded until you choose. **Change…** next to **Save to** opens the folder window again, and **Type a path** lets you enter a full path instead. The folder applies to downloads that start afterwards and is remembered.
-- **YouTube sign-in** (under **Save to**) is off by default. If YouTube keeps blocking downloads even after the automatic pauses, choose your browser there: yt-dlp then uses that browser's YouTube sign-in. YTGrab never reads or stores the sign-in itself. Heavy use can get an account flagged, so a secondary account is safer. On Windows, Firefox works best, because recent Chrome and Edge versions protect their sign-in data in a way yt-dlp can't read; close the browser if reading fails.
+- **More settings** (under **Save to**) holds **Parallel downloads** (1–4 at a time, default 2; more rarely helps because YouTube limits speed per network), **Default format** (the format new links start with), and **YouTube sign-in**. Changes apply right away.
+- **YouTube sign-in** (in **More settings**) is off by default. If YouTube keeps blocking downloads even after the automatic pauses, choose your browser there: yt-dlp then uses that browser's YouTube sign-in. YTGrab never reads or stores the sign-in itself. Heavy use can get an account flagged, so a secondary account is safer. On Windows, Firefox works best, because recent Chrome and Edge versions protect their sign-in data in a way yt-dlp can't read; close the browser if reading fails.
 - The suggested folder is `Downloads\ytgrab` in your user folder; it is created when you pick it.
 - The job history is stored in `%AppData%\ytgrab\jobs.db` on Windows (`~/.config/ytgrab` on Linux, `~/Library/Application Support/ytgrab` on macOS).
 
@@ -123,4 +124,5 @@ Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and 
 | "another YTGrab is using the data folder" | A second copy was started with a different port. Use the copy that is already running. |
 | The page says "The ytgrab server isn't responding" | The console window was closed. Start YTGrab again and reload the page. |
 | Antivirus warns about `yt-dlp.exe` | It is a packaged Python program, which some scanners flag. Compare its SHA-256 with `manifest.json` and the official release. |
+| "Only … free on the drive with your download folder" or "The drive … is full" | Free up space or choose a folder on another drive with **Change…**, then Retry. `ytgrab doctor` shows how much space is free. |
 | "Choose an existing, writable absolute folder." | Enter a full path like `D:\Videos` for a folder that already exists. |

@@ -40,7 +40,15 @@ type Queue struct {
 	// spacing returns the minimum gap between starting two downloads.
 	spacing   func() time.Duration
 	nextStart time.Time
+
+	// limit, when set, is the current number of parallel downloads; reserved counts the
+	// slots in use.
+	limit    func() int
+	reserved int
 }
+
+// maxWorkers is the most parallel downloads the queue will ever run.
+const maxWorkers = 4
 
 // maxBlockedAttempts is how many times a job is tried while YouTube keeps blocking.
 const maxBlockedAttempts = 3
@@ -95,7 +103,11 @@ func (queue *Queue) Resume() {
 
 func (queue *Queue) Start(parent context.Context) {
 	queue.ctx, queue.cancel = context.WithCancel(parent)
-	for range queue.workers {
+	workers := queue.workers
+	if queue.limit != nil {
+		workers = maxWorkers // idle workers wait for a free slot
+	}
+	for range workers {
 		queue.group.Add(1)
 		go queue.worker()
 	}
@@ -137,17 +149,21 @@ func (queue *Queue) worker() {
 		if queue.cooldown != nil && queue.cooldown.Wait(queue.ctx) != nil {
 			return
 		}
-		jobs, err := queue.store.Queued(queue.ctx, 1)
-		if err == nil && len(jobs) != 0 {
-			if !queue.pace() {
-				return
-			}
-			// Another worker may have been blocked while this one waited its turn.
-			if _, paused := queue.PausedUntil(); paused {
+		if queue.reserve() {
+			jobs, err := queue.store.Queued(queue.ctx, 1)
+			if err == nil && len(jobs) != 0 {
+				ran := queue.pace()
+				// Another worker may have been blocked while this one waited its turn.
+				if _, paused := queue.PausedUntil(); ran && !paused {
+					queue.runJob(jobs[0])
+				}
+				queue.release()
+				if !ran {
+					return
+				}
 				continue
 			}
-			queue.runJob(jobs[0])
-			continue
+			queue.release()
 		}
 		select {
 		case <-queue.ctx.Done():
@@ -156,6 +172,37 @@ func (queue *Queue) worker() {
 		case <-timer.C:
 		}
 	}
+}
+
+// reserve takes one of the parallel-download slots, or reports that all are in use.
+func (queue *Queue) reserve() bool {
+	queue.mu.Lock()
+	defer queue.mu.Unlock()
+	if queue.reserved >= queue.currentLimit() {
+		return false
+	}
+	queue.reserved++
+	return true
+}
+
+func (queue *Queue) release() {
+	queue.mu.Lock()
+	queue.reserved--
+	queue.mu.Unlock()
+	queue.Wake() // let a waiting worker take the freed slot
+}
+
+func (queue *Queue) currentLimit() int {
+	if queue.limit == nil {
+		return queue.workers
+	}
+	return min(max(queue.limit(), 1), maxWorkers)
+}
+
+// SetLimit makes the number of parallel downloads follow a setting; changes apply to the
+// next job. Call before Start.
+func (queue *Queue) SetLimit(limit func() int) {
+	queue.limit = limit
 }
 
 // pace waits so consecutive downloads don't start at the same moment. It reports false

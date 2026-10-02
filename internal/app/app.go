@@ -62,6 +62,7 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	// One pause gate for downloads and format checks: when YouTube limits this network,
 	// everything waits instead of retrying into a longer block.
 	jobQueue.SetCooldown(cooldown.New())
+	jobQueue.SetLimit(appSettings.MaxDownloads)
 	jobQueue.Start(ctx)
 	defer jobQueue.Stop()
 	latest := newLatestYtdlp()

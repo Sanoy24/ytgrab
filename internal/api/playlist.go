@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
@@ -13,7 +15,7 @@ import (
 )
 
 type PlaylistLister interface {
-	ListPlaylist(context.Context, string) (ytdlp.Playlist, error)
+	ListPlaylist(ctx context.Context, url string, start int) (ytdlp.Playlist, error)
 }
 
 // titleSource is optionally implemented by inspectors that remember titles from recent
@@ -36,7 +38,16 @@ func applyCachedTitle(source any, job *domain.Job) {
 // confirmed video. The server builds every job URL from a validated video ID.
 func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore, controller JobController) {
 	mux.HandleFunc("GET /api/playlist", func(w http.ResponseWriter, r *http.Request) {
-		list, err := lister.ListPlaylist(r.Context(), r.URL.Query().Get("url"))
+		start := 1
+		if value := r.URL.Query().Get("start"); value != "" {
+			n, err := strconv.Atoi(value)
+			if err != nil || n < 1 || n > 100_000 {
+				writeError(w, http.StatusBadRequest, "invalid_request", "The start position must be a positive number.")
+				return
+			}
+			start = n
+		}
+		list, err := lister.ListPlaylist(r.Context(), r.URL.Query().Get("url"), start)
 		switch {
 		case err == nil:
 			writeJSON(w, http.StatusOK, list)
@@ -53,7 +64,7 @@ func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore
 			VideoIDs []string       `json:"video_ids"`
 			Preset   *domain.Preset `json:"preset"`
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 8192)
+		r.Body = http.MaxBytesReader(w, r.Body, 16384)
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&input); err != nil || decoder.Decode(new(any)) != io.EOF {
@@ -64,8 +75,8 @@ func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore
 			writeError(w, http.StatusBadRequest, "invalid_preset", "Choose a preset for the playlist videos.")
 			return
 		}
-		if len(input.VideoIDs) == 0 || len(input.VideoIDs) > domain.MaxPlaylistItems {
-			writeError(w, http.StatusBadRequest, "invalid_request", "Choose between 1 and 50 videos.")
+		if len(input.VideoIDs) == 0 || len(input.VideoIDs) > domain.MaxPlaylistJobs {
+			writeError(w, http.StatusBadRequest, "invalid_request", fmt.Sprintf("Choose between 1 and %d videos.", domain.MaxPlaylistJobs))
 			return
 		}
 		// Validate everything first so a bad request creates no jobs.

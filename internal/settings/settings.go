@@ -7,14 +7,28 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/Sanoy24/ytgrab/internal/domain"
 )
 
 const (
-	downloadsKey = "downloads_dir"
-	cookiesKey   = "cookies_browser"
+	downloadsKey     = "downloads_dir"
+	cookiesKey       = "cookies_browser"
+	maxDownloadsKey  = "max_downloads"
+	defaultPresetKey = "default_preset"
 )
+
+// Parallel downloads are bounded: more rarely helps against YouTube's limits.
+const (
+	MinDownloads     = 1
+	MaxDownloadsCap  = 4
+	defaultDownloads = 2
+)
+
+var ErrInvalidPreference = errors.New("That setting value isn't allowed.")
 
 // Browsers yt-dlp can read YouTube sign-in cookies from. Only these names are accepted,
 // so the setting can never become an arbitrary yt-dlp option.
@@ -34,6 +48,8 @@ type Manager struct {
 	store        Store
 	downloadsDir string
 	cookies      string
+	maxDownloads int
+	preset       domain.Preset
 	defaultDir   string
 	configured   bool
 }
@@ -55,7 +71,17 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if !slices.Contains(CookieBrowsers, cookies) {
 		cookies = ""
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	maxDownloads := defaultDownloads
+	if saved, ok, err := store.GetSetting(ctx, maxDownloadsKey); err == nil && ok {
+		if n, err := strconv.Atoi(saved); err == nil && n >= MinDownloads && n <= MaxDownloadsCap {
+			maxDownloads = n
+		}
+	}
+	preset := domain.VideoBest
+	if saved, ok, err := store.GetSetting(ctx, defaultPresetKey); err == nil && ok && domain.Preset(saved).Valid() {
+		preset = domain.Preset(saved)
+	}
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, defaultDir: defaultDirectory, configured: found || explicit}, nil
 }
 
 // CookiesBrowser returns the browser whose YouTube sign-in yt-dlp should use, or "" (off).
@@ -76,6 +102,47 @@ func (manager *Manager) SetCookiesBrowser(ctx context.Context, browser string) e
 		return fmt.Errorf("save sign-in setting: %w", err)
 	}
 	manager.cookies = browser
+	return nil
+}
+
+// MaxDownloads is how many downloads may run at once.
+func (manager *Manager) MaxDownloads() int {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.maxDownloads
+}
+
+// SetMaxDownloads changes how many downloads run at once (1–4); it applies immediately.
+func (manager *Manager) SetMaxDownloads(ctx context.Context, n int) error {
+	if n < MinDownloads || n > MaxDownloadsCap {
+		return ErrInvalidPreference
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, maxDownloadsKey, strconv.Itoa(n)); err != nil {
+		return fmt.Errorf("save parallel downloads: %w", err)
+	}
+	manager.maxDownloads = n
+	return nil
+}
+
+// DefaultPreset is the format the page selects for new links.
+func (manager *Manager) DefaultPreset() domain.Preset {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.preset
+}
+
+func (manager *Manager) SetDefaultPreset(ctx context.Context, preset domain.Preset) error {
+	if !preset.Valid() {
+		return ErrInvalidPreference
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, defaultPresetKey, string(preset)); err != nil {
+		return fmt.Errorf("save default format: %w", err)
+	}
+	manager.preset = preset
 	return nil
 }
 

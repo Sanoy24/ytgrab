@@ -17,20 +17,26 @@ type PlaylistEntry struct {
 	DurationSeconds *float64 `json:"duration_seconds"`
 }
 
-// Playlist lists at most domain.MaxPlaylistItems downloadable entries. Total is YouTube's
-// count when known; Truncated means more entries exist beyond the listed ones.
+// Playlist is one page of up to domain.PlaylistPageSize entries, starting at the 1-based
+// position Start. Total is YouTube's count when known. Next is the position of the
+// following page, or nil on the last page; Truncated reports the same.
 type Playlist struct {
 	ID          string          `json:"id"`
 	Title       string          `json:"title"`
 	Entries     []PlaylistEntry `json:"entries"`
 	Total       *int            `json:"total"`
+	Start       int             `json:"start"`
+	Next        *int            `json:"next"`
 	Truncated   bool            `json:"truncated"`
 	Unavailable int             `json:"unavailable"`
 }
 
 // ListPlaylist reads a playlist's entries without resolving each video, sharing the
 // inspector's request throttle.
-func (inspector *Inspector) ListPlaylist(ctx context.Context, rawURL string) (Playlist, error) {
+func (inspector *Inspector) ListPlaylist(ctx context.Context, rawURL string, start int) (Playlist, error) {
+	if start < 1 {
+		start = 1
+	}
 	url, listID, err := domain.ParsePlaylistURL(rawURL)
 	if err != nil {
 		return Playlist{}, err
@@ -47,7 +53,7 @@ func (inspector *Inspector) ListPlaylist(ctx context.Context, rawURL string) (Pl
 		return Playlist{}, err
 	}
 	defer release()
-	output, err := inspector.runJSON(ctx, path, playlistArgs(url), 45*time.Second)
+	output, err := inspector.runJSON(ctx, path, playlistArgs(url, start), 45*time.Second)
 	inspector.noteResult(err)
 	var toolError *Error
 	if errors.As(err, &toolError) && toolError.Code == "video_unavailable" {
@@ -56,7 +62,7 @@ func (inspector *Inspector) ListPlaylist(ctx context.Context, rawURL string) (Pl
 	if err != nil {
 		return Playlist{}, err
 	}
-	list, err := parsePlaylist(output, listID)
+	list, err := parsePlaylist(output, listID, start)
 	if err == nil {
 		inspector.rememberTitles(list)
 	}
@@ -86,16 +92,16 @@ func (inspector *Inspector) CachedTitle(videoID string) string {
 	return inspector.titles[videoID]
 }
 
-// playlistArgs asks for one entry beyond the limit so truncation can be detected.
-func playlistArgs(url string) []string {
+// playlistArgs asks for one page plus one entry, so a following page can be detected.
+func playlistArgs(url string, start int) []string {
 	return []string{
 		"--ignore-config", "--flat-playlist", "--dump-single-json", "--sleep-requests", "0.5",
-		"--playlist-items", fmt.Sprintf("1:%d", domain.MaxPlaylistItems+1),
+		"--playlist-items", fmt.Sprintf("%d:%d", start, start+domain.PlaylistPageSize),
 		"--", url,
 	}
 }
 
-func parsePlaylist(data []byte, expectedID string) (Playlist, error) {
+func parsePlaylist(data []byte, expectedID string, start int) (Playlist, error) {
 	var raw struct {
 		ID      string `json:"id"`
 		Title   string `json:"title"`
@@ -112,9 +118,9 @@ func parsePlaylist(data []byte, expectedID string) (Playlist, error) {
 	if raw.ID != expectedID {
 		return Playlist{}, &Error{Code: "video_unavailable", Message: "The listed playlist did not match the requested link."}
 	}
-	list := Playlist{ID: raw.ID, Title: raw.Title, Entries: []PlaylistEntry{}, Total: raw.Count}
+	list := Playlist{ID: raw.ID, Title: raw.Title, Entries: []PlaylistEntry{}, Total: raw.Count, Start: start}
 	for i, entry := range raw.Entries {
-		if i >= domain.MaxPlaylistItems {
+		if i >= domain.PlaylistPageSize {
 			list.Truncated = true
 			break
 		}
@@ -125,8 +131,12 @@ func parsePlaylist(data []byte, expectedID string) (Playlist, error) {
 		}
 		list.Entries = append(list.Entries, PlaylistEntry{VideoID: entry.ID, Title: entry.Title, DurationSeconds: entry.Duration})
 	}
-	if raw.Count != nil && *raw.Count > domain.MaxPlaylistItems {
+	if raw.Count != nil && *raw.Count >= start+domain.PlaylistPageSize {
 		list.Truncated = true
+	}
+	if list.Truncated {
+		next := start + domain.PlaylistPageSize
+		list.Next = &next
 	}
 	if len(list.Entries) == 0 {
 		return Playlist{}, &Error{Code: "video_unavailable", Message: "This playlist has no downloadable videos."}

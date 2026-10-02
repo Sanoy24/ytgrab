@@ -21,11 +21,12 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `DELETE` | `/api/jobs/{id}` | Remove a finished, failed, or cancelled job from the history; `?delete_file=true` also deletes a finished job's file |
 | `POST` | `/api/history/clear` | Remove all finished, failed, and cancelled jobs, `{ "removed": 3 }`; files are kept |
 | `GET` | `/api/inspect?url=…` | A video's formats, grouped into video and audio |
-| `GET` | `/api/playlist?url=…` | Up to 50 playlist entries for review |
+| `GET` | `/api/playlist?url=…&start=1` | One page of up to 50 playlist entries for review; `next` gives the following page's `start` |
 | `POST` | `/api/playlist/jobs` | One preset job per confirmed video |
 | `GET` | `/api/settings` | Output-folder settings |
 | `PUT` | `/api/settings` | Set the output folder to a typed path |
 | `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
+| `PUT` | `/api/settings/preferences` | Set `max_downloads` (1–4) and/or `default_preset`; applies immediately |
 | `PUT` | `/api/settings/cookies` | Turn browser sign-in on (`{ "browser": "firefox" }`) or off (`""`); only listed browsers are accepted |
 | `POST` | `/api/settings/use-default` | Create and use the suggested folder |
 
@@ -107,7 +108,9 @@ Field names follow yt-dlp's format info. Errors: `invalid_url`, `video_unavailab
   "title": "Project Gold",
   "entries": [{ "video_id": "nV_awXI9XJY", "title": "…", "duration_seconds": 261 }],
   "total": 7,          // YouTube's count, when known
-  "truncated": false,  // true when more than 50 entries exist
+  "start": 1,          // position of the first entry on this page
+  "next": null,        // start of the next page, or null on the last page
+  "truncated": false,  // true when more entries follow
   "unavailable": 0     // private or deleted entries that were skipped
 }
 
