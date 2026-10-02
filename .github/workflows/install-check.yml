@@ -1,0 +1,67 @@
+name: Install check
+
+# Installs the published release the way users do — Homebrew and the curl installer on a
+# real Mac, Scoop on Windows — and checks that YTGrab starts. Runs after each release
+# (once the tap and bucket are updated) and on demand from the Actions tab.
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  homebrew:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: macos-latest
+    steps:
+      - name: Install with Homebrew
+        run: brew install sanoy24/tap/ytgrab
+      - name: Check
+        run: |
+          ytgrab --version
+          ytgrab doctor
+          brew test ytgrab
+      - uses: actions/checkout@v4
+      - name: Start the server
+        run: sh .github/scripts/smoke.sh ytgrab
+
+  installer:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: macos-latest
+    steps:
+      - name: Install with the curl installer
+        run: curl -fsSL https://raw.githubusercontent.com/Sanoy24/ytgrab/main/install.sh | YTGRAB_NO_SETUP=1 sh
+      - name: Check
+        run: |
+          ~/.local/bin/ytgrab --version
+          ~/.local/bin/ytgrab doctor || true   # yt-dlp and FFmpeg aren't installed here
+      - uses: actions/checkout@v4
+      - name: Start the server
+        run: sh .github/scripts/smoke.sh ~/.local/bin/ytgrab
+
+  scoop:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: windows-latest
+    steps:
+      - name: Install with Scoop
+        shell: pwsh
+        run: |
+          Invoke-RestMethod https://get.scoop.sh -OutFile install-scoop.ps1
+          ./install-scoop.ps1 -RunAsAdmin
+          "$env:USERPROFILE\scoop\shims" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          & "$env:USERPROFILE\scoop\shims\scoop.cmd" bucket add sanoy24 https://github.com/Sanoy24/scoop-bucket
+          & "$env:USERPROFILE\scoop\shims\scoop.cmd" install sanoy24/ytgrab
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check
+        shell: pwsh
+        run: |
+          ytgrab --version
+          ytgrab doctor
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/checkout@v4
+      - name: Start the server
+        shell: bash
+        run: sh .github/scripts/smoke.sh "$(cygpath -u "$USERPROFILE")/scoop/apps/ytgrab/current/ytgrab.exe"
