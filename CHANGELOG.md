@@ -6,6 +6,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Part of a video.** Enter a start and end time to download just that section, cut exactly; the file name includes the range.
 - **Playlist folders.** A playlist's videos can be saved into a folder named after the playlist (on by default, remembered if you turn it off).
 - **Speed limit.** In More settings, cap each download at 0.5 to 10 MB/s to leave bandwidth for other things.
 - **Subtitles.** In More settings, add subtitles in a chosen language to video downloads, either inside the video or as an .srt file next to it. Uses the creator's subtitles, or YouTube's automatic ones.

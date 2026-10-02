@@ -145,6 +145,22 @@ h1, h2, h3, p { margin: 0; }
 .update-command { display: block; margin-top: 6px; padding: 6px 8px; border-radius: 6px; background: var(--surface); overflow-x: auto; white-space: nowrap; }
 .update-actions { display: flex; align-items: center; gap: 8px; }
 .update-actions a.btn { text-decoration: none; }
+
+/* Only part of the video */
+.clip { margin: 4px 0 14px; }
+.clip summary { cursor: pointer; font-size: 0.85rem; color: var(--info); }
+.clip-fields { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.clip-fields label { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; }
+.clip-fields input {
+  width: 6.5rem;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
 #pause-text { font-variant-numeric: tabular-nums; }
 .tools { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
 .tools li {

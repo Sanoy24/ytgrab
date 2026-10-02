@@ -167,3 +167,24 @@ test('saves a playlist into its own folder by default', async ({ page }) => {
   await expect(page.locator('#playlist-items li')).toHaveCount(50);
   await expect(folder).not.toBeChecked();
 });
+
+test('downloads only part of a video', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await expect(page.locator('#clip')).toBeHidden();
+  await page.locator('#url').fill('https://youtu.be/aBcDeFgHiJk');
+  await expect(page.locator('#inspect')).toContainText('full walkthrough');
+  await page.getByText('Only part of the video').click();
+  await page.locator('#clip-start').fill('1:75');
+  await page.locator('#submit').click();
+  await expect(page.locator('#clip-error')).toContainText('minutes:seconds');
+  await page.locator('#clip-start').fill('1:05');
+  await page.locator('#clip-end').fill('2:30');
+  await page.locator('#submit').click();
+  await expect(page.locator('#toast')).toContainText('Only 1:05–2:30.');
+  await expect(page.locator('#queue .job-meta').first()).toContainText('1:05–2:30');
+  await expect(page.locator('#clip')).toBeHidden();
+  // Playlists don't offer it.
+  await page.locator('#url').fill('https://www.youtube.com/playlist?list=PLbig0000000000');
+  await expect(page.locator('#playlist-items li')).toHaveCount(50);
+  await expect(page.locator('#clip')).toBeHidden();
+});

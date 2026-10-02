@@ -207,6 +207,11 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	if isVideo(job) {
 		args = append(args, subtitleArgs(cfg.SubtitlesMode, cfg.SubtitlesLang)...)
 	}
+	if job.Section != nil && job.Section.Valid() {
+		// Exact cuts re-encode just the start and end; without them the clip would begin at
+		// the nearest keyframe, often seconds early.
+		args = append(args, "--download-sections", "*"+seconds(job.Section.Start)+"-"+seconds(job.Section.End), "--force-keyframes-at-cuts")
+	}
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
 			args = append(args, "-f", videoSelector(*job.Format), "--merge-output-format", "mp4/webm/mkv")
@@ -299,6 +304,20 @@ func cookieArgs(browser string) []string {
 // outputTemplate names files by quality so different picks of one video never collide;
 // otherwise yt-dlp would report an earlier quality as "already downloaded".
 func outputTemplate(job domain.Job) string {
+	name := baseTemplate(job)
+	if job.Section != nil && job.Section.Valid() {
+		// A clip never takes the full video's name.
+		name = strings.TrimSuffix(name, ".%(ext)s") + " " + job.Section.Label() + ".%(ext)s"
+	}
+	return name
+}
+
+// seconds formats a time for --download-sections, which takes plain seconds.
+func seconds(s float64) string {
+	return strconv.FormatFloat(s, 'f', -1, 64)
+}
+
+func baseTemplate(job domain.Job) string {
 	const base = "%(title).150B [%(id)s]"
 	switch {
 	case job.Format != nil && job.Format.Kind == "video":

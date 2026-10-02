@@ -98,6 +98,10 @@ Files include the video's title, channel, upload date, and chapters; M4A and MP3
 
 Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`), so different qualities of one video never overwrite each other.
 
+## Download part of a video
+
+For a single video, open **Only part of the video** below the formats and enter a **Start** and **End** time, like `1:05` and `2:30` (or `1:02:30` for longer videos). Leave Start empty to begin at the start, or End empty to go to the end. The clip is cut exactly at those times, which takes a little extra processing, and its file name includes the range (`Title [id] 720p 1m05s-2m30s.mp4`), so it never replaces a full download. A video can be in the queue once at a time, so add the full video and a clip of it one after the other.
+
 ## Download several videos at once
 
 Paste several video links into the link field at once, one per line or separated by spaces (from a document, a chat, or a list you made). YTGrab shows them in a list like a playlist: untick any you don't want, choose a preset, and press **Add N videos**. Repeated links are added once. Playlist links and anything that isn't a single-video link are skipped, with a note saying how many; paste a playlist on its own to review its videos.
