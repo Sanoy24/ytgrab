@@ -42,6 +42,12 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// subtitleSettings is implemented by settings that can add subtitles to video downloads.
+type subtitleSettings interface {
+	Subtitles() (mode, lang string)
+	SetSubtitles(ctx context.Context, mode, lang string) error
+}
+
 // startupSettings is implemented by settings that can start YTGrab when the user signs in.
 type startupSettings interface {
 	StartAtLoginSupported() bool
@@ -76,6 +82,10 @@ func settingsBody(settings Settings) map[string]any {
 	}
 	if startup, ok := settings.(startupSettings); ok && startup.StartAtLoginSupported() {
 		body["start_at_login"] = startup.StartAtLogin()
+	}
+	if subtitles, ok := settings.(subtitleSettings); ok {
+		body["subtitles_mode"], body["subtitles_lang"] = subtitles.Subtitles()
+		body["subtitle_languages"] = settingspkg.SubtitleLanguages
 	}
 	return body
 }
@@ -161,6 +171,31 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					writeError(w, http.StatusBadRequest, "invalid_browser", err.Error())
 					return
 				}
+				writeError(w, http.StatusInternalServerError, "storage", "Could not save the setting.")
+				return
+			}
+			writeJSON(w, http.StatusOK, settingsBody(settings))
+		})
+	}
+	if subtitles, ok := settings.(subtitleSettings); ok {
+		mux.HandleFunc("PUT /api/settings/subtitles", func(w http.ResponseWriter, r *http.Request) {
+			var input struct {
+				Mode string `json:"mode"`
+				Lang string `json:"lang"`
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, 1024)
+			decoder := json.NewDecoder(r.Body)
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&input); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_request", "Send a subtitle mode and language as JSON.")
+				return
+			}
+			err := subtitles.SetSubtitles(r.Context(), input.Mode, input.Lang)
+			if errors.Is(err, settingspkg.ErrInvalidPreference) {
+				writeError(w, http.StatusBadRequest, "invalid_preference", "Choose a listed subtitle option and language.")
+				return
+			}
+			if err != nil {
 				writeError(w, http.StatusInternalServerError, "storage", "Could not save the setting.")
 				return
 			}

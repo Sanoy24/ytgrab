@@ -229,6 +229,9 @@ class FixtureClient {
       max_downloads_limit: 4,
       default_preset: this.defaultPreset ?? 'video-best',
       start_at_login: this.startAtLogin ?? false,
+      subtitles_mode: this.subtitlesMode ?? 'off',
+      subtitles_lang: this.subtitlesLang ?? 'en',
+      subtitle_languages: ['en', 'am', 'ar', 'de', 'es', 'fr', 'hi', 'id', 'it', 'ja', 'ko', 'nl', 'pl', 'pt', 'ru', 'sw', 'tr', 'uk', 'vi', 'zh'],
       cookie_browsers: ['firefox', 'chrome', 'edge', 'brave', 'chromium', 'opera', 'vivaldi', 'safari'],
     };
   }
@@ -237,6 +240,13 @@ class FixtureClient {
     await delay(200);
     if (max_downloads !== undefined) this.maxDownloads = max_downloads;
     if (default_preset !== undefined) this.defaultPreset = default_preset;
+    return this.settingsBody();
+  }
+
+  async setSubtitles({ mode, lang }) {
+    await delay(200);
+    this.subtitlesMode = mode;
+    this.subtitlesLang = lang;
     return this.settingsBody();
   }
 
@@ -428,6 +438,10 @@ class HttpClient {
   // Saves { max_downloads, default_preset } (either or both).
   setPreferences(body) {
     return this.request('PUT', '/api/settings/preferences', body);
+  }
+  // Subtitles for video downloads: mode is 'off', 'embed', or 'file'; lang is a listed code.
+  setSubtitles({ mode, lang }) {
+    return this.request('PUT', '/api/settings/subtitles', { mode, lang });
   }
   // Starts YTGrab in the tray when the user signs in to Windows, or stops doing so.
   setStartAtLogin(enabled) {

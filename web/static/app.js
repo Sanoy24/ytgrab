@@ -1218,7 +1218,58 @@ async function onDirSubmit(e) {
 // Parallel downloads and the default format; both apply right away.
 let presetApplied = false;
 
+// Language names in English, from the browser where it knows them.
+const languageNames = (() => {
+  try {
+    const names = new Intl.DisplayNames(['en'], { type: 'language' });
+    return (code) => names.of(code) || code;
+  } catch {
+    return (code) => code;
+  }
+})();
+
+function renderSubtitles(next) {
+  const supported = typeof next.subtitles_mode === 'string' && Array.isArray(next.subtitle_languages);
+  $('#pref-subs-row').hidden = !supported;
+  $('#pref-subs-lang-row').hidden = !supported || next.subtitles_mode === 'off';
+  if (!supported) return;
+  const lang = $('#pref-subs-lang');
+  if (lang.options.length !== next.subtitle_languages.length) {
+    lang.replaceChildren(
+      ...next.subtitle_languages
+        .map((code) => ({ code, name: languageNames(code) }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(({ code, name }) => el('option', { value: code, textContent: name })),
+    );
+  }
+  $('#pref-subs').value = next.subtitles_mode;
+  lang.value = next.subtitles_lang;
+}
+
+async function saveSubtitles(control) {
+  const mode = $('#pref-subs').value;
+  const lang = $('#pref-subs-lang').value;
+  control.disabled = true;
+  try {
+    applySettings(await client.setSubtitles({ mode, lang }));
+    const name = languageNames(lang);
+    toast(
+      mode === 'off'
+        ? 'Videos will download without subtitles.'
+        : mode === 'embed'
+          ? `${name} subtitles will be added to new video downloads.`
+          : `${name} subtitles will be saved next to new video downloads.`,
+    );
+  } catch (err) {
+    applySettings(settings);
+    toast(err.message, true);
+  } finally {
+    control.disabled = false;
+  }
+}
+
 function renderPreferences(next) {
+  renderSubtitles(next);
   // Only sent where YTGrab can start at sign-in (Windows).
   $('#pref-login-row').hidden = typeof next.start_at_login !== 'boolean';
   if (!$('#pref-login-row').hidden) $('#pref-login').checked = next.start_at_login;
@@ -1405,6 +1456,8 @@ function init() {
   $('#notify-toggle').addEventListener('click', toggleNotifications);
   $('#signin-browser').addEventListener('change', onSignInChange);
   $('#pref-login').addEventListener('change', onStartAtLoginChange);
+  $('#pref-subs').addEventListener('change', (e) => saveSubtitles(e.currentTarget));
+  $('#pref-subs-lang').addEventListener('change', (e) => saveSubtitles(e.currentTarget));
   $('#pref-parallel').addEventListener('change', (e) => {
     const n = Number(e.currentTarget.value);
     savePreference(e.currentTarget, { max_downloads: n }, n === 1 ? 'Downloads will run one at a time.' : `Up to ${n} downloads will run at once.`);

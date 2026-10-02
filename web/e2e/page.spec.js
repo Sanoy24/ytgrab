@@ -123,3 +123,16 @@ test('queues several pasted links at once', async ({ page }) => {
   await expect(page.locator('#queue .job')).toHaveCount(2);
   await expect(input).toHaveValue('');
 });
+
+test('turns on subtitles in a chosen language', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.getByText('More settings').click();
+  await expect(page.locator('#pref-subs-lang-row')).toBeHidden();
+  await page.getByLabel('Subtitles', { exact: true }).selectOption('embed');
+  await expect(page.locator('#toast')).toContainText('English subtitles will be added');
+  await expect(page.locator('#pref-subs-lang-row')).toBeVisible();
+  await page.getByLabel('Subtitle language').selectOption({ label: 'Amharic' });
+  await expect(page.locator('#toast')).toContainText('Amharic subtitles will be added');
+  await page.getByLabel('Subtitles', { exact: true }).selectOption('off');
+  await expect(page.locator('#pref-subs-lang-row')).toBeHidden();
+});

@@ -25,6 +25,9 @@ type Config struct {
 	ShutdownTimeout time.Duration
 	// CookiesBrowser is the saved browser-sign-in choice, filled in per download.
 	CookiesBrowser string
+	// SubtitlesMode ("off", "embed", "file") and SubtitlesLang are filled in per download.
+	SubtitlesMode string
+	SubtitlesLang string
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
 	OpenBrowser bool
