@@ -182,6 +182,7 @@ type startupManager struct {
 
 func (s *startupManager) StartAtLoginSupported() bool { return s.supported }
 func (s *startupManager) StartAtLogin() bool          { return s.on }
+func (s *startupManager) StartAtLoginLabel() string   { return "Start with Windows" }
 func (s *startupManager) SetStartAtLogin(on bool) error {
 	s.on = on
 	return nil

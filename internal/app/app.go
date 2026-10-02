@@ -95,6 +95,7 @@ type loginStart struct{ entry autostart.Entry }
 func (l loginStart) StartAtLoginSupported() bool   { return l.entry.Supported() }
 func (l loginStart) StartAtLogin() bool            { return l.entry.Enabled() }
 func (l loginStart) SetStartAtLogin(on bool) error { return l.entry.Set(on) }
+func (l loginStart) StartAtLoginLabel() string     { return autostart.Label() }
 
 func serve(ctx context.Context, cfg config.Config, output io.Writer, listener net.Listener, store api.JobStore, controller api.JobController, settings ...api.Settings) error {
 	inspector := ytdlp.NewInspector(cfg)

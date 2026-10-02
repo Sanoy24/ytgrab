@@ -13,6 +13,9 @@ var runKey = `Software\Microsoft\Windows\CurrentVersion\Run`
 
 const valueName = "YTGrab"
 
+// Label names the setting the way Windows users know it.
+func Label() string { return "Start with Windows" }
+
 // Supported reports whether this copy can be started at sign-in.
 func (e Entry) Supported() bool { return e.Exe != "" }
 

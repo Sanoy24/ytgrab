@@ -23,10 +23,11 @@ type Serve func(ctx context.Context, hooks Hooks) error
 type Actions struct {
 	Open       func(url string) // show the page in the browser
 	OpenFolder func(dir string) // show the download folder
-	// StartAtLogin and SetStartAtLogin back the "Start with Windows" item; leave them
-	// nil to hide it.
-	StartAtLogin    func() bool
-	SetStartAtLogin func(bool) error
+	// StartAtLogin and SetStartAtLogin back the start-at-login item, labelled
+	// StartAtLoginLabel; leave them nil to hide it.
+	StartAtLogin      func() bool
+	SetStartAtLogin   func(bool) error
+	StartAtLoginLabel string
 }
 
 type note struct {

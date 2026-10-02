@@ -25,6 +25,11 @@ jobs:
         run: test -z "$(gofmt -l .)" || { gofmt -l .; echo "Run gofmt -w on the files above."; exit 1; }
       - run: go vet ./...
       - run: go test ./...
+      - name: Linux tray and autostart on a private D-Bus
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y --no-install-recommends dbus desktop-file-utils
+          dbus-run-session -- go test -count=1 -v -run 'TestLinuxTray|TestLinuxEntry' ./internal/tray ./internal/autostart
 
   web:
     runs-on: ubuntu-latest
@@ -58,3 +63,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: shellcheck -s sh install.sh scripts/render-packages.sh
+      - name: Run the installer and check its menu entry
+        run: |
+          sudo apt-get install -y --no-install-recommends desktop-file-utils
+          YTGRAB_NO_SETUP=1 sh install.sh
+          desktop-file-validate ~/.local/share/applications/ytgrab.desktop
+          cat ~/.local/share/applications/ytgrab.desktop
+          ~/.local/bin/ytgrab --version

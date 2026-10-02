@@ -231,6 +231,7 @@ class FixtureClient {
       max_downloads_limit: 4,
       default_preset: this.defaultPreset ?? 'video-best',
       start_at_login: this.startAtLogin ?? false,
+      start_at_login_label: 'Start with Windows',
       speed_limit_kbps: this.speedLimit ?? 0,
       speed_limits: [0, 500, 1000, 2000, 5000, 10000],
       subtitles_mode: this.subtitlesMode ?? 'off',
