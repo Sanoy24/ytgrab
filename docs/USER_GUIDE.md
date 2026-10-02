@@ -124,4 +124,5 @@ Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and 
 | "another YTGrab is using the data folder" | A second copy was started with a different port. Use the copy that is already running. |
 | The page says "The ytgrab server isn't responding" | The console window was closed. Start YTGrab again and reload the page. |
 | Antivirus warns about `yt-dlp.exe` | It is a packaged Python program, which some scanners flag. Compare its SHA-256 with `manifest.json` and the official release. |
+| "Only … free on the drive with your download folder" or "The drive … is full" | Free up space or choose a folder on another drive with **Change…**, then Retry. `ytgrab doctor` shows how much space is free. |
 | "Choose an existing, writable absolute folder." | Enter a full path like `D:\Videos` for a folder that already exists. |

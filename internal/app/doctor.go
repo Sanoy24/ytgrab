@@ -10,6 +10,7 @@ import (
 
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/diskspace"
 	"github.com/Sanoy24/ytgrab/internal/setup"
 	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
@@ -45,7 +46,18 @@ func downloadFolderLine(cfg config.Config) setup.Line {
 	if !chosen {
 		return setup.Line{Status: "info", Name: "downloads", Detail: "No folder chosen yet; the page asks for one before the first download."}
 	}
-	return writableLine("downloads", dir, false)
+	line := writableLine("downloads", dir, false)
+	if line.Fail {
+		return line
+	}
+	if free, err := diskspace.Free(dir); err == nil {
+		line.Detail += " (" + diskspace.Format(free) + " free)"
+		if free < 1_000_000_000 {
+			line.Status = "warn"
+			line.Detail += ". Low on space: videos can be several GB."
+		}
+	}
+	return line
 }
 
 func writableLine(name, dir string, create bool) setup.Line {
