@@ -54,4 +54,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: shellcheck -s sh install.sh
+      - run: shellcheck -s sh install.sh scripts/render-packages.sh

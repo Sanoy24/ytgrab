@@ -58,3 +58,36 @@ jobs:
           if ($tag -match '-') { $ghArgs += '--prerelease' }
           $ghArgs += Get-ChildItem dist -File | ForEach-Object { $_.FullName }
           gh @ghArgs
+
+  # Updates the Homebrew tap and Scoop bucket after a stable release. Needs a
+  # PACKAGES_TOKEN secret: a fine-grained token with "Contents: read and write" on
+  # Sanoy24/homebrew-tap and Sanoy24/scoop-bucket. Without it the job is skipped.
+  packages:
+    needs: release
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    env:
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.PACKAGES_TOKEN != ''
+
+      - name: Update the Homebrew formula and Scoop manifest
+        if: env.PACKAGES_TOKEN != ''
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sh scripts/render-packages.sh "$version" rendered
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          publish() { # repo, file
+            git clone -q "https://x-access-token:${PACKAGES_TOKEN}@github.com/Sanoy24/$1.git" "$1"
+            cp "rendered/$2" "$1/$2"
+            cd "$1"
+            git add "$2"
+            if git diff --cached --quiet; then echo "$1 already has $version"; else
+              git commit -qm "Update YTGrab to $version" && git push -q
+            fi
+            cd ..
+          }
+          publish homebrew-tap Formula/ytgrab.rb
+          publish scoop-bucket bucket/ytgrab.json

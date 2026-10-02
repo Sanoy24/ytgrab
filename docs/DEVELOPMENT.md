@@ -90,6 +90,8 @@ git push origin v1.3.0
 
 The [release workflow](../.github/workflows/release.yml) downloads the official `yt-dlp.exe` and its checksums, runs the tests, builds Windows, Linux (x86 and ARM), and macOS archives, and publishes a GitHub release whose notes come from the changelog. A tag with a suffix, such as `v1.3.0-rc.1`, becomes a pre-release, which the installer and "latest" links ignore.
 
+For stable releases, a second job renders the Homebrew formula and Scoop manifest from the templates in [`packaging/`](../packaging/) with [`scripts/render-packages.sh`](../scripts/render-packages.sh) and pushes them to [Sanoy24/homebrew-tap](https://github.com/Sanoy24/homebrew-tap) and [Sanoy24/scoop-bucket](https://github.com/Sanoy24/scoop-bucket). It needs a `PACKAGES_TOKEN` repository secret: a fine-grained personal access token with **Contents: Read and write** on those two repositories. Without the secret the job is skipped; to update them by hand, run `scripts/render-packages.sh 1.3.0 out` and copy `out/Formula/ytgrab.rb` and `out/bucket/ytgrab.json` into the two repositories.
+
 To build the archives locally instead, put `yt-dlp.exe` and `SHA2-256SUMS` from the [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) in `tools/` and run on Windows:
 
 ```powershell

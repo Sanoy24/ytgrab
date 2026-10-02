@@ -1,0 +1,36 @@
+{
+    "version": "{{VERSION}}",
+    "description": "Local YouTube downloader with a browser interface",
+    "homepage": "https://github.com/Sanoy24/ytgrab",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/Sanoy24/ytgrab/releases/download/v{{VERSION}}/ytgrab-{{VERSION}}-windows-amd64.zip",
+            "hash": "{{SHA256_WINDOWS_AMD64}}"
+        }
+    },
+    "depends": [
+        "ffmpeg",
+        "deno"
+    ],
+    "bin": "ytgrab.exe",
+    "shortcuts": [
+        [
+            "ytgrab.exe",
+            "YTGrab",
+            "--open"
+        ]
+    ],
+    "notes": "Start YTGrab with 'ytgrab --open' or from the Start menu. It opens http://127.0.0.1:8787/ in your browser.",
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/Sanoy24/ytgrab/releases/download/v$version/ytgrab-$version-windows-amd64.zip",
+                "hash": {
+                    "url": "$url.sha256"
+                }
+            }
+        }
+    }
+}
