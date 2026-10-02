@@ -23,7 +23,7 @@ func TestUpdateRefusedWhileDownloadsRunOrAnotherUpdateIsActive(t *testing.T) {
 
 func TestLatestVersionIsCachedForADay(t *testing.T) {
 	calls := 0
-	latest := &latestYtdlp{lookup: func(context.Context) (string, error) { calls++; return "2026.09.30", nil }}
+	latest := &latestRelease{lookup: func(context.Context) (string, error) { calls++; return "2026.09.30", nil }}
 	latest.refresh() // what Get starts in the background, run synchronously here
 	for range 3 {
 		if got := latest.Get(); got != "2026.09.30" {

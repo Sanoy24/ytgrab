@@ -6,6 +6,8 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Update notices.** When a newer YTGrab is released, the page says so and shows the update command for how you installed it (Scoop, Homebrew, the installer, or `go install`), or links to the release for zip copies. It checks GitHub at most once a day.
+- **Open downloads folder** in the tray menu.
 - **Download status in the tray.** The tray icon's tooltip shows how many downloads are running and queued, and Windows shows a notification when downloads finish or fail while no YTGrab page is open.
 - **Start with Windows.** Turn it on in More settings or from the tray menu, and YTGrab starts in the tray when you sign in, without opening the browser. The entry follows YTGrab if its folder moves or Scoop updates it.
 

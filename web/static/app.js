@@ -238,6 +238,7 @@ const RUN_ORDER = { processing: 0, downloading: 1, inspecting: 2, queued: 3 };
 // Notifications are opt-in (the browser asks for permission) and only fire while the
 // YTGrab tab is in the background. The choice is remembered in this browser.
 const NOTIFY_KEY = 'ytgrab.notify';
+const UPDATE_DISMISSED_KEY = 'ytgrab.updateDismissed';
 let notifyOn = false;
 let lastStates = null; // job id -> state at the previous render
 
@@ -1273,6 +1274,59 @@ function requireFolder() {
   return false;
 }
 
+// ---------- YTGrab updates ----------
+
+let versionInfo = null;
+
+async function loadVersion() {
+  try {
+    versionInfo = await client.version();
+  } catch {
+    return; // older server or offline: no notice
+  }
+  renderUpdate();
+}
+
+function renderUpdate() {
+  const info = versionInfo;
+  let dismissed = '';
+  try {
+    dismissed = localStorage.getItem(UPDATE_DISMISSED_KEY) || '';
+  } catch {
+    // Storage unavailable: the notice can't be dismissed for good.
+  }
+  const show = Boolean(info?.update_available && info.latest && dismissed !== info.latest);
+  $('#update-banner').hidden = !show;
+  if (!show) return;
+  $('#update-title').textContent = `YTGrab ${info.latest} is available (you have ${info.version}).`;
+  const command = info.update_command || '';
+  $('#update-how').textContent = command
+    ? 'To update, quit YTGrab, run this, then start it again:'
+    : 'Download it from the release page and replace the files in your YTGrab folder.';
+  $('#update-command').hidden = !command;
+  $('#update-command').textContent = command;
+  $('#update-copy').hidden = !command;
+  $('#update-notes').href = info.release_url;
+}
+
+async function copyUpdateCommand() {
+  try {
+    await navigator.clipboard.writeText(versionInfo.update_command);
+    toast('Command copied.');
+  } catch {
+    toast('Copy the command from the notice.', true);
+  }
+}
+
+function dismissUpdate() {
+  try {
+    localStorage.setItem(UPDATE_DISMISSED_KEY, versionInfo.latest);
+  } catch {
+    // Storage unavailable: hide it for this page only.
+  }
+  $('#update-banner').hidden = true;
+}
+
 function init() {
   $('#fixture-note').hidden = !client.isFixture;
   $('#dir-edit').addEventListener('click', (e) =>
@@ -1364,9 +1418,14 @@ function init() {
     render();
   });
 
+  $('#update-copy').addEventListener('click', copyUpdateCommand);
+  $('#update-dismiss').addEventListener('click', dismissUpdate);
+
   loadHealth();
   loadSettings();
   loadJobs();
+  loadVersion();
+  setInterval(loadVersion, 6 * 60 * 60 * 1000); // the server checks GitHub at most daily
 }
 
 init();

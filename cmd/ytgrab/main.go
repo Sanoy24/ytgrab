@@ -15,6 +15,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/autostart"
 	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/reveal"
 	"github.com/Sanoy24/ytgrab/internal/setup"
 	"github.com/Sanoy24/ytgrab/internal/tray"
 )
@@ -75,7 +76,11 @@ func run(args []string) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	actions := tray.Actions{Open: openPage}
+	actions := tray.Actions{Open: openPage, OpenFolder: func(dir string) {
+		if err := reveal.OpenFolder(dir); err != nil {
+			fmt.Fprintf(os.Stderr, "could not open %s: %v\n", dir, err)
+		}
+	}}
 	if login := autostart.ForThisProgram(); login.Supported() {
 		// Keep "Start with Windows" pointing at this copy after a move or Scoop update.
 		if err := login.Refresh(); err != nil {

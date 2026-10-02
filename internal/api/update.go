@@ -40,3 +40,24 @@ func addUpdateRoute(mux *http.ServeMux, updater YtdlpUpdater) {
 		}
 	})
 }
+
+// VersionInfo says which YTGrab this is and whether a newer one is available.
+type VersionInfo struct {
+	Version         string `json:"version"`
+	Latest          string `json:"latest,omitempty"` // "" until the first check succeeds
+	UpdateAvailable bool   `json:"update_available"`
+	// UpdateCommand updates this copy; "" means download the release again.
+	UpdateCommand string `json:"update_command,omitempty"`
+	ReleaseURL    string `json:"release_url"`
+}
+
+// VersionReporter is optionally implemented by the settings value.
+type VersionReporter interface {
+	YTGrabVersion() VersionInfo
+}
+
+func addVersionRoute(mux *http.ServeMux, reporter VersionReporter) {
+	mux.HandleFunc("GET /api/system/version", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, reporter.YTGrabVersion())
+	})
+}

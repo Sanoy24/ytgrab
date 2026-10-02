@@ -140,6 +140,11 @@ h1, h2, h3, p { margin: 0; }
 .banner strong { display: block; margin-bottom: 2px; }
 .pause-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .pause-banner .hint { display: block; margin-top: 4px; }
+.update-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.update-text { min-width: 0; }
+.update-command { display: block; margin-top: 6px; padding: 6px 8px; border-radius: 6px; background: var(--surface); overflow-x: auto; white-space: nowrap; }
+.update-actions { display: flex; align-items: center; gap: 8px; }
+.update-actions a.btn { text-decoration: none; }
 #pause-text { font-variant-numeric: tabular-nums; }
 .tools { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
 .tools li {

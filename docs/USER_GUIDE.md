@@ -24,6 +24,8 @@ Scoop installs FFmpeg and Deno too and adds **YTGrab** to the Start menu; yt-dlp
 
 YTGrab then keeps running without a window. Its icon sits in the notification area by the clock — on Windows 11, new icons start under the **^** arrow; drag it onto the taskbar to keep it in view. Click the icon to open the page; right-click it and choose **Quit YTGrab** to stop. Unfinished downloads continue from where they stopped next time. Point at the icon to see how many downloads are running and queued. When downloads finish or fail while no YTGrab page is open, Windows shows a notification; with the page open, use **Notify me** in the page instead, so you aren't told twice. Next time, **Start YTGrab.cmd** opens the app straight away.
 
+The tray menu also has **Open downloads folder**, which opens the folder YTGrab currently saves to.
+
 Started from a terminal (`ytgrab --open`), YTGrab stays in that terminal and prints its log there; it shows the tray icon too, and Ctrl+C stops it. When it runs without a window, its log is written to `ytgrab.log` in the data folder, and anything that stops it from starting is shown in a message box.
 
 ### Check or repair the setup
@@ -108,6 +110,10 @@ Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 
 - **Show in folder** opens your file manager with the finished file selected. **Copy path** copies its full path.
 - **Remove** takes an entry off the list. For a finished download it asks first: **Remove from list** keeps the file, **Delete file too** deletes it.
 - **Clear** (next to the History heading) removes all finished, failed, and cancelled entries at once. Your files are kept.
+
+## Updating YTGrab
+
+Once a day YTGrab checks GitHub for a newer release. When there is one, the page shows a notice with the command for the way you installed it: `scoop update ytgrab`, `brew upgrade ytgrab`, the curl installer, or `go install`. Quit YTGrab, run it, and start YTGrab again. For a copy unpacked from a zip, the notice links to the release page; download the new zip and replace the files in your YTGrab folder (your settings and history are kept, because they live in the data folder). **Not now** hides the notice until the next version.
 
 ## Settings and data
 

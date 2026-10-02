@@ -11,8 +11,8 @@ import (
 
 // Hooks are how the server reports to the tray.
 type Hooks struct {
-	Ready    func(url string)       // the server is listening
-	Activity func(activity.Summary) // the queue changed; nil where there is no tray
+	Ready    func(url string, downloadsDir func() string) // the server is listening
+	Activity func(activity.Summary)                       // the queue changed; nil where there is no tray
 }
 
 // Serve runs the server until ctx ends. It calls hooks.Ready once the server is
@@ -21,7 +21,8 @@ type Serve func(ctx context.Context, hooks Hooks) error
 
 // Actions are what the tray menu does.
 type Actions struct {
-	Open func(url string) // show the page in the browser
+	Open       func(url string) // show the page in the browser
+	OpenFolder func(dir string) // show the download folder
 	// StartAtLogin and SetStartAtLogin back the "Start with Windows" item; leave them
 	// nil to hide it.
 	StartAtLogin    func() bool

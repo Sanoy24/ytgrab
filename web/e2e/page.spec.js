@@ -91,3 +91,15 @@ test('turns Start with Windows on and off from More settings', async ({ page }) 
   await box.uncheck();
   await expect(page.locator('#toast')).toContainText("won't start when you sign in");
 });
+
+test('offers a YTGrab update with the command for this install', async ({ page }) => {
+  await page.goto('/?fixture=default');
+  const banner = page.locator('#update-banner');
+  await expect(banner).toContainText('YTGrab 1.8.0 is available (you have 1.7.0).');
+  await expect(page.locator('#update-command')).toHaveText('scoop update ytgrab');
+  await page.getByRole('button', { name: 'Not now' }).click();
+  await expect(banner).toBeHidden();
+  await page.reload();
+  await expect(page.locator('#queue .job')).toHaveCount(3);
+  await expect(banner).toBeHidden(); // dismissed for this version
+});

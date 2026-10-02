@@ -76,7 +76,7 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	latest.Get() // look up the newest yt-dlp now, so the first page load can show it
 	updater := &ytdlpUpdater{cfg: cfg, running: jobQueue.Running, latest: latest}
 	serving = true
-	return serve(ctx, cfg, output, listener, store, jobQueue, serverSettings{Manager: appSettings, Picker: picker.New(), ytdlpUpdater: updater, loginStart: loginStart{autostart.ForThisProgram()}})
+	return serve(ctx, cfg, output, listener, store, jobQueue, serverSettings{Manager: appSettings, Picker: picker.New(), ytdlpUpdater: updater, ytgrabUpdates: ytgrabUpdatesFor(cfg.Version), loginStart: loginStart{autostart.ForThisProgram()}})
 }
 
 // serverSettings adds the desktop folder window, yt-dlp updates, and starting at sign-in
@@ -85,6 +85,7 @@ type serverSettings struct {
 	*settings.Manager
 	picker.Picker
 	*ytdlpUpdater
+	*ytgrabUpdates
 	loginStart
 }
 
@@ -141,7 +142,11 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 	served := make(chan error, 1)
 	go func() { served <- server.Serve(listener) }()
 	if cfg.Ready != nil {
-		cfg.Ready(url)
+		downloadsDir := func() string { return cfg.DownloadsDir }
+		if len(settings) != 0 {
+			downloadsDir = settings[0].DownloadsDir
+		}
+		cfg.Ready(url, downloadsDir)
 	}
 
 	select {
