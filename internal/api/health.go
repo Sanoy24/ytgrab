@@ -28,7 +28,13 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		_ = json.NewEncoder(w).Encode(check(r.Context()))
 	})
-	mux.Handle("/", http.FileServer(http.FS(web.Static())))
+	// The page is built into the program; "no-cache" makes the browser check for a newer
+	// copy each time, so an updated YTGrab never runs with the previous version's page.
+	static := http.FileServer(http.FS(web.Static()))
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		static.ServeHTTP(w, r)
+	}))
 	if jobs != nil {
 		addJobRoutes(mux, jobs, controller, inspector)
 		addHistoryRoutes(mux, jobs)

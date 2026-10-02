@@ -2,6 +2,16 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **A new look.** YTGrab has a sidebar with **Download**, **Library**, and **Settings**. Paste a link to see the video's thumbnail and choose a quality from a Video / Audio switch; downloads in progress show with thumbnails, and a small card in the sidebar follows them from any view. The Library can be searched. The page fits the window, so nothing important scrolls out of view.
+
+### Added
+
+- **Paste or drop anywhere.** Press Ctrl+V anywhere on the page, or drop a link onto it, to start a download.
+
 ## [1.8.0] - 2026-10-02
 
 ### Added
@@ -85,6 +95,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[Unreleased]: https://github.com/Sanoy24/ytgrab/compare/v1.8.0...HEAD
 [1.8.0]: https://github.com/Sanoy24/ytgrab/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/Sanoy24/ytgrab/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/Sanoy24/ytgrab/compare/v1.5.0...v1.6.0

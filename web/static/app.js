@@ -31,6 +31,7 @@ const ERROR_HINTS = {
 
 let jobs = [];
 let historyFilter = 'all';
+let historyQuery = ''; // library search, lower case
 const pending = new Set(); // job ids with an action in flight
 
 // ---------- URL validation ----------
@@ -437,13 +438,14 @@ function render() {
   const history = jobs
     .filter((j) => !isActive(j.state))
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
-  const shown = history.filter((j) =>
-    historyFilter === 'all'
-      ? true
-      : historyFilter === 'completed'
-        ? j.state === 'completed'
-        : j.state !== 'completed',
+  const shown = history.filter(
+    (j) =>
+      (historyFilter === 'all' ? true : historyFilter === 'completed' ? j.state === 'completed' : j.state !== 'completed') &&
+      (!historyQuery || jobTitle(j).toLowerCase().includes(historyQuery)),
   );
+  $('#queue-nav-count').textContent = queue.length || '';
+  $('#library-nav-count').textContent = history.length || '';
+  renderNow(queue);
 
   $('#queue-count').textContent = queue.length ? `(${queue.length})` : '';
   $('#history-count').textContent = history.length ? `(${history.length})` : '';
@@ -459,7 +461,9 @@ function render() {
   );
 
   let historyEmpty;
-  if (!history.length)
+  if (history.length && historyQuery && !shown.length)
+    historyEmpty = stateBlock('empty', 'No matches', `Nothing in the library matches "${$('#history-search').value.trim()}".`);
+  else if (!history.length)
     historyEmpty = stateBlock(
       'empty',
       'No downloads yet',
@@ -477,6 +481,126 @@ function render() {
   // Drop cached nodes for jobs that no longer exist.
   const ids = new Set(jobs.map((j) => j.id));
   for (const id of nodes.keys()) if (!ids.has(id)) nodes.delete(id);
+}
+
+// ---------- views ----------
+
+const VIEWS = ['download', 'library', 'settings'];
+let currentView = 'download';
+
+function showView(name, { focus = false } = {}) {
+  if (!VIEWS.includes(name)) name = 'download';
+  currentView = name;
+  for (const v of VIEWS) $(`#view-${v}`).hidden = v !== name;
+  for (const b of document.querySelectorAll('.nav-item')) {
+    if (b.dataset.view === name) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  }
+  const hash = name === 'download' ? '' : `#${name}`;
+  if (location.hash !== hash) history.replaceState(null, '', hash || location.pathname + location.search);
+  $('#main').scrollTop = 0;
+  if (focus) $(`#view-${name} h2`)?.focus?.();
+  renderNow(jobs.filter((j) => isActive(j.state)));
+}
+
+// The download in progress, shown in the sidebar while another view is open.
+function renderNow(queue) {
+  const box = $('#now');
+  const running = queue.filter((j) => j.state === 'downloading' || j.state === 'processing');
+  if (currentView === 'download' || !queue.length) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  // Prefer a download whose size is known, so the bar shows real progress.
+  const first = running.find((j) => j.progress?.total_bytes) || running[0] || queue[0];
+  const p = first.progress;
+  const pct = first.state === 'downloading' && p?.total_bytes ? Math.min(100, (p.downloaded_bytes / p.total_bytes) * 100) : null;
+  $('#now-title').textContent = jobTitle(first);
+  $('#now-meta').textContent = [
+    running.length ? `${running.length} downloading` : `${queue.length} queued`,
+    pct != null ? `${Math.floor(pct)}%` : first.state === 'processing' ? 'finishing' : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  $('#now-fill').style.width = `${pct ?? (first.state === 'processing' ? 100 : 0)}%`;
+}
+
+// ---------- video / audio switch ----------
+
+function kindOf(choice) {
+  return /^(audio:|preset:audio)/.test(choice) ? 'audio' : 'video';
+}
+
+// Shows one kind's choices. With pickFirst, a choice of the other kind is replaced by the
+// first one shown, so what is selected is always visible.
+function setKind(kind, { pickFirst = false } = {}) {
+  for (const tab of document.querySelectorAll('.kind-tab')) tab.setAttribute('aria-pressed', String(tab.dataset.kind === kind));
+  for (const group of document.querySelectorAll('.presets .preset-group')) group.hidden = group.dataset.kind !== kind;
+  if (pickFirst && kindOf(selectedChoice()) !== kind) {
+    const shown = $('#format-choices').hidden ? $('#preset-choices') : $('#format-choices');
+    const inputs = [...shown.querySelectorAll(`.preset-group[data-kind="${kind}"] input:not(:disabled)`)];
+    // Back on a kind, return to the choice made there before.
+    const pick = inputs.find((i) => i.value === lastChoice[kind]) || inputs[0];
+    if (pick) pick.checked = true;
+  }
+}
+
+// The last choice made on each side of the switch.
+const lastChoice = {};
+document.addEventListener('change', (e) => {
+  if (e.target.name === 'choice') lastChoice[kindOf(e.target.value)] = e.target.value;
+});
+
+function syncKind() {
+  setKind(kindOf(selectedChoice()));
+}
+
+// ---------- paste or drop a link anywhere ----------
+
+function takeLinks(text) {
+  showView('download');
+  const input = $('#url');
+  input.value = oneLine(text);
+  setUrlError('');
+  input.dispatchEvent(new InputEvent('input', { inputType: 'insertFromPaste' }));
+  input.focus();
+}
+
+function setupPasteAndDrop() {
+  document.addEventListener('paste', (e) => {
+    if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+    const text = e.clipboardData?.getData('text') || '';
+    if (!text.trim()) return;
+    e.preventDefault();
+    takeLinks(text);
+  });
+  let depth = 0;
+  const carriesText = (e) => [...(e.dataTransfer?.types || [])].some((t) => t === 'text/uri-list' || t === 'text/plain');
+  const setDragging = (on) => {
+    document.body.classList.toggle('dragging', on);
+    $('#drop-overlay').hidden = !on;
+  };
+  document.addEventListener('dragenter', (e) => {
+    if (!carriesText(e)) return;
+    depth++;
+    setDragging(true);
+  });
+  document.addEventListener('dragleave', () => {
+    depth = Math.max(0, depth - 1);
+    if (!depth) setDragging(false);
+  });
+  document.addEventListener('dragover', (e) => {
+    if (carriesText(e)) e.preventDefault();
+  });
+  document.addEventListener('drop', (e) => {
+    depth = 0;
+    setDragging(false);
+    const text = e.dataTransfer?.getData('text/uri-list') || e.dataTransfer?.getData('text/plain') || '';
+    if (!text.trim()) return;
+    e.preventDefault();
+    takeLinks(text.split(/\r?\n/).filter((l) => l && !l.startsWith('#')).join(' '));
+  });
 }
 
 function renderLoadError(err) {
@@ -829,6 +953,7 @@ function showPresets(checkedValue) {
   for (const r of $('#preset-choices').querySelectorAll('input')) r.disabled = false;
   const want = checkedValue?.startsWith('preset:') ? checkedValue : `preset:${settings?.default_preset || 'video-best'}`;
   $('#preset-choices').querySelector(`input[value="${want}"]`).checked = true;
+  syncKind();
 }
 
 function resetFormats() {
@@ -963,6 +1088,7 @@ function showFormats(grouped, previous) {
   for (const r of $('#preset-choices').querySelectorAll('input')) r.disabled = true;
   $('#preset-choices').hidden = true;
   $('#format-choices').hidden = false;
+  syncKind();
 
   const meta = [
     formatDuration(grouped.duration),
@@ -1576,13 +1702,16 @@ function init() {
   loadNotifyPreference();
   renderNotifyToggle();
   $('#notify-toggle').addEventListener('click', toggleNotifications);
-  const sheet = $('#settings');
-  $('#open-settings').addEventListener('click', () => sheet.showModal());
-  $('#close-settings').addEventListener('click', () => sheet.close());
-  // A click on the dimmed backdrop (outside the panel) closes it.
-  sheet.addEventListener('click', (e) => {
-    if (e.target === sheet) sheet.close();
+  for (const b of document.querySelectorAll('.nav-item')) b.addEventListener('click', () => showView(b.dataset.view));
+  $('#now').addEventListener('click', () => showView('download'));
+  window.addEventListener('hashchange', () => showView(location.hash.slice(1)));
+  showView(location.hash.slice(1));
+  for (const tab of document.querySelectorAll('.kind-tab')) tab.addEventListener('click', () => setKind(tab.dataset.kind, { pickFirst: true }));
+  $('#history-search').addEventListener('input', (e) => {
+    historyQuery = e.currentTarget.value.trim().toLowerCase();
+    render();
   });
+  setupPasteAndDrop();
   $('#signin-browser').addEventListener('change', onSignInChange);
   $('#pref-login').addEventListener('change', onStartAtLoginChange);
   $('#pref-speed').addEventListener('change', (e) => {
@@ -1657,7 +1786,7 @@ function init() {
     render();
   });
 
-  document.querySelector('.layout').addEventListener('click', (e) => {
+  $('#main').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-action]');
     if (b) runAction(b.closest('.job').dataset.id, b.dataset.action);
   });
