@@ -15,27 +15,24 @@
   <body>
     <header class="topbar">
       <div class="wrap topbar-inner">
-        <h1 class="brand">ytgrab <span class="brand-sub">local downloader</span></h1>
+        <h1 class="brand"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="var(--accent)"/><path d="M44 18h12v26h16L50 66 28 44h16zM20 60h10v12h40V60h10v22H20z" fill="#fff"/></svg><span class="brand-name">YTGrab</span><span class="brand-sub">local downloader</span></h1>
         <div class="header-actions">
-        <button type="button" class="notify-toggle" id="notify-toggle" aria-pressed="false" title="Get a notification when downloads finish" hidden>
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
-          <span id="notify-label">Notify me</span>
-        </button>
-        <button
-          type="button"
-          class="health"
-          id="health"
-          aria-controls="health-detail"
-          aria-expanded="false"
-          hidden
-        >
-          <span class="dot" aria-hidden="true"></span><span id="health-label">Checking tools…</span>
-        </button>
+          <button type="button" class="health" id="health" aria-controls="health-detail" aria-expanded="false" hidden>
+            <span class="dot" aria-hidden="true"></span><span id="health-label">Checking tools…</span>
+          </button>
+          <button type="button" class="icon-btn notify-toggle" id="notify-toggle" aria-pressed="false" title="Notify me when downloads finish while this tab is in the background" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <span class="visually-hidden" id="notify-label">Notify me</span>
+          </button>
+          <button type="button" class="icon-btn" id="open-settings" aria-haspopup="dialog" aria-controls="settings" title="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+            <span class="visually-hidden">Settings</span>
+          </button>
         </div>
       </div>
     </header>
 
-    <div class="wrap">
+    <div class="wrap notices">
       <div class="banner" id="health-detail" role="status" hidden></div>
       <div class="banner pause-banner" id="pause-banner" role="status" hidden>
         <div>
@@ -64,7 +61,8 @@
 
     <main class="wrap layout">
       <section class="panel add" aria-labelledby="add-title">
-        <h2 id="add-title">New download</h2>
+        <div class="add-scroll">
+          <h2 id="add-title">New download</h2>
         <div class="setup-folder" id="setup-folder" role="region" aria-labelledby="setup-title" hidden>
           <strong id="setup-title">Choose where to save downloads</strong>
           <p class="hint">Pick a folder once. You can change it any time.</p>
@@ -77,26 +75,27 @@
           <button type="button" class="btn-link" id="setup-type">Type a folder path instead</button>
           <p class="field-error" id="setup-error" role="alert" hidden></p>
         </div>
-        <form id="add-form" novalidate>
-          <label for="url" class="field-label">Video link</label>
-          <div class="url-row">
-            <input
-              id="url"
-              name="url"
-              type="url"
-              inputmode="url"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="https://www.youtube.com/watch?v=…"
-              aria-describedby="url-hint url-error"
-              required
-            />
-            <button type="button" class="btn btn-ghost" id="paste" hidden>Paste</button>
-          </div>
-          <p class="hint" id="url-hint">
-            Paste a YouTube video or playlist link, or several video links at once.
-          </p>
-          <p class="field-error" id="url-error" role="alert" hidden></p>
+          <form id="add-form" novalidate>
+            <label for="url" class="visually-hidden">Video link</label>
+            <div class="url-row">
+              <svg class="url-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+              <input
+                id="url"
+                name="url"
+                type="url"
+                inputmode="url"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Paste a YouTube link"
+                aria-describedby="url-hint url-error"
+                required
+              />
+              <button type="button" class="btn btn-ghost" id="paste" hidden>Paste</button>
+            </div>
+            <p class="hint" id="url-hint">
+              A video, a playlist, or several video links at once.
+            </p>
+            <p class="field-error" id="url-error" role="alert" hidden></p>
 
           <fieldset class="playlist" id="playlist" hidden>
             <legend class="field-label">Playlist videos</legend>
@@ -117,7 +116,7 @@
           </fieldset>
 
           <fieldset class="presets">
-            <legend class="field-label">Format</legend>
+            <legend class="visually-hidden">Format</legend>
             <div class="inspect" id="inspect" role="status" aria-live="polite"></div>
 
             <div id="preset-choices">
@@ -183,20 +182,75 @@
             <p class="hint">Times like 1:05 or 1:02:30. Leave End empty to go to the end of the video.</p>
             <p class="field-error" id="clip-error" role="alert" hidden></p>
           </details>
+          </form>
+        </div>
 
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary" id="submit">Add to queue</button>
+        <div class="add-footer">
+          <button type="submit" form="add-form" class="btn btn-primary btn-block" id="submit">Add to queue</button>
+          <div class="output-dir" id="output-dir" hidden>
+            <div class="output-dir-view" id="dir-view">
+              <span class="output-dir-label">Save to</span>
+              <code class="output-dir-path" id="dir-path"></code>
+              <button type="button" class="btn-link" id="dir-edit">Change…</button>
+              <button type="button" class="btn-link" id="dir-type">Type a path</button>
+            </div>
+          <form class="output-dir-edit" id="dir-form" novalidate hidden>
+            <label for="dir-input" class="field-label">Output folder</label>
+            <input
+              id="dir-input"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="dir-hint dir-error"
+              required
+            />
+            <p class="hint" id="dir-hint">
+              Full path to an existing folder, for example <code>D:\Videos</code>. Applies to
+              downloads that start after saving.
+            </p>
+            <p class="field-error" id="dir-error" role="alert" hidden></p>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-small btn-primary" id="dir-save">Save</button>
+              <button type="button" class="btn btn-small" id="dir-cancel">Cancel</button>
+            </div>
+          </form>
           </div>
-        </form>
-        <div class="output-dir" id="output-dir" hidden>
-          <div class="output-dir-view" id="dir-view">
-            <span class="field-label">Save to</span>
-            <code class="output-dir-path" id="dir-path"></code>
-            <button type="button" class="btn btn-small" id="dir-edit">Change…</button>
-            <button type="button" class="btn-link" id="dir-type">Type a path</button>
+        </div>
+      </section>
+
+      <div class="lists">
+        <section class="panel list-panel queue-panel" aria-labelledby="queue-title">
+          <div class="panel-head">
+            <h2 id="queue-title">Queue <span class="count" id="queue-count"></span></h2>
           </div>
-          <details class="more-settings" id="more-settings">
-            <summary>More settings</summary>
+          <div class="list" id="queue" aria-live="polite" aria-busy="true"></div>
+        </section>
+
+        <section class="panel list-panel history-panel" aria-labelledby="history-title">
+          <div class="panel-head">
+            <h2 id="history-title">History <span class="count" id="history-count"></span></h2>
+            <div class="filters" role="group" aria-label="Filter history">
+              <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
+              <button type="button" class="chip" data-filter="completed" aria-pressed="false">Completed</button>
+              <button type="button" class="chip" data-filter="problems" aria-pressed="false">Failed / cancelled</button>
+            </div>
+            <button type="button" class="btn-link history-clear" id="clear-history">Clear</button>
+          </div>
+          <div class="list" id="history" aria-busy="true"></div>
+        </section>
+      </div>
+    </main>
+
+    <dialog class="sheet" id="settings" aria-labelledby="settings-title">
+      <div class="sheet-head">
+        <h2 id="settings-title">Settings</h2>
+        <button type="button" class="icon-btn" id="close-settings" title="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          <span class="visually-hidden">Close settings</span>
+        </button>
+      </div>
+      <div class="sheet-body">
+        <p class="hint sheet-intro">Changes are saved right away.</p>
             <div class="pref-row" id="pref-parallel-row" hidden>
               <label for="pref-parallel">Parallel downloads</label>
               <select id="pref-parallel"></select>
@@ -248,59 +302,14 @@
                 account is safer, since heavy use can get an account flagged.
               </p>
             </div>
-          </details>
-          <form class="output-dir-edit" id="dir-form" novalidate hidden>
-            <label for="dir-input" class="field-label">Output folder</label>
-            <input
-              id="dir-input"
-              type="text"
-              autocomplete="off"
-              spellcheck="false"
-              aria-describedby="dir-hint dir-error"
-              required
-            />
-            <p class="hint" id="dir-hint">
-              Full path to an existing folder, for example <code>D:\Videos</code>. Applies to
-              downloads that start after saving.
-            </p>
-            <p class="field-error" id="dir-error" role="alert" hidden></p>
-            <div class="form-actions">
-              <button type="submit" class="btn btn-small btn-primary" id="dir-save">Save</button>
-              <button type="button" class="btn btn-small" id="dir-cancel">Cancel</button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <section class="panel" aria-labelledby="queue-title">
-        <div class="panel-head">
-          <h2 id="queue-title">Queue <span class="count" id="queue-count"></span></h2>
-        </div>
-        <div id="queue" aria-live="polite" aria-busy="true"></div>
-      </section>
-
-      <section class="panel" aria-labelledby="history-title">
-        <div class="panel-head">
-          <h2 id="history-title">History <span class="count" id="history-count"></span></h2>
-          <button type="button" class="btn-link history-clear" id="clear-history">Clear</button>
-          <div class="filters" role="group" aria-label="Filter history">
-            <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
-            <button type="button" class="chip" data-filter="completed" aria-pressed="false">
-              Completed
-            </button>
-            <button type="button" class="chip" data-filter="problems" aria-pressed="false">
-              Failed / cancelled
-            </button>
-          </div>
-        </div>
-        <div id="history" aria-busy="true"></div>
-      </section>
-    </main>
+      </div>
+    </dialog>
 
     <div class="toast-region" id="toast" role="status" aria-live="polite"></div>
 
     <template id="job-template">
       <article class="job">
+        <div class="job-thumb" aria-hidden="true"><img alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" /></div>
         <div class="job-main">
           <div class="job-title-row">
             <h3 class="job-title"></h3>
