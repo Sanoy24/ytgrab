@@ -25,18 +25,30 @@ jobs:
 
   web:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check browser modules
-        run: |
-          mkdir -p /tmp/ytgrab-js
-          for f in web/static/*.js; do
-            cp "$f" "/tmp/ytgrab-js/$(basename "$f" .js).mjs"
-            node --check "/tmp/ytgrab-js/$(basename "$f" .js).mjs"
-          done
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Unit tests
+        run: npm test
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: npx playwright test
+      - name: Keep the trace of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: web/test-results/
+          retention-days: 7
 
   install-script:
     runs-on: ubuntu-latest
