@@ -551,7 +551,9 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .badge[data-state="downloading"], .badge[data-state="processing"], .badge[data-state="inspecting"] { background: var(--info-soft); color: var(--info); }
 .badge[data-state="completed"] { background: var(--ok-soft); color: var(--ok); }
 .badge[data-state="failed"] { background: var(--err-soft); color: var(--err); }
-.badge[data-state="cancelled"] { background: var(--warn-soft); color: var(--warn); }
+.badge[data-state="cancelled"], .badge[data-state="paused"] { background: var(--warn-soft); color: var(--warn); }
+.job-progress[data-paused] progress::-webkit-progress-value { background: var(--faint); }
+.job-progress[data-paused] progress::-moz-progress-bar { background: var(--faint); }
 
 @media (max-width: 640px) {
   .job, .queue-list .job { grid-template-columns: 84px minmax(0, 1fr); }

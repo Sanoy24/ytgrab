@@ -15,7 +15,10 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/jobs` | Create a job from a preset or an inspected format; optional `section: { start, end }` in seconds downloads only that part (at least 1 second, within 24 hours) |
 | `GET` | `/api/jobs/{id}` | One job |
 | `GET` | `/api/jobs/{id}/events` | Progress stream (Server-Sent Events) |
-| `POST` | `/api/jobs/{id}/cancel` | Cancel a queued or running job |
+| `POST` | `/api/jobs/{id}/cancel` | Cancel a queued, running, or paused job |
+| `POST` | `/api/jobs/{id}/pause` | Stop a queued or running job but keep it in the queue as `paused` (its partial file is kept) |
+| `POST` | `/api/jobs/{id}/resume` | Return a paused job to the queue; it continues from the partial file |
+| `POST` | `/api/jobs/{id}/top` | Start a queued or paused job before the other waiting ones |
 | `POST` | `/api/jobs/{id}/retry` | Retry a failed or cancelled job |
 | `POST` | `/api/jobs/{id}/open` | Open a finished download's own file with its default app (`204`; `file_missing` if it was moved) |
 | `POST` | `/api/jobs/{id}/reveal` | Show a finished file in the system file manager (`204`; `file_missing` if it was moved) |

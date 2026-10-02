@@ -216,6 +216,29 @@ class FixtureClient {
     });
   }
 
+  async pauseJob(id) {
+    await delay(200);
+    this.update(id, (j) => {
+      if (!isActive(j.state) || j.state === 'paused') throw new ApiError('invalid_state', 'Only queued or running downloads can be paused.');
+      j.state = 'paused';
+    });
+  }
+
+  async resumeJob(id) {
+    await delay(200);
+    this.update(id, (j) => {
+      if (j.state !== 'paused') throw new ApiError('invalid_state', 'Only paused downloads can be resumed.');
+      j.state = 'queued';
+    });
+  }
+
+  async moveToTop(id) {
+    await delay(150);
+    this.update(id, (j) => {
+      j.priority = Date.now();
+    });
+  }
+
   async retryJob(id) {
     await delay(200);
     this.update(id, (j) => {
@@ -440,6 +463,17 @@ class HttpClient {
   retryJob(id) {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/retry`).then(this.afterChange);
   }
+  // Stops a download but keeps it (and its partial file) in the queue.
+  pauseJob(id) {
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/pause`).then(this.afterChange);
+  }
+  resumeJob(id) {
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/resume`).then(this.afterChange);
+  }
+  // Starts this waiting download before the others.
+  moveToTop(id) {
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/top`).then(this.afterChange);
+  }
 
   // A change made from this page refreshes the subscription right away, so a new job's
   // progress stream opens without waiting for the idle poll interval.
@@ -584,8 +618,9 @@ class HttpClient {
 
 const MAX_STREAMS = 4;
 
+// In the queue: waiting, running, or paused (a paused download keeps its place).
 export const isActive = (state) =>
-  ['queued', 'inspecting', 'downloading', 'processing'].includes(state);
+  ['queued', 'inspecting', 'downloading', 'processing', 'paused'].includes(state);
 
 const delay = (ms, signal) =>
   new Promise((resolve, reject) => {

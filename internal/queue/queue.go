@@ -287,8 +287,8 @@ func (queue *Queue) runJob(job domain.Job) {
 		return // Startup recovery will mark this interrupted on next launch.
 	}
 	current, err = queue.store.Get(queue.ctx, job.ID)
-	if err != nil || current.State == domain.Cancelled {
-		return
+	if err != nil || current.State == domain.Cancelled || current.State == domain.Paused {
+		return // stopped on purpose; a paused job keeps its partial file for later
 	}
 	previous = current.State
 	if downloadErr != nil {

@@ -20,6 +20,9 @@ const (
 	Completed   State = "completed"
 	Failed      State = "failed"
 	Cancelled   State = "cancelled"
+	// Paused stays in the queue (and blocks a second copy of the video) but isn't started
+	// until it is resumed; the partial file is kept, so it continues where it stopped.
+	Paused State = "paused"
 )
 
 type Preset string
@@ -77,6 +80,8 @@ type Job struct {
 	OutputPath *string          `json:"output_path"`
 	// Folder is an optional subfolder of the download folder (see SafeFolderName).
 	Folder string `json:"folder,omitempty"`
+	// Priority orders the queue: higher starts first, then older. "Move to top" raises it.
+	Priority int64 `json:"priority,omitempty"`
 	// Section, when set, downloads only that part of the video.
 	Section   *Section  `json:"section,omitempty"`
 	Error     *JobError `json:"error"`
@@ -216,7 +221,7 @@ func ValidVideoID(videoID string) bool {
 
 func (state State) Active() bool {
 	switch state {
-	case Queued, Inspecting, Downloading, Processing:
+	case Queued, Inspecting, Downloading, Processing, Paused:
 		return true
 	default:
 		return false
@@ -229,13 +234,15 @@ func CanTransition(from State, to State) bool {
 	}
 	switch from {
 	case Queued:
-		return to == Inspecting || to == Downloading || to == Failed || to == Cancelled
+		return to == Inspecting || to == Downloading || to == Failed || to == Cancelled || to == Paused
 	case Inspecting:
-		return to == Downloading || to == Failed || to == Cancelled || to == Queued
+		return to == Downloading || to == Failed || to == Cancelled || to == Queued || to == Paused
 	case Downloading:
-		return to == Processing || to == Completed || to == Failed || to == Cancelled || to == Queued
+		return to == Processing || to == Completed || to == Failed || to == Cancelled || to == Queued || to == Paused
 	case Processing:
-		return to == Completed || to == Failed || to == Cancelled || to == Queued
+		return to == Completed || to == Failed || to == Cancelled || to == Queued || to == Paused
+	case Paused:
+		return to == Queued || to == Cancelled
 	case Failed, Cancelled:
 		return to == Queued
 	default:
@@ -259,7 +266,7 @@ func (job *Job) Requeue() error {
 }
 
 func (job *Job) Transition(to State) error {
-	if !CanTransition(job.State, to) || (job.State.Active() && job.State != Queued && to == Queued) {
+	if !CanTransition(job.State, to) || (job.State.Active() && job.State != Queued && job.State != Paused && to == Queued) {
 		return errors.New("invalid job state transition")
 	}
 	if (job.State == Failed || job.State == Cancelled) && to == Queued {

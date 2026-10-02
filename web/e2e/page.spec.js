@@ -244,3 +244,15 @@ test('retries every failed download and offers to download one again', async ({ 
   await expect(page.locator('#view-download')).toBeVisible();
   await expect(page.locator('#url')).toHaveValue(/YE7VzlLtp-4/);
 });
+
+test('pauses, resumes, and reorders downloads', async ({ page }) => {
+  await page.goto('/?fixture=default');
+  const running = page.locator('#queue .job', { hasText: 'local-first download manager' });
+  await running.getByRole('button', { name: /^Pause/ }).click();
+  await expect(running.locator('.badge')).toHaveText('Paused');
+  await expect(running.locator('.job-progress-text')).toContainText('Paused');
+  await running.getByRole('button', { name: /^Resume/ }).click();
+  await expect(running.locator('.badge')).not.toHaveText('Paused');
+  // "Me at the zoo" is the only waiting download, so it needs no move.
+  await expect(page.locator('#queue .job', { hasText: 'Me at the zoo' }).getByRole('button', { name: /^Move to top/ })).toHaveCount(0);
+});
