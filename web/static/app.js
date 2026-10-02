@@ -239,6 +239,16 @@ const RUN_ORDER = { processing: 0, downloading: 1, inspecting: 2, queued: 3 };
 // YTGrab tab is in the background. The choice is remembered in this browser.
 const NOTIFY_KEY = 'ytgrab.notify';
 const UPDATE_DISMISSED_KEY = 'ytgrab.updateDismissed';
+const PLAYLIST_FOLDER_KEY = 'ytgrab.playlistFolder';
+
+// Saving a playlist into its own folder is on unless the user turned it off.
+function playlistFolderPreferred() {
+  try {
+    return localStorage.getItem(PLAYLIST_FOLDER_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
 let notifyOn = false;
 let lastStates = null; // job id -> state at the previous render
 
@@ -1006,6 +1016,12 @@ function renderPlaylist(list, append = false) {
   $('#playlist-note').textContent = notes.join(' ');
   $('#playlist-note').hidden = !notes.length;
   $('#playlist-more').hidden = !list.next;
+  // Pasted links have no playlist name to use as a folder.
+  $('#playlist-folder-row').hidden = Boolean(list.batch);
+  if (!list.batch) {
+    $('#playlist-folder-label').textContent = `Save in a folder named “${list.title || 'Playlist'}”`;
+    if (!append) $('#playlist-folder').checked = playlistFolderPreferred();
+  }
   $('#playlist-all').parentElement.hidden = false;
   const items = append ? list.entries.slice($('#playlist-items').children.length) : list.entries;
   $('#playlist-items')[append ? 'append' : 'replaceChildren'](
@@ -1063,15 +1079,17 @@ function oneLine(text) {
 async function submitPlaylist() {
   const ids = playlistIds();
   const preset = selectedChoice().replace(/^preset:/, '');
+  const folder = !playlist.batch && $('#playlist-folder').checked ? playlist.list.title || 'Playlist' : undefined;
   const button = $('#submit');
   button.disabled = true;
   button.textContent = 'Adding…';
   try {
-    const result = await client.createPlaylistJobs({ video_ids: ids, preset });
+    const result = await client.createPlaylistJobs({ video_ids: ids, preset, folder });
     if (!client.isFixture) jobs = await client.listJobs();
     const added = result.jobs.length;
     const skipped = result.skipped ? ` ${result.skipped} already in the queue.` : '';
-    toast(`Added ${added} video${added === 1 ? '' : 's'}.${skipped}`);
+    const into = folder && result.jobs[0]?.folder ? ` Saving into the “${result.jobs[0].folder}” folder.` : '';
+    toast(`Added ${added} video${added === 1 ? '' : 's'}.${skipped}${into}`);
     $('#url').value = '';
     resetFormats();
     render();
@@ -1491,6 +1509,13 @@ function init() {
     savePreference(e.currentTarget, { default_preset: e.currentTarget.value }, `New links will start with ${label}.`);
   });
   $('#playlist-items').addEventListener('change', updatePlaylistCount);
+  $('#playlist-folder').addEventListener('change', (e) => {
+    try {
+      localStorage.setItem(PLAYLIST_FOLDER_KEY, e.currentTarget.checked ? '1' : '0');
+    } catch {
+      // Storage unavailable: the choice lasts for this page only.
+    }
+  });
   $('#playlist-more').addEventListener('click', (e) => loadMorePlaylist(e.currentTarget));
   $('#playlist-all').addEventListener('change', (e) => {
     for (const box of document.querySelectorAll('#playlist-items input')) box.checked = e.target.checked;

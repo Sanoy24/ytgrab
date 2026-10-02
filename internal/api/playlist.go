@@ -63,6 +63,7 @@ func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore
 		var input struct {
 			VideoIDs []string       `json:"video_ids"`
 			Preset   *domain.Preset `json:"preset"`
+			Folder   string         `json:"folder"` // optional; saved into this subfolder
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 16384)
 		decoder := json.NewDecoder(r.Body)
@@ -103,6 +104,7 @@ func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore
 				return
 			}
 			applyCachedTitle(lister, &job)
+			job.Folder = domain.SafeFolderName(input.Folder)
 			jobs = append(jobs, job)
 		}
 		created := []domain.Job{}

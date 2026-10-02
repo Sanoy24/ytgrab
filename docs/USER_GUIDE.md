@@ -104,7 +104,7 @@ Paste several video links into the link field at once, one per line or separated
 
 ## Download a playlist
 
-Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 50 videos, all ticked; **Load next 50** shows more. Up to 200 can be added at a time. Untick what you don't want, choose a preset (it applies to every video), and press **Add N videos**. Nothing is queued until you press that button. Private and deleted videos are skipped. For a link to one video inside a playlist, YTGrab downloads just that video and offers **Download the whole playlist instead**. YouTube Mixes (auto-generated radio lists) can't be downloaded as playlists.
+Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 50 videos, all ticked; **Load next 50** shows more. Up to 200 can be added at a time. Untick what you don't want, choose a preset (it applies to every video), and press **Add N videos**. Nothing is queued until you press that button. **Save in a folder named "…"** (on by default; YTGrab remembers if you turn it off) puts the playlist's videos in a folder of that name inside your download folder; characters that aren't allowed in folder names are left out. Private and deleted videos are skipped. For a link to one video inside a playlist, YTGrab downloads just that video and offers **Download the whole playlist instead**. YouTube Mixes (auto-generated radio lists) can't be downloaded as playlists.
 
 ## Queue and history
 

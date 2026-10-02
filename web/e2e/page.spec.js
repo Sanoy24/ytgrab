@@ -147,3 +147,23 @@ test('sets a per-download speed limit', async ({ page }) => {
   await select.selectOption({ label: 'No limit' });
   await expect(page.locator('#toast')).toContainText('full speed');
 });
+
+test('saves a playlist into its own folder by default', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.locator('#url').fill('https://www.youtube.com/playlist?list=PLbig0000000000');
+  const folder = page.locator('#playlist-folder');
+  await expect(page.locator('#playlist-folder-label')).toHaveText('Save in a folder named “A very long series”');
+  await expect(folder).toBeChecked();
+  const boxes = page.locator('#playlist-items input');
+  for (let i = 2; i < 50; i++) await boxes.nth(i).uncheck();
+  await page.locator('#submit').click();
+  await expect(page.locator('#toast')).toContainText('Saving into the “A very long series” folder.');
+  // Turned off, it stays off next time.
+  await page.locator('#url').fill('https://www.youtube.com/playlist?list=PLbig0000000001');
+  await expect(folder).toBeChecked();
+  await folder.uncheck();
+  await page.reload();
+  await page.locator('#url').fill('https://www.youtube.com/playlist?list=PLbig0000000000');
+  await expect(page.locator('#playlist-items li')).toHaveCount(50);
+  await expect(folder).not.toBeChecked();
+});

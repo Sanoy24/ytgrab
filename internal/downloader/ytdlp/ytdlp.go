@@ -62,6 +62,13 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	if downloader.DownloadsDir != nil {
 		cfg.DownloadsDir = downloader.DownloadsDir()
 	}
+	if job.Folder != "" {
+		// Checked again here: only a name SafeFolderName produced is used as a subfolder.
+		if job.Folder != domain.SafeFolderName(job.Folder) {
+			return Result{}, &Error{Code: "invalid_folder", Message: "The folder for this download isn't valid. Remove it and add the video again."}
+		}
+		cfg.DownloadsDir = filepath.Join(cfg.DownloadsDir, job.Folder)
+	}
 	if downloader.CookiesBrowser != nil {
 		cfg.CookiesBrowser = downloader.CookiesBrowser()
 	}

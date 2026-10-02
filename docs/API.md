@@ -22,7 +22,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/history/clear` | Remove all finished, failed, and cancelled jobs, `{ "removed": 3 }`; files are kept |
 | `GET` | `/api/inspect?url=…` | A video's formats, grouped into video and audio |
 | `GET` | `/api/playlist?url=…&start=1` | One page of up to 50 playlist entries for review; `next` gives the following page's `start` |
-| `POST` | `/api/playlist/jobs` | One preset job per confirmed video ID; the page also uses it for several pasted links |
+| `POST` | `/api/playlist/jobs` | One preset job per confirmed video ID; the page also uses it for several pasted links. Optional `folder` (for example the playlist title) saves into that subfolder, made safe with the same rules on every system |
 | `GET` | `/api/settings` | Output-folder settings |
 | `PUT` | `/api/settings` | Set the output folder to a typed path |
 | `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
