@@ -42,6 +42,12 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// speedSettings is implemented by settings with a per-download speed limit.
+type speedSettings interface {
+	SpeedLimit() int
+	SetSpeedLimit(context.Context, int) error
+}
+
 // subtitleSettings is implemented by settings that can add subtitles to video downloads.
 type subtitleSettings interface {
 	Subtitles() (mode, lang string)
@@ -82,6 +88,10 @@ func settingsBody(settings Settings) map[string]any {
 	}
 	if startup, ok := settings.(startupSettings); ok && startup.StartAtLoginSupported() {
 		body["start_at_login"] = startup.StartAtLogin()
+	}
+	if speed, ok := settings.(speedSettings); ok {
+		body["speed_limit_kbps"] = speed.SpeedLimit()
+		body["speed_limits"] = settingspkg.SpeedLimits
 	}
 	if subtitles, ok := settings.(subtitleSettings); ok {
 		body["subtitles_mode"], body["subtitles_lang"] = subtitles.Subtitles()
@@ -128,6 +138,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 			var input struct {
 				MaxDownloads  *int           `json:"max_downloads"`
 				DefaultPreset *domain.Preset `json:"default_preset"`
+				SpeedLimit    *int           `json:"speed_limit_kbps"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -142,6 +153,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 			}
 			if err == nil && input.DefaultPreset != nil {
 				err = prefs.SetDefaultPreset(r.Context(), *input.DefaultPreset)
+			}
+			if err == nil && input.SpeedLimit != nil {
+				speed, ok := settings.(speedSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server has no speed limit setting.")
+					return
+				}
+				err = speed.SetSpeedLimit(r.Context(), *input.SpeedLimit)
 			}
 			if errors.Is(err, settingspkg.ErrInvalidPreference) {
 				writeError(w, http.StatusBadRequest, "invalid_preference", err.Error())

@@ -229,6 +229,8 @@ class FixtureClient {
       max_downloads_limit: 4,
       default_preset: this.defaultPreset ?? 'video-best',
       start_at_login: this.startAtLogin ?? false,
+      speed_limit_kbps: this.speedLimit ?? 0,
+      speed_limits: [0, 500, 1000, 2000, 5000, 10000],
       subtitles_mode: this.subtitlesMode ?? 'off',
       subtitles_lang: this.subtitlesLang ?? 'en',
       subtitle_languages: ['en', 'am', 'ar', 'de', 'es', 'fr', 'hi', 'id', 'it', 'ja', 'ko', 'nl', 'pl', 'pt', 'ru', 'sw', 'tr', 'uk', 'vi', 'zh'],
@@ -236,8 +238,9 @@ class FixtureClient {
     };
   }
 
-  async setPreferences({ max_downloads, default_preset }) {
+  async setPreferences({ max_downloads, default_preset, speed_limit_kbps }) {
     await delay(200);
+    if (speed_limit_kbps !== undefined) this.speedLimit = speed_limit_kbps;
     if (max_downloads !== undefined) this.maxDownloads = max_downloads;
     if (default_preset !== undefined) this.defaultPreset = default_preset;
     return this.settingsBody();
@@ -435,7 +438,7 @@ class HttpClient {
   updateSettings(body) {
     return this.request('PUT', '/api/settings', body);
   }
-  // Saves { max_downloads, default_preset } (either or both).
+  // Saves any of { max_downloads, default_preset, speed_limit_kbps }.
   setPreferences(body) {
     return this.request('PUT', '/api/settings/preferences', body);
   }

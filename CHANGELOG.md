@@ -6,6 +6,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Speed limit.** In More settings, cap each download at 0.5 to 10 MB/s to leave bandwidth for other things.
 - **Subtitles.** In More settings, add subtitles in a chosen language to video downloads, either inside the video or as an .srt file next to it. Uses the creator's subtitles, or YouTube's automatic ones.
 - **Several links at once.** Paste a list of video links (one per line or separated by spaces) to review them together and add them all with one format. Repeats are added once; playlist and other links are skipped with a note.
 - **Update notices.** When a newer YTGrab is released, the page says so and shows the update command for how you installed it (Scoop, Homebrew, the installer, or `go install`), or links to the release for zip copies. It checks GitHub at most once a day.

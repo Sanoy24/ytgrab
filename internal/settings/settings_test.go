@@ -168,3 +168,31 @@ func TestSubtitlesAreOffByDefaultAndAllowlisted(t *testing.T) {
 		t.Fatalf("reloaded = %q %q", mode, lang)
 	}
 }
+
+func TestSpeedLimitIsAllowlisted(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := New(ctx, store, t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manager.SpeedLimit() != 0 {
+		t.Fatal("no limit by default")
+	}
+	for _, bad := range []int{-1, 1, 3000, 1 << 30} {
+		if err := manager.SetSpeedLimit(ctx, bad); !errors.Is(err, ErrInvalidPreference) {
+			t.Errorf("SetSpeedLimit(%d) = %v", bad, err)
+		}
+	}
+	if err := manager.SetSpeedLimit(ctx, 2000); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, _ := New(ctx, store, t.TempDir(), false)
+	if reloaded.SpeedLimit() != 2000 {
+		t.Fatalf("reloaded = %d", reloaded.SpeedLimit())
+	}
+}
