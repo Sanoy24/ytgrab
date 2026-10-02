@@ -62,6 +62,7 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 				Kind string `json:"kind"`
 				ID   string `json:"id"`
 			} `json:"format"`
+			Section *domain.Section `json:"section"`
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		decoder := json.NewDecoder(r.Body)
@@ -76,6 +77,10 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 		}
 		if (input.Preset == nil) == (input.Format == nil) {
 			writeError(w, http.StatusBadRequest, "invalid_request", "Choose one preset or inspected format.")
+			return
+		}
+		if input.Section != nil && !input.Section.Valid() {
+			writeError(w, http.StatusBadRequest, "invalid_section", domain.ErrInvalidSection.Error())
 			return
 		}
 		var job domain.Job
@@ -121,6 +126,7 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 			writeError(w, http.StatusInternalServerError, "internal", "Could not create the download.")
 			return
 		}
+		job.Section = input.Section
 		applyCachedTitle(inspector, &job)
 		if err := store.Create(r.Context(), job); err != nil {
 			if errors.Is(err, sqlitestore.ErrDuplicate) {

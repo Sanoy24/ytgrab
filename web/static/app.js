@@ -1,5 +1,5 @@
 import { createClient, isActive } from './api.js';
-import { formatDuration, groupFormats, matchPreset } from './formats.js';
+import { formatDuration, groupFormats, matchPreset, readSection } from './formats.js';
 import { parseLinks, validateUrl } from './links.js';
 
 const client = createClient();
@@ -91,6 +91,7 @@ function renderJob(job) {
 
   const format = PRESET_LABELS[job.preset] || job.format?.label || job.preset || 'Custom format';
   const meta = [format, formatWhen(job.updated_at)];
+  if (job.section) meta.splice(1, 0, `${formatDuration(job.section.start)}–${formatDuration(job.section.end)}`);
   if (job.attempt > 1) meta.push(`attempt ${job.attempt}`);
   el.querySelector('.job-meta').textContent = meta.join(' · ');
 
@@ -661,6 +662,39 @@ function setUrlError(message) {
   input.setAttribute('aria-invalid', message ? 'true' : 'false');
 }
 
+// The clip fields apply to one video at a time, never to playlists or pasted lists.
+function updateClipVisibility() {
+  const single = !playlist && Boolean(validateUrl($('#url').value).url);
+  $('#clip').hidden = !single;
+}
+
+function setClipError(message) {
+  $('#clip-error').textContent = message;
+  $('#clip-error').hidden = !message;
+}
+
+function resetClip() {
+  $('#clip-start').value = '';
+  $('#clip-end').value = '';
+  $('#clip').open = false;
+  setClipError('');
+}
+
+// Returns the section to download, null for the whole video, or false after showing why
+// the times can't be used.
+function clipSection(url) {
+  if ($('#clip').hidden) return null;
+  const result = readSection($('#clip-start').value, $('#clip-end').value, cachedInspection(url)?.duration);
+  if (result?.error) {
+    $('#clip').open = true;
+    setClipError(result.error);
+    $('#clip-start').focus();
+    return false;
+  }
+  setClipError('');
+  return result;
+}
+
 async function onSubmit(e) {
   e.preventDefault();
   if (!requireFolder()) return;
@@ -683,8 +717,11 @@ async function onSubmit(e) {
     return;
   }
   setUrlError('');
+  const section = clipSection(result.url);
+  if (section === false) return;
   const [kind, value] = String(new FormData(e.target).get('choice')).split(':');
   const body = kind === 'preset' ? { preset: value } : { format: { kind, id: value } };
+  if (section) body.section = section;
   const button = $('#submit');
   button.disabled = true;
   button.textContent = 'Adding…';
@@ -708,7 +745,10 @@ async function onSubmit(e) {
     if (!client.isFixture) jobs = await client.listJobs();
     input.value = '';
     resetFormats();
-    toast(result.note ? `Added. ${result.note}` : 'Added to the queue.');
+    resetClip();
+    updateClipVisibility();
+    const clipped = section ? ` Only ${formatDuration(section.start)}–${formatDuration(section.end)}.` : '';
+    toast(result.note ? `Added.${clipped} ${result.note}` : `Added to the queue.${clipped}`);
     render();
   } catch (err) {
     if (err.code === 'invalid_url' || err.code === 'duplicate_job') setUrlError(err.message);
@@ -948,6 +988,7 @@ async function enterPlaylist(url) {
   const ctl = (playlistCtl = new AbortController());
   playlist = { url, list: null };
   $('#playlist').hidden = false;
+  $('#clip').hidden = true;
   $('#playlist-title').replaceChildren(el('span', { className: 'spinner' }), 'Reading playlist…');
   $('#playlist-meta').textContent = '';
   $('#playlist-items').replaceChildren();
@@ -990,6 +1031,7 @@ function enterBatch({ videos, skipped }) {
   };
   playlist = { url: key, list, batch: true };
   $('#playlist').hidden = false;
+  $('#clip').hidden = true;
   renderPlaylist(list);
 }
 
@@ -1070,6 +1112,7 @@ function exitPlaylist() {
   playlist = null;
   $('#playlist').hidden = true;
   updatePlaylistCount();
+  updateClipVisibility();
 }
 
 function oneLine(text) {
@@ -1479,6 +1522,8 @@ function init() {
     input.setRangeText(oneLine(text), input.selectionStart, input.selectionEnd, 'end');
     input.dispatchEvent(new InputEvent('input', { inputType: 'insertFromPaste' }));
   });
+  $('#url').addEventListener('input', () => updateClipVisibility());
+  for (const id of ['#clip-start', '#clip-end']) $(id).addEventListener('input', () => setClipError(''));
   $('#url').addEventListener('input', (e) => {
     if ($('#url').getAttribute('aria-invalid') === 'true') setUrlError('');
     scheduleInspect(e.inputType === 'insertFromPaste');

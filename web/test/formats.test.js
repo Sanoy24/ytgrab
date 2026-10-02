@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { codecName, formatDuration, formatSize, groupFormats, matchPreset } from '../static/formats.js';
+import { codecName, formatDuration, formatSize, groupFormats, matchPreset, parseTime, readSection } from '../static/formats.js';
 import { inspection } from '../static/fixtures.js';
 
 test('groups video by resolution and frame rate, preferring H.264', () => {
@@ -37,4 +37,25 @@ test('formats sizes, durations, and codec names', () => {
   assert.equal(formatDuration(3725), '1:02:05');
   assert.equal(codecName('vp09.00.10.08'), 'VP9');
   assert.equal(codecName('none'), '');
+});
+
+test('reads clip times in seconds, minutes, and hours', () => {
+  assert.equal(parseTime(''), null);
+  assert.equal(parseTime('75'), 75);
+  assert.equal(parseTime('1:15'), 75);
+  assert.equal(parseTime('1:02:30'), 3750);
+  assert.equal(parseTime('0:05.5'), 5.5);
+  for (const bad of ['1:75', 'abc', '1:2:3:4', '-5', '1,5']) assert.ok(Number.isNaN(parseTime(bad)), bad);
+});
+
+test('turns clip fields into a section', () => {
+  assert.equal(readSection('', '', 300), null);
+  assert.deepEqual(readSection('1:05', '2:30', 300), { start: 65, end: 150 });
+  assert.deepEqual(readSection('', '0:10', 300), { start: 0, end: 10 });
+  assert.deepEqual(readSection('4:00', '', 300), { start: 240, end: 300 }); // to the end
+  assert.deepEqual(readSection('4:00', '9:00', 300), { start: 240, end: 300 }); // capped
+  assert.match(readSection('6:00', '', 300).error, /after the video ends/);
+  assert.match(readSection('1:00', '', undefined).error, /end time/);
+  assert.match(readSection('1:00', '1:00', 300).error, /at least 1 second/);
+  assert.match(readSection('1:75', '', 300).error, /minutes:seconds/);
 });

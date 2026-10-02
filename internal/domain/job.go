@@ -77,9 +77,11 @@ type Job struct {
 	OutputPath *string          `json:"output_path"`
 	// Folder is an optional subfolder of the download folder (see SafeFolderName).
 	Folder string `json:"folder,omitempty"`
-	Error      *JobError        `json:"error"`
-	CreatedAt  time.Time        `json:"created_at"`
-	UpdatedAt  time.Time        `json:"updated_at"`
+	// Section, when set, downloads only that part of the video.
+	Section   *Section  `json:"section,omitempty"`
+	Error     *JobError `json:"error"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func NewJob(rawURL string, preset Preset) (Job, error) {

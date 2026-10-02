@@ -105,3 +105,34 @@ export function matchPreset(preset, { video, audio }) {
   if (preset === 'audio-m4a') return audio.find((a) => a.ext === 'm4a') || audio[0];
   return null; // audio-mp3 stays a conversion preset
 }
+
+// Reads "75", "1:15", or "1:02:30" (seconds may have a decimal part) as seconds.
+// Returns null for an empty field and NaN for anything else.
+export function parseTime(text) {
+  const value = text.trim();
+  if (!value) return null;
+  if (!/^\d+(:\d{1,2}){0,2}(\.\d+)?$/.test(value)) return NaN;
+  const parts = value.split(':').map(Number);
+  if (parts.slice(1).some((n) => n >= 60)) return NaN;
+  return parts.reduce((total, n) => total * 60 + n, 0);
+}
+
+// Turns the clip fields into { start, end } seconds, null for the whole video, or
+// { error } explaining what to fix. duration (seconds) is used when known.
+export function readSection(startText, endText, duration) {
+  const start = parseTime(startText);
+  const end = parseTime(endText);
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return { error: 'Write times as minutes:seconds, like 1:05, or hours:minutes:seconds.' };
+  }
+  if (start === null && end === null) return null;
+  const from = start ?? 0;
+  if (duration && from >= duration) {
+    return { error: `The start is after the video ends (${formatDuration(duration)}).` };
+  }
+  let to = end ?? duration;
+  if (to == null) return { error: 'Enter an end time.' };
+  if (duration && to > duration) to = duration;
+  if (to - from < 1) return { error: 'The end must be at least 1 second after the start.' };
+  return { start: from, end: to };
+}
