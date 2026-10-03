@@ -49,7 +49,9 @@ internal/store/sqlite/       persistence and migrations
 internal/tray/               tray / menu-bar icon, menu, notifications
 internal/trayhost/           whether this desktop can show a tray icon
 internal/watch/              watched channels and playlists, and their checks
-web/static/                  the browser UI
+web/static/                  the browser UI: app.js (download form, queue, library, settings),
+                             watching.js, search.js, ui.js (shared helpers), api.js (server
+                             and sample-data clients), formats.js, links.js
 ```
 
 ## Download flow
