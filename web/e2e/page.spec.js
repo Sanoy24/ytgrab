@@ -332,3 +332,14 @@ test('marks or removes sponsor segments', async ({ page }) => {
   await select.selectOption('remove');
   await expect(page.locator('#toast')).toContainText('cut out of new downloads');
 });
+
+test('filters a watch and checks it on its own schedule', async ({ page }) => {
+  await page.goto('/?fixture=empty#watching');
+  await page.locator('#watch-url').fill('https://www.youtube.com/@ChromeDevs');
+  await page.getByText('Filters and how often to check').click();
+  await page.locator('#watch-min').selectOption('2');
+  await page.locator('#watch-keywords').fill('devtools, lighthouse');
+  await page.locator('#watch-interval').selectOption('24');
+  await page.getByRole('button', { name: 'Start watching' }).click();
+  await expect(page.locator('.watch-meta')).toContainText('2+ min · titles with “devtools, lighthouse” · daily');
+});

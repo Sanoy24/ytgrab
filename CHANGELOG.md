@@ -6,6 +6,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Smarter Watching.** Filter a watch by minimum length (skip Shorts) or by words in the title, and choose to check every hour, 6 hours, or day. Upcoming premieres and live streams now wait until they can be downloaded instead of failing.
 - **SponsorBlock.** Mark sponsor reads, self-promotion, and "like and subscribe" reminders as chapters, or cut them out, using the community SponsorBlock list.
 
 ## [1.10.0] - 2026-10-03

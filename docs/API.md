@@ -21,9 +21,9 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/jobs/{id}/top` | Start a queued or paused job before the other waiting ones |
 | `POST` | `/api/jobs/{id}/retry` | Retry a failed or cancelled job |
 | `GET` | `/api/watches` | `{ watches: [Watch], interval_hours, max_backfill, max_per_check }` |
-| `POST` | `/api/watches` | `{ url, preset, folder, backfill }`: lists the channel or playlist, counts what's there as seen, queues the newest `backfill` (0–10) videos; `watch_exists` if it's already watched |
+| `POST` | `/api/watches` | `{ url, preset, folder, backfill, min_minutes, keywords, interval_hours }` (minutes 0–600, keywords up to 200 characters, interval 1, 6, or 24): lists the channel or playlist, counts what's there as seen, queues the newest `backfill` (0–10) videos; `watch_exists` if it's already watched |
 | `POST` | `/api/watches/{id}/check` | Check now; returns the watch with `last_new` |
-| `PUT` | `/api/watches/{id}` | Any of `{ preset, folder, paused }` |
+| `PUT` | `/api/watches/{id}` | Any of `{ preset, folder, paused, min_minutes, keywords, interval_hours }` |
 | `DELETE` | `/api/watches/{id}` | Stop watching (downloads are kept) |
 | `POST` | `/api/jobs/{id}/open` | Open a finished download's own file with its default app (`204`; `file_missing` if it was moved) |
 | `POST` | `/api/jobs/{id}/reveal` | Show a finished file in the system file manager (`204`; `file_missing` if it was moved) |

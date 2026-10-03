@@ -20,13 +20,19 @@ type Watch struct {
 	Title  string `json:"title"`
 	Preset Preset `json:"preset"`
 	// Folder saves its downloads into a folder named after the channel or playlist.
-	Folder      bool       `json:"folder"`
-	Paused      bool       `json:"paused"`
-	CreatedAt   time.Time  `json:"created_at"`
-	LastChecked *time.Time `json:"last_checked"`
-	LastError   string     `json:"last_error,omitempty"`
-	LastNew     int        `json:"last_new"`   // videos queued by the last check
-	Downloaded  int        `json:"downloaded"` // videos queued since the watch was added
+	Folder bool `json:"folder"`
+	Paused bool `json:"paused"`
+	// Filters: skip videos shorter than MinMinutes (0: any length), and when Keywords is
+	// set, download only titles containing one of its comma-separated words.
+	MinMinutes int    `json:"min_minutes"`
+	Keywords   string `json:"keywords,omitempty"`
+	// IntervalHours is how often it is checked: 1, 6 (the default), or 24.
+	IntervalHours int        `json:"interval_hours"`
+	CreatedAt     time.Time  `json:"created_at"`
+	LastChecked   *time.Time `json:"last_checked"`
+	LastError     string     `json:"last_error,omitempty"`
+	LastNew       int        `json:"last_new"`   // videos queued by the last check
+	Downloaded    int        `json:"downloaded"` // videos queued since the watch was added
 }
 
 // Channel names: @handles, channel IDs, and the older /c/ and /user/ names.
@@ -85,4 +91,39 @@ func parseWatchURL(raw string) (kind, canonical string, err error) {
 		return "channel", base + parts[0] + "/" + parts[1] + "/videos", nil
 	}
 	return "", "", ErrInvalidWatchURL
+}
+
+var ErrInvalidWatchOptions = errors.New("Choose a minimum length up to 600 minutes, keywords up to 200 characters, and a check every 1, 6, or 24 hours.")
+
+// Interval is how often the watch is checked.
+func (w Watch) Interval() time.Duration {
+	if w.IntervalHours == 1 || w.IntervalHours == 24 {
+		return time.Duration(w.IntervalHours) * time.Hour
+	}
+	return 6 * time.Hour
+}
+
+// ValidWatchOptions checks a watch's filters and interval.
+func ValidWatchOptions(minMinutes int, keywords string, intervalHours int) bool {
+	return minMinutes >= 0 && minMinutes <= 600 && len(keywords) <= 200 &&
+		(intervalHours == 0 || intervalHours == 1 || intervalHours == 6 || intervalHours == 24)
+}
+
+// Wants reports whether a listed video passes the watch's filters. A video whose length
+// isn't listed passes the length filter.
+func (w Watch) Wants(title string, durationSeconds *float64) bool {
+	if w.MinMinutes > 0 && durationSeconds != nil && *durationSeconds < float64(w.MinMinutes*60) {
+		return false
+	}
+	words := strings.FieldsFunc(strings.ToLower(w.Keywords), func(r rune) bool { return r == ',' })
+	if len(words) == 0 {
+		return true
+	}
+	lower := strings.ToLower(title)
+	for _, word := range words {
+		if word = strings.TrimSpace(word); word != "" && strings.Contains(lower, word) {
+			return true
+		}
+	}
+	return false
 }

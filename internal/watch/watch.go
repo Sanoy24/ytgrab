@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	// Interval is how often each watch is checked.
+	// Interval is how often a watch is checked unless it chose otherwise.
 	Interval = 6 * time.Hour
 	// A check lists a channel's newest uploads, or a whole playlist up to a limit.
 	channelLimit  = 30
@@ -44,6 +44,26 @@ type Lister interface {
 	ListLatest(ctx context.Context, kind, url string, limit int) (ytdlp.Listing, error)
 }
 
+// Options are chosen when a watch is added.
+type Options struct {
+	Preset        domain.Preset
+	Folder        bool
+	Backfill      int // how many of the newest videos to download right away
+	MinMinutes    int
+	Keywords      string
+	IntervalHours int
+}
+
+// Changes edit a watch; nil fields stay as they are.
+type Changes struct {
+	Preset        *domain.Preset
+	Folder        *bool
+	Paused        *bool
+	MinMinutes    *int
+	Keywords      *string
+	IntervalHours *int
+}
+
 type Service struct {
 	store  Store
 	lister Lister
@@ -69,15 +89,18 @@ func (s *Service) List(ctx context.Context) ([]domain.Watch, error) {
 
 // Add starts watching a channel or playlist. What it holds now counts as seen, except the
 // newest backfill videos, which are queued right away.
-func (s *Service) Add(ctx context.Context, rawURL string, preset domain.Preset, folder bool, backfill int) (domain.Watch, error) {
-	if backfill < 0 || backfill > MaxBackfill {
+func (s *Service) Add(ctx context.Context, rawURL string, opts Options) (domain.Watch, error) {
+	if opts.Backfill < 0 || opts.Backfill > MaxBackfill {
 		return domain.Watch{}, ErrInvalidBackfill
 	}
-	watch, err := domain.NewWatch(rawURL, preset)
+	if !domain.ValidWatchOptions(opts.MinMinutes, opts.Keywords, opts.IntervalHours) {
+		return domain.Watch{}, domain.ErrInvalidWatchOptions
+	}
+	watch, err := domain.NewWatch(rawURL, opts.Preset)
 	if err != nil {
 		return domain.Watch{}, err
 	}
-	watch.Folder = folder
+	watch.Folder, watch.MinMinutes, watch.Keywords, watch.IntervalHours = opts.Folder, opts.MinMinutes, opts.Keywords, opts.IntervalHours
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	listing, err := s.lister.ListLatest(ctx, watch.Kind, watch.URL, limitFor(watch.Kind))
@@ -90,13 +113,21 @@ func (s *Service) Add(ctx context.Context, rawURL string, preset domain.Preset, 
 	}
 	now := s.now().UTC()
 	watch.LastChecked = &now
-	ids := videoIDs(listing.Entries)
-	if err := s.store.CreateWatch(ctx, watch, ids); err != nil {
+	// Everything available now counts as seen; upcoming and live videos stay unseen so
+	// they are picked up once they can be downloaded.
+	available := availableEntries(listing.Entries)
+	if err := s.store.CreateWatch(ctx, watch, videoIDs(available)); err != nil {
 		return domain.Watch{}, err
 	}
-	newest := oldestFirst(watch.Kind, ids)
-	if len(newest) > backfill {
-		newest = newest[len(newest)-backfill:]
+	var wanted []string
+	for _, entry := range available {
+		if watch.Wants(entry.Title, entry.DurationSeconds) {
+			wanted = append(wanted, entry.VideoID)
+		}
+	}
+	newest := oldestFirst(watch.Kind, wanted)
+	if len(newest) > opts.Backfill {
+		newest = newest[len(newest)-opts.Backfill:]
 	}
 	queued, err := s.queue(ctx, watch, newest, titles(listing.Entries))
 	watch.LastNew, watch.Downloaded = queued, queued
@@ -124,8 +155,22 @@ func (s *Service) Check(ctx context.Context, id string) (domain.Watch, error) {
 		_ = s.store.UpdateWatch(ctx, watch)
 		return watch, err
 	}
-	unseen, err := s.store.Unseen(ctx, watch.ID, videoIDs(listing.Entries))
+	available := availableEntries(listing.Entries)
+	unseenIDs, err := s.store.Unseen(ctx, watch.ID, videoIDs(available))
 	if err != nil {
+		return watch, err
+	}
+	// New videos the filters skip are marked seen, so they are never downloaded later.
+	entries := byID(available)
+	var unseen, skipped []string
+	for _, id := range unseenIDs {
+		if entry := entries[id]; watch.Wants(entry.Title, entry.DurationSeconds) {
+			unseen = append(unseen, id)
+		} else {
+			skipped = append(skipped, id)
+		}
+	}
+	if err := s.store.MarkSeen(ctx, watch.ID, skipped); err != nil {
 		return watch, err
 	}
 	unseen = oldestFirst(watch.Kind, unseen)
@@ -148,23 +193,36 @@ func (s *Service) Check(ctx context.Context, id string) (domain.Watch, error) {
 	return watch, err
 }
 
-// Update changes a watch's format, folder choice, or pause.
-func (s *Service) Update(ctx context.Context, id string, preset *domain.Preset, folder, paused *bool) (domain.Watch, error) {
+// Update changes a watch's format, folder choice, filters, interval, or pause. Filters
+// apply to videos found from then on.
+func (s *Service) Update(ctx context.Context, id string, changes Changes) (domain.Watch, error) {
 	watch, err := s.store.GetWatch(ctx, id)
 	if err != nil {
 		return domain.Watch{}, err
 	}
-	if preset != nil {
-		if !preset.Valid() {
+	if changes.Preset != nil {
+		if !changes.Preset.Valid() {
 			return domain.Watch{}, domain.ErrInvalidPreset
 		}
-		watch.Preset = *preset
+		watch.Preset = *changes.Preset
 	}
-	if folder != nil {
-		watch.Folder = *folder
+	if changes.Folder != nil {
+		watch.Folder = *changes.Folder
 	}
-	if paused != nil {
-		watch.Paused = *paused
+	if changes.Paused != nil {
+		watch.Paused = *changes.Paused
+	}
+	if changes.MinMinutes != nil {
+		watch.MinMinutes = *changes.MinMinutes
+	}
+	if changes.Keywords != nil {
+		watch.Keywords = *changes.Keywords
+	}
+	if changes.IntervalHours != nil {
+		watch.IntervalHours = *changes.IntervalHours
+	}
+	if !domain.ValidWatchOptions(watch.MinMinutes, watch.Keywords, watch.IntervalHours) {
+		return domain.Watch{}, domain.ErrInvalidWatchOptions
 	}
 	return watch, s.store.UpdateWatch(ctx, watch)
 }
@@ -205,7 +263,7 @@ func (s *Service) checkDue(ctx context.Context) {
 }
 
 func (s *Service) due(watch domain.Watch) bool {
-	return !watch.Paused && (watch.LastChecked == nil || s.now().Sub(*watch.LastChecked) >= Interval)
+	return !watch.Paused && (watch.LastChecked == nil || s.now().Sub(*watch.LastChecked) >= watch.Interval())
 }
 
 // queue creates a download for each video and marks it seen. A video already in the
@@ -260,6 +318,27 @@ func oldestFirst(kind string, ids []string) []string {
 		slices.Reverse(ordered)
 	}
 	return ordered
+}
+
+// availableEntries drops premieres and live streams, which can't be downloaded yet.
+func availableEntries(entries []ytdlp.PlaylistEntry) []ytdlp.PlaylistEntry {
+	var available []ytdlp.PlaylistEntry
+	for _, entry := range entries {
+		switch entry.LiveStatus {
+		case "is_upcoming", "is_live", "post_live":
+		default:
+			available = append(available, entry)
+		}
+	}
+	return available
+}
+
+func byID(entries []ytdlp.PlaylistEntry) map[string]ytdlp.PlaylistEntry {
+	m := make(map[string]ytdlp.PlaylistEntry, len(entries))
+	for _, entry := range entries {
+		m[entry.VideoID] = entry
+	}
+	return m
 }
 
 func videoIDs(entries []ytdlp.PlaylistEntry) []string {

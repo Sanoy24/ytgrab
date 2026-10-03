@@ -60,9 +60,10 @@ func parseListing(data []byte, kind string) (Listing, error) {
 		Title   string `json:"title"`
 		Channel string `json:"channel"`
 		Entries []struct {
-			ID       string   `json:"id"`
-			Title    string   `json:"title"`
-			Duration *float64 `json:"duration"`
+			ID         string   `json:"id"`
+			Title      string   `json:"title"`
+			Duration   *float64 `json:"duration"`
+			LiveStatus string   `json:"live_status"`
 		} `json:"entries"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -80,7 +81,7 @@ func parseListing(data []byte, kind string) (Listing, error) {
 		if !domain.ValidVideoID(entry.ID) || entry.Title == "[Private video]" || entry.Title == "[Deleted video]" {
 			continue
 		}
-		listing.Entries = append(listing.Entries, PlaylistEntry{VideoID: entry.ID, Title: entry.Title, DurationSeconds: entry.Duration})
+		listing.Entries = append(listing.Entries, PlaylistEntry{VideoID: entry.ID, Title: entry.Title, DurationSeconds: entry.Duration, LiveStatus: entry.LiveStatus})
 	}
 	return listing, nil
 }

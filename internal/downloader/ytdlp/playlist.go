@@ -15,6 +15,9 @@ type PlaylistEntry struct {
 	VideoID         string   `json:"video_id"`
 	Title           string   `json:"title"`
 	DurationSeconds *float64 `json:"duration_seconds"`
+	// LiveStatus is yt-dlp's live_status when listed, such as "is_upcoming" for a
+	// premiere that can't be downloaded yet.
+	LiveStatus string `json:"live_status,omitempty"`
 }
 
 // Playlist is one page of up to domain.PlaylistPageSize entries, starting at the 1-based

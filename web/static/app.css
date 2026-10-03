@@ -612,6 +612,10 @@ input[aria-invalid="true"] { border-color: var(--err); }
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
   padding: 7px 10px; min-width: 13rem;
 }
+.watch-more { margin-top: 14px; }
+.watch-more summary { width: fit-content; cursor: pointer; color: var(--muted); font-size: 0.875rem; }
+.watch-more summary:hover { color: var(--text); }
+.watch-options input[type="text"] { font-weight: 400; min-width: 13rem; }
 .watch-actions { position: static; margin: 16px 0 0; padding: 0; background: none; }
 .watch-list { display: grid; gap: 10px; margin-top: 22px; }
 .watch {

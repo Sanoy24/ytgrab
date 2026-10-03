@@ -652,9 +652,13 @@ function renderWatches() {
   }
   list.replaceChildren(
     ...watches.map((w) => {
+      const every = { 1: 'every hour', 24: 'daily' }[w.interval_hours] || 'every 6 hours';
       const meta = [
         w.kind === 'channel' ? 'Channel' : 'Playlist',
         PRESET_LABELS[w.preset] || w.preset,
+        w.min_minutes ? `${w.min_minutes}+ min` : '',
+        w.keywords ? `titles with “${w.keywords}”` : '',
+        w.paused ? '' : every,
         w.paused ? 'paused' : w.last_checked ? `checked ${formatWhen(w.last_checked)}` : 'not checked yet',
         w.downloaded ? `${w.downloaded} downloaded` : '',
       ].filter(Boolean);
@@ -731,7 +735,11 @@ async function onWatchSubmit(e) {
       preset: $('#watch-preset').value,
       folder: $('#watch-folder').checked,
       backfill: Number($('#watch-backfill').value),
+      min_minutes: Number($('#watch-min').value),
+      keywords: $('#watch-keywords').value.trim(),
+      interval_hours: Number($('#watch-interval').value),
     });
+    $('#watch-keywords').value = '';
     $('#watch-url').value = '';
     toast(watch.last_new ? `Watching ${watch.title}. Added ${watch.last_new} video${watch.last_new === 1 ? '' : 's'} to the queue.` : `Watching ${watch.title}. New videos will download as they appear.`);
     if (!client.isFixture) jobs = await client.listJobs();

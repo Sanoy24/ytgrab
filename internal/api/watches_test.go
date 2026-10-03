@@ -26,11 +26,14 @@ func (f *fakeWatcher) List(context.Context) ([]domain.Watch, error) {
 	}
 	return out, nil
 }
-func (f *fakeWatcher) Add(_ context.Context, url string, preset domain.Preset, folder bool, backfill int) (domain.Watch, error) {
-	if backfill < 0 || backfill > watch.MaxBackfill {
+func (f *fakeWatcher) Add(_ context.Context, url string, opts watch.Options) (domain.Watch, error) {
+	if opts.Backfill < 0 || opts.Backfill > watch.MaxBackfill {
 		return domain.Watch{}, watch.ErrInvalidBackfill
 	}
-	w, err := domain.NewWatch(url, preset)
+	if !domain.ValidWatchOptions(opts.MinMinutes, opts.Keywords, opts.IntervalHours) {
+		return domain.Watch{}, domain.ErrInvalidWatchOptions
+	}
+	w, err := domain.NewWatch(url, opts.Preset)
 	if err != nil {
 		return w, err
 	}
@@ -39,7 +42,7 @@ func (f *fakeWatcher) Add(_ context.Context, url string, preset domain.Preset, f
 			return domain.Watch{}, sqlitestore.ErrWatchExists
 		}
 	}
-	w.Folder, w.Title = folder, "Google for Developers"
+	w.Folder, w.Title, w.MinMinutes = opts.Folder, "Google for Developers", opts.MinMinutes
 	f.watches[w.ID] = w
 	return w, nil
 }
@@ -51,7 +54,8 @@ func (f *fakeWatcher) Check(_ context.Context, id string) (domain.Watch, error) 
 	w.LastNew = 1
 	return w, nil
 }
-func (f *fakeWatcher) Update(_ context.Context, id string, _ *domain.Preset, _, paused *bool) (domain.Watch, error) {
+func (f *fakeWatcher) Update(_ context.Context, id string, changes watch.Changes) (domain.Watch, error) {
+	paused := changes.Paused
 	w, ok := f.watches[id]
 	if !ok {
 		return w, sqlitestore.ErrNotFound
@@ -94,17 +98,18 @@ func TestWatchRoutes(t *testing.T) {
 		_ = json.Unmarshal(response.Body.Bytes(), &decoded)
 		return response.Code, decoded
 	}
-	code, added := call(http.MethodPost, "/api/watches", `{"url":"https://www.youtube.com/@GoogleDevelopers","preset":"audio-m4a","folder":true,"backfill":1}`)
-	if code != http.StatusCreated || added["kind"] != "channel" {
+	code, added := call(http.MethodPost, "/api/watches", `{"url":"https://www.youtube.com/@GoogleDevelopers","preset":"audio-m4a","folder":true,"backfill":1,"min_minutes":2,"keywords":"gemma","interval_hours":24}`)
+	if code != http.StatusCreated || added["kind"] != "channel" || added["min_minutes"] != float64(2) {
 		t.Fatalf("add = %d %v", code, added)
 	}
 	id := added["id"].(string)
 	for body, want := range map[string]int{
-		`{"url":"https://www.youtube.com/@GoogleDevelopers/videos","preset":"audio-m4a"}`:  http.StatusConflict,
-		`{"url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","preset":"audio-m4a"}`:       http.StatusBadRequest,
-		`{"url":"https://www.youtube.com/@ChromeDevs","preset":"audio-m4a","backfill":99}`: http.StatusBadRequest,
-		`{"url":"https://www.youtube.com/@ChromeDevs","preset":"--exec"}`:                  http.StatusBadRequest,
-		`{"url":"https://www.youtube.com/@ChromeDevs","preset":"audio-m4a","x":1}`:         http.StatusBadRequest,
+		`{"url":"https://www.youtube.com/@GoogleDevelopers/videos","preset":"audio-m4a"}`:       http.StatusConflict,
+		`{"url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","preset":"audio-m4a"}`:            http.StatusBadRequest,
+		`{"url":"https://www.youtube.com/@ChromeDevs","preset":"audio-m4a","backfill":99}`:      http.StatusBadRequest,
+		`{"url":"https://www.youtube.com/@ChromeDevs","preset":"--exec"}`:                       http.StatusBadRequest,
+		`{"url":"https://www.youtube.com/@ChromeDevs","preset":"audio-m4a","x":1}`:              http.StatusBadRequest,
+		`{"url":"https://www.youtube.com/@ChromeDevs","preset":"audio-m4a","interval_hours":3}`: http.StatusBadRequest,
 	} {
 		if code, _ := call(http.MethodPost, "/api/watches", body); code != want {
 			t.Errorf("%s = %d, want %d", body, code, want)
