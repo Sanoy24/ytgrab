@@ -1309,7 +1309,7 @@ function formatRow(choice, checked) {
 }
 
 // Sites other than YouTube, as job cards name them.
-const SITE_NAMES = { x: 'X', reddit: 'Reddit', instagram: 'Instagram' };
+const SITE_NAMES = { x: 'X', reddit: 'Reddit', instagram: 'Instagram', vimeo: 'Vimeo' };
 
 const X_AUDIO = { kind: 'preset', id: 'audio-m4a', label: 'M4A', detail: "The post's audio, no re-encoding" };
 

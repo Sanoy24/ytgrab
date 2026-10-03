@@ -180,7 +180,11 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 		return Result{}, ctx.Err()
 	}
 	if waitErr != nil {
-		return Result{}, classifyFor(job.Site, stderrTail)
+		err := classifyFor(job.Site, stderrTail)
+		if failure, ok := err.(*Error); ok && (failure.Code == "drm_protected" || failure.Code == "video_unavailable") {
+			removeThumbnails(cfg.DownloadsDir, job.VideoID) // a retry won't use them
+		}
+		return Result{}, err
 	}
 	if result.OutputPath == "" {
 		return Result{}, &Error{Code: "download_failed", Message: "yt-dlp finished without reporting an output file."}
@@ -254,10 +258,10 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "--playlist-items", strconv.Itoa(index))
 	}
 	finish := func(args []string) []string {
-		if job.Site == domain.SiteInstagram && isVideo(job) {
-			// Instagram's VP9 comes in MP4 with AAC audio. yt-dlp won't pair those in MP4 by
-			// itself and falls back to MKV, but MP4 holds them fine and plays more widely.
-			// The later option wins.
+		if (job.Site == domain.SiteInstagram || job.Site == domain.SiteVimeo) && isVideo(job) {
+			// Instagram's VP9 comes in MP4 with AAC audio, and Vimeo's audio doesn't name its
+			// codec. yt-dlp won't pair either in MP4 by itself and falls back to MKV, but MP4
+			// holds them fine and plays more widely. The later option wins.
 			args = append(args, "--merge-output-format", "mp4")
 		}
 		return append(args, "--", target)
@@ -267,6 +271,9 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 			args = append(args, "-f", videoSelector(*job.Format), "--merge-output-format", "mp4/webm/mkv")
 		} else {
 			args = append(args, "-f", job.Format.ID)
+			if job.Site != domain.SiteYouTube && (job.Format.Ext == "m4a" || job.Format.Ext == "mp4") {
+				args = append(args, "-x", "--audio-format", "m4a") // Vimeo's audio comes in MP4
+			}
 		}
 		return finish(args)
 	}
@@ -281,7 +288,12 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	case domain.Video720:
 		args = append(args, "-f", "bv*[height<=720]+ba/b[height<=720]", "--merge-output-format", "mp4/mkv")
 	case domain.AudioM4A:
-		args = append(args, "-f", "ba[ext=m4a]")
+		if job.Site == domain.SiteYouTube {
+			args = append(args, "-f", "ba[ext=m4a]")
+		} else {
+			// Vimeo's AAC comes in MP4; repackaging it as M4A doesn't re-encode.
+			args = append(args, "-f", "ba[ext=m4a]/ba", "-x", "--audio-format", "m4a")
+		}
 	case domain.AudioMP3:
 		args = append(args, "-f", "ba", "-x", "--audio-format", "mp3", "--audio-quality", "0")
 	case domain.AudioOpus:
@@ -614,7 +626,7 @@ func confirmOutput(directory string, reportedPath string) (string, error) {
 }
 
 // siteNames name the sites in failure messages.
-var siteNames = map[string]string{domain.SiteX: "X", domain.SiteReddit: "Reddit", domain.SiteInstagram: "Instagram"}
+var siteNames = map[string]string{domain.SiteX: "X", domain.SiteReddit: "Reddit", domain.SiteInstagram: "Instagram", domain.SiteVimeo: "Vimeo"}
 
 // classifyFor explains a failure in terms of the site it happened on. Other sites' limits
 // are their own, so they never pause YouTube downloads ("blocked" is reserved for YouTube).
@@ -631,6 +643,17 @@ func classifyFor(site, stderr string) error {
 			return &Error{Code: "signin_required", Message: "Reddit shows this post only to signed-in users. Turn on Browser sign-in in Settings, choosing a browser where you're signed in to Reddit, then retry."}
 		case strings.Contains(lower, "http error 404"), strings.Contains(lower, "does not exist"), strings.Contains(lower, "removed"), strings.Contains(lower, "deleted"):
 			return &Error{Code: "video_unavailable", Message: "This post is unavailable: it may be deleted or removed."}
+		}
+		return siteFailure(site, stderr)
+	}
+	if site == domain.SiteVimeo {
+		switch {
+		case strings.Contains(lower, "embed"), strings.Contains(lower, "referer"), strings.Contains(lower, "domain"):
+			return &Error{Code: "video_unavailable", Message: "This video's owner allows it to play only on certain websites, so YTGrab can't download it."}
+		case strings.Contains(lower, "logged-in"), strings.Contains(lower, "login"), strings.Contains(lower, "password"), strings.Contains(lower, "private"):
+			return &Error{Code: "signin_required", Message: "Vimeo shows this video only to signed-in users or with a password. If you can watch it in your browser, turn on Browser sign-in in Settings with a browser where you're signed in to Vimeo, then retry."}
+		case strings.Contains(lower, "http error 404"), strings.Contains(lower, "not found"), strings.Contains(lower, "does not exist"):
+			return &Error{Code: "video_unavailable", Message: "This video is unavailable: it may be deleted or private."}
 		}
 		return siteFailure(site, stderr)
 	}
@@ -677,6 +700,8 @@ func siteFailure(site, stderr string) error {
 func classifyFailure(stderr string) error {
 	lower := strings.ToLower(stderr)
 	switch {
+	case strings.Contains(lower, "drm protected"):
+		return &Error{Code: "drm_protected", Message: "This video is copy-protected (DRM), so it can't be downloaded."}
 	case strings.Contains(lower, "no space left on device"), strings.Contains(lower, "not enough space on the disk"):
 		return &Error{Code: "disk_full", Message: "The drive with your download folder is full. Free up space or choose another folder, then Retry."}
 	// Checked first and by specific phrases: YouTube's bot check also mentions cookies.
@@ -694,3 +719,22 @@ func classifyFailure(stderr string) error {
 		return &Error{Code: "download_failed", Message: "yt-dlp could not download this video. Check that yt-dlp is up to date and retry."}
 	}
 }
+
+// removeThumbnails deletes the cover images yt-dlp saved for a download that failed for
+// good, before it could embed them: files named with "[videoID]" and an image extension.
+// Partial downloads are kept, so a retry still resumes.
+func removeThumbnails(dir, videoID string) {
+	if !plainID.MatchString(videoID) {
+		return // nothing that a glob pattern would read differently
+	}
+	for _, ext := range []string{"jpg", "webp", "png"} {
+		// "[[]" matches a literal "[": a bare one would start a character class.
+		matches, _ := filepath.Glob(filepath.Join(dir, "*[[]"+videoID+"]."+ext))
+		for _, match := range matches {
+			_ = os.Remove(match)
+		}
+	}
+}
+
+// plainID matches the video IDs every site uses: letters, digits, "_", "-", and ".".
+var plainID = regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)

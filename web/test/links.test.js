@@ -30,7 +30,7 @@ test('turns playlist links into playlist requests and refuses Mixes', () => {
 test('explains what is wrong with other input', () => {
   assert.match(validateUrl('').error, /Paste/);
   assert.match(validateUrl('not a link').error, /doesn't look like a link/);
-  assert.match(validateUrl('https://vimeo.com/123').error, /Only YouTube/);
+  assert.match(validateUrl('https://www.dailymotion.com/video/x8abcd').error, /Only YouTube/);
   assert.match(validateUrl('ftp://youtube.com/watch?v=x').error, /http and https/);
   assert.match(validateUrl('https://www.youtube.com/@channel').error, /video or playlist/);
 });
@@ -124,4 +124,13 @@ test('accepts Instagram post and reel links and rewrites them to one form', () =
   });
   assert.match(validateUrl('https://www.instagram.com/someone/').error, /doesn't point to a post/);
   assert.equal(looksLikeSearch('instagram.com/reel/Dd_8Q80veb1'), false);
+});
+
+test('accepts Vimeo links and rewrites them to the player', () => {
+  for (const link of ['https://vimeo.com/76979871', 'vimeo.com/channels/staffpicks/76979871', 'https://player.vimeo.com/video/76979871']) {
+    assert.deepEqual(validateUrl(link), { url: 'https://player.vimeo.com/video/76979871', site: 'vimeo', id: '76979871' }, link);
+  }
+  assert.equal(validateUrl('https://vimeo.com/123456789/abcdef1234').url, 'https://player.vimeo.com/video/123456789?h=abcdef1234');
+  assert.match(validateUrl('https://vimeo.com/staffpicks').error, /doesn't point to a video/);
+  assert.equal(looksLikeSearch('vimeo.com/76979871'), false);
 });
