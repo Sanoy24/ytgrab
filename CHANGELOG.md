@@ -4,11 +4,16 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
-### Fixed
+### Added
 
+- **Watch channels and playlists.** In the new **Watching** view, add a channel or playlist once; YTGrab checks it every 6 hours and downloads new videos in the format you chose, into their own folder. Start with only new uploads or with the latest few, and check, pause, or stop any watch.
 - **File names.** Choose to name files by title, channel and title, date and title, or to keep a folder per channel.
 - **Split into chapters.** For videos with chapters, also save each chapter as its own numbered file, in a folder next to the full download.
 - **Cover art for Opus and FLAC.** Like M4A and MP3, they now get the video's thumbnail as cover art.
+- **winget support.** Releases can be sent to winget, and the update notice recognizes winget installs (`winget upgrade Sanoy24.YTGrab`).
+
+### Fixed
+
 - **Accessibility.** Small grey text now meets WCAG contrast in both themes, a "Skip to the link field" link helps keyboard users, navigation buttons read naturally to screen readers ("Library, 5 downloads"), and screen readers announce finished and failed downloads instead of every progress update.
 - **Faster with a long history.** Unchanged downloads are no longer redrawn every second while something downloads.
 
