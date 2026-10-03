@@ -42,6 +42,12 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// sponsorSettings is implemented by settings that handle SponsorBlock segments.
+type sponsorSettings interface {
+	SponsorBlock() string
+	SetSponsorBlock(context.Context, string) error
+}
+
 // fileNameSettings is implemented by settings that choose how files are named.
 type fileNameSettings interface {
 	FileNames() string
@@ -106,6 +112,9 @@ func settingsBody(settings Settings) map[string]any {
 	if auto, ok := settings.(autoUpdateSettings); ok {
 		body["auto_update_ytdlp"] = auto.AutoUpdateYtdlp()
 	}
+	if sponsor, ok := settings.(sponsorSettings); ok {
+		body["sponsorblock"] = sponsor.SponsorBlock()
+	}
 	if names, ok := settings.(fileNameSettings); ok {
 		body["file_names"] = names.FileNames()
 		body["file_name_styles"] = settingspkg.FileNameStyles
@@ -162,6 +171,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				SpeedLimit    *int           `json:"speed_limit_kbps"`
 				AutoUpdate    *bool          `json:"auto_update_ytdlp"`
 				FileNames     *string        `json:"file_names"`
+				SponsorBlock  *string        `json:"sponsorblock"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -200,6 +210,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				err = names.SetFileNames(r.Context(), *input.FileNames)
+			}
+			if err == nil && input.SponsorBlock != nil {
+				sponsor, ok := settings.(sponsorSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server has no SponsorBlock setting.")
+					return
+				}
+				err = sponsor.SetSponsorBlock(r.Context(), *input.SponsorBlock)
 			}
 			if errors.Is(err, settingspkg.ErrInvalidPreference) {
 				writeError(w, http.StatusBadRequest, "invalid_preference", err.Error())

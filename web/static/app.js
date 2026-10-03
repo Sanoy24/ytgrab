@@ -1813,6 +1813,8 @@ function renderFileNames(next) {
 
 function renderPreferences(next) {
   renderFileNames(next);
+  $('#pref-sponsor-row').hidden = typeof next.sponsorblock !== 'string';
+  if (typeof next.sponsorblock === 'string') $('#pref-sponsor').value = next.sponsorblock;
   $('#pref-autoupdate-row').hidden = typeof next.auto_update_ytdlp !== 'boolean';
   $('#pref-autoupdate').checked = Boolean(next.auto_update_ytdlp);
   renderSubtitles(next);
@@ -2037,6 +2039,14 @@ function init() {
       e.currentTarget,
       { speed_limit_kbps: kbps },
       kbps ? `New downloads will each use at most ${speedLabel(kbps)}.` : 'New downloads will run at full speed.',
+    );
+  });
+  $('#pref-sponsor').addEventListener('change', (e) => {
+    const mode = e.currentTarget.value;
+    savePreference(
+      e.currentTarget,
+      { sponsorblock: mode },
+      mode === 'off' ? 'Sponsor segments will be left as they are.' : mode === 'mark' ? 'Sponsor segments will be marked as chapters in new downloads.' : 'Sponsor segments will be cut out of new downloads.',
     );
   });
   $('#pref-names').addEventListener('change', (e) => {

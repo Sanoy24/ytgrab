@@ -24,7 +24,11 @@ const (
 	speedLimitKey    = "speed_limit_kbps"
 	autoUpdateKey    = "auto_update_ytdlp"
 	fileNamesKey     = "file_names"
+	sponsorBlockKey  = "sponsorblock"
 )
+
+// SponsorBlockModes: leave sponsor segments alone, mark them as chapters, or cut them out.
+var SponsorBlockModes = []string{"off", "mark", "remove"}
 
 // FileNameStyles are the offered ways to name files. Every style keeps the video ID, which
 // keeps names unique and marks the files YTGrab may delete.
@@ -78,6 +82,7 @@ type Manager struct {
 	speedLimit   int
 	autoUpdate   bool
 	fileNames    string
+	sponsorBlock string
 	defaultDir   string
 	configured   bool
 }
@@ -131,7 +136,31 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if saved, ok, err := store.GetSetting(ctx, fileNamesKey); err == nil && ok && slices.Contains(FileNameStyles, saved) {
 		fileNames = saved
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	sponsorBlock := SponsorBlockModes[0]
+	if saved, ok, err := store.GetSetting(ctx, sponsorBlockKey); err == nil && ok && slices.Contains(SponsorBlockModes, saved) {
+		sponsorBlock = saved
+	}
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// SponsorBlock is what to do with sponsor segments (one of SponsorBlockModes).
+func (manager *Manager) SponsorBlock() string {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.sponsorBlock
+}
+
+func (manager *Manager) SetSponsorBlock(ctx context.Context, mode string) error {
+	if !slices.Contains(SponsorBlockModes, mode) {
+		return ErrInvalidPreference
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, sponsorBlockKey, mode); err != nil {
+		return fmt.Errorf("save SponsorBlock setting: %w", err)
+	}
+	manager.sponsorBlock = mode
+	return nil
 }
 
 // FileNames is how new downloads are named (one of FileNameStyles).

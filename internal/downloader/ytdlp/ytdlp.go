@@ -53,6 +53,7 @@ type Downloader struct {
 	Subtitles      func() (mode, lang string)
 	SpeedLimit     func() int // kB/s, 0 for none
 	FileNames      func() string
+	SponsorBlock   func() string
 }
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
@@ -81,6 +82,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if downloader.FileNames != nil {
 		cfg.FileNames = downloader.FileNames()
+	}
+	if downloader.SponsorBlock != nil {
+		cfg.SponsorBlock = downloader.SponsorBlock()
 	}
 	if err := checkFreeSpace(cfg.DownloadsDir); err != nil {
 		return Result{}, err
@@ -199,6 +203,7 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"-o", outputTemplate(job, cfg.FileNames),
 	}
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
+	args = append(args, sponsorBlockArgs(cfg.SponsorBlock)...)
 	if cfg.SpeedLimitKBps > 0 {
 		args = append(args, "--limit-rate", strconv.Itoa(cfg.SpeedLimitKBps)+"K")
 	}
@@ -259,6 +264,23 @@ func isVideo(job domain.Job) bool {
 		return job.Format.Kind == "video"
 	}
 	return job.Preset != nil && (*job.Preset == domain.VideoBest || *job.Preset == domain.Video1080 || *job.Preset == domain.Video720)
+}
+
+// sponsorCategories are the SponsorBlock segments YTGrab marks or removes: paid sponsors,
+// self-promotion, and "like and subscribe" reminders. Intros and recaps are left alone.
+const sponsorCategories = "sponsor,selfpromo,interaction"
+
+// sponsorBlockArgs looks up the video's segments in the SponsorBlock database and marks
+// them as chapters or cuts them out.
+func sponsorBlockArgs(mode string) []string {
+	switch mode {
+	case "mark":
+		return []string{"--sponsorblock-mark", sponsorCategories}
+	case "remove":
+		return []string{"--sponsorblock-remove", sponsorCategories}
+	default:
+		return nil
+	}
 }
 
 // languageCode matches the short codes in settings.SubtitleLanguages.
