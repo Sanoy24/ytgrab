@@ -302,3 +302,25 @@ test('chooses how files are named', async ({ page }) => {
   await expect(page.locator('#toast')).toContainText('named by a folder per channel');
   await expect(page.locator('#pref-names-example')).toContainText('jawed / Me at the zoo');
 });
+
+test('watches a channel and manages the watch', async ({ page }) => {
+  await page.goto('/?fixture=default#watching');
+  await expect(page.locator('.watch')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Watching, 1 channel or playlist' })).toBeVisible();
+  await page.locator('#watch-url').fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  await page.getByRole('button', { name: 'Start watching' }).click();
+  await expect(page.locator('#watch-error')).toContainText('channel');
+  await page.locator('#watch-url').fill('https://www.youtube.com/@ChromeDevs');
+  await page.locator('#watch-backfill').selectOption('5');
+  await page.getByRole('button', { name: 'Start watching' }).click();
+  await expect(page.locator('#toast')).toContainText('Watching ChromeDevs. Added 5 videos');
+  await expect(page.locator('.watch')).toHaveCount(3);
+  const card = page.locator('.watch', { hasText: 'Google for Developers' });
+  await card.getByRole('button', { name: /^Check now/ }).click();
+  await expect(page.locator('#toast')).toContainText('No new videos from Google for Developers.');
+  await card.getByRole('button', { name: /^Pause watching/ }).click();
+  await expect(card.locator('.watch-meta')).toContainText('paused');
+  page.once('dialog', (d) => d.accept());
+  await card.getByRole('button', { name: /^Stop watching/ }).click();
+  await expect(page.locator('.watch')).toHaveCount(2);
+});

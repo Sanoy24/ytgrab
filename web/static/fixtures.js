@@ -214,3 +214,17 @@ export const playlist = {
     duration_seconds: 420 + i * 37,
   })),
 };
+
+// Watched channels and playlists.
+export const watches = [
+  {
+    id: 'watch_1', kind: 'channel', url: 'https://www.youtube.com/@GoogleDevelopers/videos', title: 'Google for Developers',
+    preset: 'video-1080', folder: true, paused: false, created_at: '2026-09-20T08:00:00Z',
+    last_checked: new Date(Date.now() - 2 * 3600_000).toISOString(), last_new: 2, downloaded: 14,
+  },
+  {
+    id: 'watch_2', kind: 'playlist', url: 'https://www.youtube.com/playlist?list=PLav47HAVZMjnTdm25KnxGkL8e1sPRt8A2', title: 'Lo-fi study mix',
+    preset: 'audio-m4a', folder: true, paused: true, created_at: '2026-09-25T08:00:00Z',
+    last_checked: new Date(Date.now() - 30 * 3600_000).toISOString(), last_new: 0, downloaded: 41,
+  },
+];

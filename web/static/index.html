@@ -20,6 +20,7 @@
         <nav class="nav" aria-label="Sections">
           <button type="button" class="nav-item" data-view="download" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Download</span><span class="nav-count" id="queue-nav-count"></span></button>
           <button type="button" class="nav-item" data-view="library"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 4v16M3 9h5M3 14h5"/></svg><span>Library</span><span class="nav-count" id="library-nav-count"></span></button>
+          <button type="button" class="nav-item" data-view="watching"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>Watching</span><span class="nav-count" id="watching-nav-count"></span></button>
           <button type="button" class="nav-item" data-view="settings" id="open-settings"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span>Settings</span></button>
         </nav>
         <div class="sidebar-foot">
@@ -229,6 +230,47 @@
             <button type="button" class="btn-link history-clear" id="clear-history">Clear</button>
           </div>
           <div class="list card library-list" id="history" aria-busy="true"></div>
+        </section>
+
+        <section class="view view-watching" id="view-watching" aria-labelledby="watching-title" hidden>
+          <header class="view-head">
+            <h2 id="watching-title">Watching</h2>
+            <p class="view-sub" id="watching-sub">YTGrab checks these channels and playlists and downloads new videos as they appear.</p>
+          </header>
+          <form class="card watch-form" id="watch-form" novalidate>
+            <label for="watch-url" class="field-label">Channel or playlist link</label>
+            <div class="url-row">
+              <svg class="url-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+              <input id="watch-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://youtube.com/@channel" aria-describedby="watch-error" />
+            </div>
+            <p class="field-error" id="watch-error" role="alert" hidden></p>
+            <div class="watch-options">
+              <label>Format
+                <select id="watch-preset">
+                  <option value="video-best">Video · best quality</option>
+                  <option value="video-1080">Video · up to 1080p</option>
+                  <option value="video-720">Video · up to 720p</option>
+                  <option value="audio-m4a">Audio · M4A</option>
+                  <option value="audio-mp3">Audio · MP3</option>
+                  <option value="audio-opus">Audio · Opus</option>
+                  <option value="audio-flac">Audio · FLAC</option>
+                </select>
+              </label>
+              <label>Start with
+                <select id="watch-backfill">
+                  <option value="0">Only new uploads</option>
+                  <option value="1">The latest video too</option>
+                  <option value="5">The latest 5 videos too</option>
+                  <option value="10">The latest 10 videos too</option>
+                </select>
+              </label>
+            </div>
+            <label class="playlist-folder"><input type="checkbox" id="watch-folder" checked /> Save into a folder named after the channel or playlist</label>
+            <div class="compose-actions watch-actions">
+              <button type="submit" class="btn btn-primary btn-cta" id="watch-add">Start watching</button>
+            </div>
+          </form>
+          <div class="watch-list" id="watch-list" aria-busy="true"></div>
         </section>
 
         <section class="view view-settings" id="view-settings" aria-labelledby="settings-title" hidden>

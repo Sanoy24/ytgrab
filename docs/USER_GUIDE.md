@@ -98,6 +98,16 @@ Files include the video's title, channel, upload date, and chapters; M4A, MP3, O
 
 Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`), so different qualities of one video never overwrite each other.
 
+## Watch channels and playlists
+
+Open **Watching**, paste a channel link (`youtube.com/@name`, `/channel/…`, `/c/…`, or `/user/…`) or a playlist link, choose a format, and press **Start watching**. YTGrab then checks it every 6 hours while it's running and adds new videos to the queue by themselves. Notifications and the tray tell you when they finish.
+
+- **Start with** decides what happens right away: **Only new uploads** (the default) downloads nothing that's already there; the other choices also download the latest 1, 5, or 10 videos.
+- Videos go into a folder named after the channel or playlist unless you untick that.
+- A channel check looks at its 30 newest uploads; a playlist check looks at the whole playlist (up to 500 videos). One check adds at most 25 videos; any more wait for the next check.
+- **Check now** checks straight away, **Pause** stops checking until you resume, and **Stop watching** removes the watch but keeps what it downloaded.
+- Checks use one request to YouTube each and go through the same pause as everything else when YouTube is limiting your network, so watching a few channels doesn't make blocks more likely. Watching hundreds might.
+
 ## Split a video into chapters
 
 When the video's creator marked chapters, the Download page says how many and offers **Also save each of the N chapters as its own file**. YTGrab then saves the whole video as usual, plus a folder of the same name with one file per chapter, numbered and titled (`01 Intro.m4a`, `02 Docs.m4a`, …). It works for video and audio formats; it can't be combined with **Only part of the video**. Removing the download with its file deletes the full file but not the chapter folder.

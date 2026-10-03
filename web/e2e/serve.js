@@ -14,6 +14,6 @@ createServer((req, res) => {
     res.writeHead(404).end();
     return;
   }
-  res.writeHead(200, { 'Content-Type': types[extname(file)] ?? 'application/octet-stream' });
+  res.writeHead(200, { 'Content-Type': types[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache' });
   createReadStream(file).pipe(res);
 }).listen(Number(process.env.PORT ?? 4173), '127.0.0.1');
