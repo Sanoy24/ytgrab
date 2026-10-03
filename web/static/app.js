@@ -536,6 +536,13 @@ function render() {
   renderNow(queue);
 
   $('#queue-count').textContent = queue.length ? `(${queue.length})` : '';
+  const opens = client.windowOpens ? new Date(client.windowOpens) : null;
+  const waiting = opens && queue.some((j) => j.state === 'queued');
+  $('#window-note').hidden = !waiting;
+  if (waiting) {
+    const time = opens.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    $('#window-note').textContent = `Outside your download window: queued downloads start at ${time}. Change the window in Settings.`;
+  }
   $('#history-count').textContent = history.length ? `(${history.length})` : '';
 
   fillList(
@@ -1819,8 +1826,27 @@ function renderFileNames(next) {
   $('#pref-names-example').textContent = `For example: ${NAME_EXAMPLES[next.file_names] || ''}`;
 }
 
+function renderWindow(next) {
+  $('#pref-window-row').hidden = typeof next.download_window !== 'string';
+  if (typeof next.download_window !== 'string') return;
+  const [start, end] = next.download_window ? next.download_window.split('-') : ['', ''];
+  $('#pref-window-start').value = start;
+  $('#pref-window-end').value = end || '7';
+  $('#pref-window-end').hidden = $('#pref-window-and').hidden = !next.download_window;
+}
+
+function saveWindow(control) {
+  const start = $('#pref-window-start').value;
+  let end = $('#pref-window-end').value;
+  if (start !== '' && end === start) end = String((Number(start) + 6) % 24);
+  const value = start === '' ? '' : `${start}-${end}`;
+  const hh = (h) => `${String(h).padStart(2, '0')}:00`;
+  savePreference(control, { download_window: value }, value ? `Downloads will start only between ${hh(start)} and ${hh(end)}.` : 'Downloads can start at any time.');
+}
+
 function renderPreferences(next) {
   renderFileNames(next);
+  renderWindow(next);
   $('#pref-sponsor-row').hidden = typeof next.sponsorblock !== 'string';
   if (typeof next.sponsorblock === 'string') $('#pref-sponsor').value = next.sponsorblock;
   $('#pref-autoupdate-row').hidden = typeof next.auto_update_ytdlp !== 'boolean';
@@ -2049,6 +2075,7 @@ function init() {
       kbps ? `New downloads will each use at most ${speedLabel(kbps)}.` : 'New downloads will run at full speed.',
     );
   });
+  for (const id of ['#pref-window-start', '#pref-window-end']) $(id).addEventListener('change', (e) => saveWindow(e.currentTarget));
   $('#pref-sponsor').addEventListener('change', (e) => {
     const mode = e.currentTarget.value;
     savePreference(

@@ -310,6 +310,7 @@ class FixtureClient {
       auto_update_ytdlp: this.autoUpdate ?? true,
       file_names: this.fileNames ?? 'title',
       sponsorblock: this.sponsorBlock ?? 'off',
+      download_window: this.downloadWindow ?? '',
       file_name_styles: ['title', 'channel-title', 'date-title', 'channel-folder'],
       speed_limit_kbps: this.speedLimit ?? 0,
       speed_limits: [0, 500, 1000, 2000, 5000, 10000],
@@ -320,8 +321,13 @@ class FixtureClient {
     };
   }
 
-  async setPreferences({ max_downloads, default_preset, speed_limit_kbps, auto_update_ytdlp, file_names, sponsorblock }) {
+  async setPreferences({ max_downloads, default_preset, speed_limit_kbps, auto_update_ytdlp, file_names, sponsorblock, download_window }) {
     await delay(200);
+    if (download_window !== undefined) {
+      this.downloadWindow = download_window;
+      // The sample queue behaves as if it were outside the window whenever one is set.
+      this.windowOpens = download_window ? new Date(Date.now() + 5 * 3600_000).toISOString() : null;
+    }
     if (sponsorblock !== undefined) this.sponsorBlock = sponsorblock;
     if (file_names !== undefined) this.fileNames = file_names;
     if (auto_update_ytdlp !== undefined) this.autoUpdate = auto_update_ytdlp;
@@ -466,6 +472,7 @@ class HttpClient {
   listJobs() {
     return this.request('GET', '/api/jobs').then((r) => {
       this.pausedUntil = r.paused_until ?? null;
+      this.windowOpens = r.window_opens ?? null;
       return r.jobs ?? r;
     });
   }

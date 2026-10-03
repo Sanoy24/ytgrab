@@ -67,6 +67,8 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	// everything waits instead of retrying into a longer block.
 	jobQueue.SetCooldown(cooldown.New())
 	jobQueue.SetLimit(appSettings.MaxDownloads)
+	jobQueue.SetWindow(appSettings.DownloadWindow)
+	appSettings.OnWindowChange(jobQueue.Wake)
 	jobQueue.Start(ctx)
 	defer jobQueue.Stop()
 	if cfg.Activity != nil {

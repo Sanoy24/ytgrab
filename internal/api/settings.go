@@ -42,6 +42,12 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// windowSettings is implemented by settings with a download window.
+type windowSettings interface {
+	DownloadWindow() domain.Window
+	SetDownloadWindow(context.Context, string) error
+}
+
 // sponsorSettings is implemented by settings that handle SponsorBlock segments.
 type sponsorSettings interface {
 	SponsorBlock() string
@@ -115,6 +121,9 @@ func settingsBody(settings Settings) map[string]any {
 	if sponsor, ok := settings.(sponsorSettings); ok {
 		body["sponsorblock"] = sponsor.SponsorBlock()
 	}
+	if window, ok := settings.(windowSettings); ok {
+		body["download_window"] = window.DownloadWindow().String()
+	}
 	if names, ok := settings.(fileNameSettings); ok {
 		body["file_names"] = names.FileNames()
 		body["file_name_styles"] = settingspkg.FileNameStyles
@@ -172,6 +181,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				AutoUpdate    *bool          `json:"auto_update_ytdlp"`
 				FileNames     *string        `json:"file_names"`
 				SponsorBlock  *string        `json:"sponsorblock"`
+				Window        *string        `json:"download_window"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -218,6 +228,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				err = sponsor.SetSponsorBlock(r.Context(), *input.SponsorBlock)
+			}
+			if err == nil && input.Window != nil {
+				window, ok := settings.(windowSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server has no download window setting.")
+					return
+				}
+				err = window.SetDownloadWindow(r.Context(), *input.Window)
 			}
 			if errors.Is(err, settingspkg.ErrInvalidPreference) {
 				writeError(w, http.StatusBadRequest, "invalid_preference", err.Error())

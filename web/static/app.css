@@ -655,6 +655,9 @@ input[aria-invalid="true"] { border-color: var(--err); }
   padding: 7px 10px; width: 13rem; max-width: 58%;
 }
 .pref-hint { margin-top: 8px; font-size: 0.8rem; }
+.window-pickers { display: flex; align-items: center; gap: 6px; }
+.pref-row .window-pickers select { width: auto; max-width: none; }
+.window-note { margin: -4px 0 12px; padding: 9px 12px; border-radius: var(--radius-sm); background: var(--info-soft); color: var(--text); font-size: 0.85rem; }
 .send-bookmark {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 9px 16px;
