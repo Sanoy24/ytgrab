@@ -24,7 +24,7 @@ jobs:
           ytgrab --version
           ytgrab doctor
           brew test ytgrab
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start the server
         run: sh .github/scripts/smoke.sh ytgrab
 
@@ -38,7 +38,7 @@ jobs:
         run: |
           ~/.local/bin/ytgrab --version
           ~/.local/bin/ytgrab doctor || true   # yt-dlp and FFmpeg aren't installed here
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start the server
         run: sh .github/scripts/smoke.sh ~/.local/bin/ytgrab
 
@@ -61,7 +61,7 @@ jobs:
           ytgrab --version
           ytgrab doctor
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start the server
         shell: bash
         run: sh .github/scripts/smoke.sh "$(cygpath -u "$USERPROFILE")/scoop/apps/ytgrab/current/ytgrab.exe"
