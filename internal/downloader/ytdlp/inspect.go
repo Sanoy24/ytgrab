@@ -10,7 +10,6 @@ import (
 	"io"
 	"math"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -284,8 +283,8 @@ func (inspector *Inspector) runJSON(ctx context.Context, path string, args []str
 }
 
 func parseInspection(data []byte, expectedID, site string) (Inspection, error) {
-	if site == domain.SiteX {
-		return parseXPost(data, expectedID)
+	if site == domain.SiteX || site == domain.SiteInstagram {
+		return parseMultiPost(data, expectedID, site)
 	}
 	var raw rawVideo
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -363,15 +362,11 @@ func parseXInspection(videoID, title string, duration *float64, thumbnail string
 	return result, nil
 }
 
-// parseXPost reads an X post's videos, which yt-dlp prints one JSON line each, and returns
-// the one the link names: the first, or N for a /video/N link. A post with several videos
-// also lists them all, so the page can offer each.
-func parseXPost(data []byte, expectedID string) (Inspection, error) {
-	postID, index := expectedID, 1
-	if id, n, found := strings.Cut(expectedID, "-"); found {
-		postID = id
-		index, _ = strconv.Atoi(n)
-	}
+// parseMultiPost reads the videos of an X or Instagram post, which yt-dlp prints one JSON
+// object each, and returns the one the link names: the first, or the Nth for a link to one
+// of them. A post with several videos also lists them all, so the page can offer each.
+func parseMultiPost(data []byte, expectedID, site string) (Inspection, error) {
+	postID, index := domain.SplitItemID(site, expectedID)
 	var entries []rawVideo
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	for {
@@ -381,10 +376,11 @@ func parseXPost(data []byte, expectedID string) (Inspection, error) {
 		} else if err != nil {
 			return Inspection{}, &Error{Code: "download_failed", Message: "yt-dlp returned invalid format information."}
 		}
-		if entry.DisplayID != postID {
+		// X names every video after the post; a carousel's videos have codes of their own.
+		if site == domain.SiteX && entry.DisplayID != postID {
 			return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected post did not match the requested link."}
 		}
-		if len(entries) < domain.MaxPostVideos {
+		if len(entries) < domain.MaxCarouselItems {
 			entries = append(entries, entry)
 		}
 	}
@@ -395,16 +391,26 @@ func parseXPost(data []byte, expectedID string) (Inspection, error) {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: fmt.Sprintf("This post has only %d video%s.", len(entries), map[bool]string{true: "", false: "s"}[len(entries) == 1])}
 	}
 	chosen := entries[index-1]
-	result, err := parseXInspection(expectedID, chosen.Title, chosen.Duration, chosen.Thumbnail, chosen.Formats)
+	var result Inspection
+	var err error
+	if site == domain.SiteX {
+		result, err = parseXInspection(expectedID, chosen.Title, chosen.Duration, chosen.Thumbnail, chosen.Formats)
+	} else {
+		result, err = streamsInspection(chosen, expectedID, site)
+	}
 	if err != nil {
 		return Inspection{}, err
+	}
+	itemID, itemURL := domain.XVideoID, domain.XVideoURL
+	if site == domain.SiteInstagram {
+		itemID, itemURL = domain.InstagramItemID, domain.InstagramItemURL
 	}
 	if len(entries) > 1 {
 		for i, entry := range entries {
 			result.Videos = append(result.Videos, PostVideo{
 				Index:           i + 1,
-				VideoID:         domain.XVideoID(postID, i+1),
-				URL:             domain.XVideoURL(postID, i+1),
+				VideoID:         itemID(postID, i+1),
+				URL:             itemURL(postID, i+1),
 				DurationSeconds: entry.Duration,
 				Thumbnail:       domain.SafeThumbnail(entry.Thumbnail),
 			})
@@ -420,6 +426,12 @@ func parsePostInspection(raw rawVideo, expectedID, site string) (Inspection, err
 	if raw.DisplayID != expectedID && raw.ID != expectedID {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected post did not match the requested link."}
 	}
+	return streamsInspection(raw, expectedID, site)
+}
+
+// streamsInspection lists a post's separate video and audio streams, as Reddit and
+// Instagram serve them, estimating sizes from bitrate and length when both are known.
+func streamsInspection(raw rawVideo, expectedID, site string) (Inspection, error) {
 	result := Inspection{VideoID: expectedID, Title: html.UnescapeString(raw.Title), DurationSeconds: raw.Duration, Site: site,
 		Thumbnail: domain.SafeThumbnail(raw.Thumbnail), Video: []Format{}, Audio: []Format{}}
 	for _, format := range raw.Formats {

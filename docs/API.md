@@ -125,6 +125,8 @@ For an X post (`https://x.com/<user>/status/<id>`, also `twitter.com`), the resu
 
 A Reddit post (`https://www.reddit.com/r/<sub>/comments/<id>/…`, `redd.it/<id>`, or `v.redd.it/<id>`) adds `"site": "reddit"` and `"thumbnail"`; `video_id` is the post's ID (or the v.redd.it video's), and `video` and `audio` are separate streams like YouTube's, with `filesize_approx` estimated from bitrate. Errors add `signin_required` and `reddit_limited`.
 
+An Instagram post (`https://www.instagram.com/reel/<code>/`, also `/p/`, `/reels/`, `/tv/`) adds `"site": "instagram"` and `"thumbnail"`; `video_id` is the post's code, and `video` and `audio` are separate streams (no sizes: Instagram gives no length). A post with several videos lists them in `videos` like X, with links ending in `?item=N` (YTGrab's own) and IDs `<code>.N`. Errors add `signin_required` and `instagram_limited`.
+
 ## Playlists
 
 ```jsonc

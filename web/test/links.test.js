@@ -108,3 +108,20 @@ test('accepts Reddit post links and rewrites them to one form', () => {
   assert.match(validateUrl('https://www.reddit.com/r/videos/').error, /doesn't point to a post/);
   assert.equal(looksLikeSearch('redd.it/6rrwyj'), false);
 });
+
+test('accepts Instagram post and reel links and rewrites them to one form', () => {
+  for (const link of [
+    'https://www.instagram.com/reel/Dd_8Q80veb1/?utm_source=ig_web_copy_link&stkn=NTc4MTIwNjQ2YQ==',
+    'instagram.com/p/Dd_8Q80veb1',
+    'https://www.instagram.com/someone/reel/Dd_8Q80veb1/',
+  ]) {
+    assert.deepEqual(validateUrl(link), { url: 'https://www.instagram.com/p/Dd_8Q80veb1/', site: 'instagram', id: 'Dd_8Q80veb1' }, link);
+  }
+  assert.deepEqual(validateUrl('https://www.instagram.com/p/BQ0eAlwhDrw/?item=3'), {
+    url: 'https://www.instagram.com/p/BQ0eAlwhDrw/?item=3',
+    site: 'instagram',
+    id: 'BQ0eAlwhDrw.3',
+  });
+  assert.match(validateUrl('https://www.instagram.com/someone/').error, /doesn't point to a post/);
+  assert.equal(looksLikeSearch('instagram.com/reel/Dd_8Q80veb1'), false);
+});

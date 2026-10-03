@@ -39,14 +39,19 @@ const (
 	AudioWAV  Preset = "audio-wav"
 )
 
-var ErrInvalidURL = errors.New("enter a valid link to a single YouTube video, X post, or Reddit post")
+var ErrInvalidURL = errors.New("enter a valid link to a single YouTube video, or an X, Reddit, or Instagram post")
 
 // Sites YTGrab downloads from. A job's Site is empty for YouTube, which came first.
 const (
-	SiteYouTube = ""
-	SiteX       = "x"
-	SiteReddit  = "reddit"
+	SiteYouTube   = ""
+	SiteX         = "x"
+	SiteReddit    = "reddit"
+	SiteInstagram = "instagram"
 )
+
+// instagramCodePattern matches Instagram post codes ("Dd_8Q80veb1"); they never contain
+// a dot, which separates a carousel item's position in its ID.
+var instagramCodePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{5,40}$`)
 
 // redditPostPattern matches Reddit post IDs (base 36); redditVideoPattern matches v.redd.it
 // video IDs.
@@ -55,8 +60,12 @@ var (
 	redditVideoPattern = regexp.MustCompile(`^[a-z0-9]{6,20}$`)
 )
 
-// MaxPostVideos is the most videos an X post can hold.
-const MaxPostVideos = 4
+// MaxPostVideos is the most videos an X post can hold; MaxCarouselItems the most items an
+// Instagram post can.
+const (
+	MaxPostVideos    = 4
+	MaxCarouselItems = 20
+)
 
 // postIDPattern matches X post IDs, which are numbers.
 var postIDPattern = regexp.MustCompile(`^[0-9]{5,20}$`)
@@ -224,6 +233,25 @@ func ParseVideoURL(raw string) (string, string, error) {
 			return "https://v.redd.it/" + id, id, nil
 		}
 		return "", "", ErrInvalidURL
+	case "instagram.com", "www.instagram.com", "m.instagram.com":
+		// https://www.instagram.com/reel/<code>/, also /p/, /reels/, /tv/, and
+		// /<user>/reel/<code>/. Carousel positions (?img_index=) count photos too, so a
+		// link always means the whole post.
+		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+		for i := 0; i+1 < len(parts); i++ {
+			switch parts[i] {
+			case "p", "reel", "reels", "tv":
+				if instagramCodePattern.MatchString(parts[i+1]) {
+					// ?item=N is YTGrab's own link to one video of a carousel.
+					index, err := strconv.Atoi(parsed.Query().Get("item"))
+					if err != nil || index < 1 || index > MaxCarouselItems {
+						index = 1
+					}
+					return InstagramItemURL(parts[i+1], index), InstagramItemID(parts[i+1], index), nil
+				}
+			}
+		}
+		return "", "", ErrInvalidURL
 	case "youtu.be":
 		videoID = strings.Trim(parsed.Path, "/")
 	case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com":
@@ -269,6 +297,56 @@ func XPost(url string) (post string, index int) {
 	return post, index
 }
 
+// InstagramItemURL links to one video of an Instagram post (from 1, as yt-dlp counts a
+// carousel's videos); the first is the post itself. "item" is YTGrab's own parameter.
+func InstagramItemURL(code string, index int) string {
+	if index <= 1 {
+		return "https://www.instagram.com/p/" + code + "/"
+	}
+	return "https://www.instagram.com/p/" + code + "/?item=" + strconv.Itoa(index)
+}
+
+// InstagramItemID names one video of an Instagram post: the code, plus ".N" from the
+// second video on.
+func InstagramItemID(code string, index int) string {
+	if index <= 1 {
+		return code
+	}
+	return code + "." + strconv.Itoa(index)
+}
+
+// PostItem splits a link to one video of a post with several (X or Instagram) into the
+// post's link and the video's position, from 1.
+func PostItem(url string) (post string, index int) {
+	if strings.HasPrefix(url, "https://www.instagram.com/") {
+		post, rest, _ := strings.Cut(url, "?item=")
+		index, err := strconv.Atoi(rest)
+		if err != nil || index < 1 {
+			index = 1
+		}
+		return post, index
+	}
+	return XPost(url)
+}
+
+// SplitItemID splits a video ID from XVideoID or InstagramItemID into the post's ID and
+// the video's position, from 1.
+func SplitItemID(site, id string) (post string, index int) {
+	separator := "-"
+	if site == SiteInstagram {
+		separator = "."
+	}
+	cut := strings.LastIndex(id, separator)
+	if cut < 0 {
+		return id, 1
+	}
+	index, err := strconv.Atoi(id[cut+1:])
+	if err != nil || index < 1 {
+		return id, 1
+	}
+	return id[:cut], index
+}
+
 // SiteOf tells which site a link from ParseVideoURL belongs to.
 func SiteOf(url string) string {
 	switch {
@@ -276,6 +354,8 @@ func SiteOf(url string) string {
 		return SiteX
 	case strings.HasPrefix(url, "https://www.reddit.com/"), strings.HasPrefix(url, "https://v.redd.it/"):
 		return SiteReddit
+	case strings.HasPrefix(url, "https://www.instagram.com/"):
+		return SiteInstagram
 	}
 	return SiteYouTube
 }
@@ -283,14 +363,28 @@ func SiteOf(url string) string {
 // thumbnailHosts are the image servers, other than YouTube's, that the page may load.
 var thumbnailHosts = []string{"https://pbs.twimg.com/", "https://external-preview.redd.it/", "https://preview.redd.it/"}
 
-// SafeThumbnail keeps a post's preview image only when it comes from one of thumbnailHosts.
-func SafeThumbnail(url string) string {
-	if len(url) >= 1024 || strings.ContainsAny(url, "\"<> \\") {
+// thumbnailDomains are image servers named per region, like Instagram's
+// instagram.fadd1-1.fna.fbcdn.net; any host under them is allowed.
+var thumbnailDomains = []string{".fbcdn.net", ".cdninstagram.com"}
+
+// SafeThumbnail keeps a post's preview image only when it comes from one of thumbnailHosts
+// or thumbnailDomains, the image hosts the page's Content-Security-Policy allows.
+func SafeThumbnail(link string) string {
+	if len(link) >= 2048 || strings.ContainsAny(link, "\"<> \\") {
 		return ""
 	}
 	for _, host := range thumbnailHosts {
-		if strings.HasPrefix(url, host) {
-			return url
+		if strings.HasPrefix(link, host) {
+			return link
+		}
+	}
+	parsed, err := url.Parse(link)
+	if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.Port() != "" {
+		return ""
+	}
+	for _, suffix := range thumbnailDomains {
+		if strings.HasSuffix(strings.ToLower(parsed.Hostname()), suffix) {
+			return link
 		}
 	}
 	return ""
