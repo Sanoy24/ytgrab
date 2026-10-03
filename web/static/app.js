@@ -1,9 +1,11 @@
 import { createClient, isActive } from './api.js';
 import { formatDuration, groupFormats, matchPreset, readSection } from './formats.js';
 import { looksLikeSearch, parseLinks, validateUrl, videoIdOf } from './links.js';
+import { clearSearch, initSearch, runSearch } from './search.js';
+import { $, el, formatBytes, formatEta, formatWhen, ICONS, setThumbnail, skeleton, stateBlock, toast } from './ui.js';
+import { initWatching, loadWatches, onWatchAction, onWatchSubmit } from './watching.js';
 
 const client = createClient();
-const $ = (sel) => document.querySelector(sel);
 
 const PRESET_LABELS = {
   'video-best': 'Video · best',
@@ -32,7 +34,6 @@ const ERROR_HINTS = {
   video_unavailable: 'Check that the video is public and the link is correct.',
 };
 
-
 let jobs = [];
 let historyFilter = 'all';
 let historyQuery = ''; // library search, lower case
@@ -40,52 +41,7 @@ const pending = new Set(); // job ids with an action in flight
 
 // ---------- URL validation ----------
 
-
 // ---------- formatting ----------
-
-function formatBytes(n) {
-  if (n == null) return '';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let i = 0;
-  while (n >= 1000 && i < units.length - 1) ((n /= 1000), i++);
-  return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
-}
-
-function formatEta(s) {
-  if (s == null) return '';
-  if (s < 60) return `${s}s left`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ${s % 60}s left`;
-  return `${Math.floor(m / 60)}h ${m % 60}m left`;
-}
-
-const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-function formatWhen(iso) {
-  const diff = (new Date(iso) - Date.now()) / 1000;
-  const abs = Math.abs(diff);
-  if (abs < 45) return 'just now';
-  if (abs < 3600) return rtf.format(Math.round(diff / 60), 'minute');
-  if (abs < 86400) return rtf.format(Math.round(diff / 3600), 'hour');
-  return rtf.format(Math.round(diff / 86400), 'day');
-}
-
-// YouTube's standard preview image for a video. Loaded straight from YouTube's image
-// server, without sending which page asked for it.
-function thumbnailUrl(videoId) {
-  return /^[A-Za-z0-9_-]{11}$/.test(videoId || '') ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : '';
-}
-
-// The image stays in place but invisible until it loads: a hidden lazy image never loads.
-function setThumbnail(img, videoId) {
-  const src = thumbnailUrl(videoId);
-  if (img.dataset.src === src) return;
-  img.dataset.src = src;
-  img.classList.remove('loaded');
-  if (!src) return img.removeAttribute('src');
-  img.onload = () => img.classList.toggle('loaded', img.naturalWidth > 120); // YouTube's "no thumbnail" image is 120 px
-  img.onerror = () => img.classList.remove('loaded');
-  img.src = src;
-}
 
 function jobTitle(job) {
   if (job.title) return job.title;
@@ -218,20 +174,6 @@ function renderProgress(el, job) {
 // Finished downloads whose Remove button was pressed; they show the removal choices.
 const confirmingRemove = new Set();
 
-// Row actions shown as icons; the removal choices stay as labelled buttons.
-const ICONS = {
-  cancel: '<path d="M6 6l12 12M18 6 6 18"/>',
-  retry: '<path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3"/><path d="M3 3.5v4.8h4.8"/>',
-  reveal: '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5z"/>',
-  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
-  open: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/>',
-  resume: '<path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/>',
-  pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
-  top: '<path d="M12 20V6M6 12l6-6 6 6M5 3h14"/>',
-  again: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
-  remove: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
-};
-
 // The waiting download that will start next needs no "move to top".
 function firstWaiting(job) {
   const waiting = jobs
@@ -277,29 +219,6 @@ function renderActions(box, job) {
     );
   }
   for (const b of box.querySelectorAll('button')) b.disabled = pending.has(job.id);
-}
-
-function stateBlock(kind, title, body, action) {
-  const div = document.createElement('div');
-  div.className = `state${kind === 'error' ? ' state-error' : ''}`;
-  const strong = document.createElement('strong');
-  strong.textContent = title;
-  div.append(strong, body);
-  if (action) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn btn-small';
-    b.textContent = action.label;
-    b.addEventListener('click', action.onClick);
-    div.append(document.createElement('br'), b);
-  }
-  return div;
-}
-
-function skeleton(n) {
-  return Array.from({ length: n }, () =>
-    Object.assign(document.createElement('div'), { className: 'skeleton' }),
-  );
 }
 
 function fillList(container, list, empty) {
@@ -627,140 +546,6 @@ function renderNow(queue) {
   $('#now-fill').style.width = `${pct ?? (first.state === 'processing' ? 100 : 0)}%`;
 }
 
-// ---------- watching ----------
-
-let watchInfo = null; // { watches, interval_hours, ... }
-const watchBusy = new Set();
-
-async function loadWatches() {
-  try {
-    watchInfo = await client.listWatches();
-  } catch (err) {
-    if (err.code === 'not_available') return; // older server
-    $('#watch-list').replaceChildren(stateBlock('error', "Couldn't load watched channels", err.message));
-    return;
-  }
-  renderWatches();
-}
-
-function renderWatches() {
-  const list = $('#watch-list');
-  list.setAttribute('aria-busy', 'false');
-  const watches = watchInfo?.watches || [];
-  const active = watches.filter((w) => !w.paused).length;
-  $('#watching-nav-count').textContent = active || '';
-  setNavLabel('watching', 'Watching', active, active === 1 ? 'channel or playlist' : 'channels and playlists');
-  if (watchInfo?.interval_hours) {
-    $('#watching-sub').textContent = `YTGrab checks these every ${watchInfo.interval_hours} hours while it's running and downloads new videos as they appear.`;
-  }
-  if (!watches.length) {
-    list.replaceChildren(stateBlock('empty', 'Not watching anything yet', 'Add a channel or playlist above, and its new videos will download by themselves.'));
-    return;
-  }
-  list.replaceChildren(
-    ...watches.map((w) => {
-      const every = { 1: 'every hour', 24: 'daily' }[w.interval_hours] || 'every 6 hours';
-      const meta = [
-        w.kind === 'channel' ? 'Channel' : 'Playlist',
-        PRESET_LABELS[w.preset] || w.preset,
-        w.min_minutes ? `${w.min_minutes}+ min` : '',
-        w.keywords ? `titles with “${w.keywords}”` : '',
-        w.paused ? '' : every,
-        w.paused ? 'paused' : w.last_checked ? `checked ${formatWhen(w.last_checked)}` : 'not checked yet',
-        w.downloaded ? `${w.downloaded} downloaded` : '',
-      ].filter(Boolean);
-      const busy = watchBusy.has(w.id);
-      const button = (action, label) => {
-        const b = el('button', { type: 'button', className: 'act', title: label, disabled: busy });
-        b.dataset.watchAction = action;
-        b.setAttribute('aria-label', `${label}: ${w.title}`);
-        b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[action === 'check' ? 'retry' : action === 'unpause' ? 'resume' : action === 'pause' ? 'pause' : 'remove']}</svg>`;
-        return b;
-      };
-      const card = el(
-        'article',
-        { className: 'watch' },
-        el('div', { className: 'watch-avatar', textContent: (w.title || '?').trim().charAt(0).toUpperCase() }),
-        el(
-          'div',
-          { className: 'watch-main' },
-          el('h3', { className: 'watch-title' }, el('span', { textContent: w.title, title: w.url })),
-          el('p', { className: 'watch-meta', textContent: meta.join(' · ') }),
-          ...(w.last_error ? [el('p', { className: 'watch-error', textContent: w.last_error })] : []),
-        ),
-        el('div', { className: 'watch-actions-row' }, button('check', 'Check now'), button(w.paused ? 'unpause' : 'pause', w.paused ? 'Resume watching' : 'Pause watching'), button('remove', 'Stop watching')),
-      );
-      card.dataset.id = w.id;
-      if (w.paused) card.dataset.paused = 'true';
-      return card;
-    }),
-  );
-}
-
-async function onWatchAction(id, action) {
-  const watch = watchInfo?.watches.find((w) => w.id === id);
-  if (!watch) return;
-  if (action === 'remove' && !confirm(`Stop watching ${watch.title}? Videos it already downloaded are kept.`)) return;
-  watchBusy.add(id);
-  renderWatches();
-  try {
-    if (action === 'check') {
-      const checked = await client.checkWatch(id);
-      toast(checked.last_new ? `Found ${checked.last_new} new video${checked.last_new === 1 ? '' : 's'} and added ${checked.last_new === 1 ? 'it' : 'them'} to the queue.` : `No new videos from ${watch.title}.`);
-    } else if (action === 'remove') {
-      await client.deleteWatch(id);
-      toast(`Stopped watching ${watch.title}.`);
-    } else {
-      const paused = action === 'pause';
-      await client.updateWatch(id, { paused });
-      toast(paused ? `Paused watching ${watch.title}.` : `Watching ${watch.title} again.`);
-    }
-  } catch (err) {
-    toast(err.message, true);
-  } finally {
-    watchBusy.delete(id);
-    await loadWatches();
-  }
-}
-
-async function onWatchSubmit(e) {
-  e.preventDefault();
-  const url = $('#watch-url').value.trim();
-  const error = $('#watch-error');
-  if (!url) {
-    error.textContent = 'Paste a link to a YouTube channel or playlist first.';
-    error.hidden = false;
-    return;
-  }
-  const button = $('#watch-add');
-  button.disabled = true;
-  button.textContent = 'Reading the channel…';
-  error.hidden = true;
-  try {
-    const watch = await client.addWatch({
-      url,
-      preset: $('#watch-preset').value,
-      folder: $('#watch-folder').checked,
-      backfill: Number($('#watch-backfill').value),
-      min_minutes: Number($('#watch-min').value),
-      keywords: $('#watch-keywords').value.trim(),
-      interval_hours: Number($('#watch-interval').value),
-    });
-    $('#watch-keywords').value = '';
-    $('#watch-url').value = '';
-    toast(watch.last_new ? `Watching ${watch.title}. Added ${watch.last_new} video${watch.last_new === 1 ? '' : 's'} to the queue.` : `Watching ${watch.title}. New videos will download as they appear.`);
-    if (!client.isFixture) jobs = await client.listJobs();
-    render();
-    await loadWatches();
-  } catch (err) {
-    error.textContent = err.message;
-    error.hidden = false;
-  } finally {
-    button.disabled = false;
-    button.textContent = 'Start watching';
-  }
-}
-
 // ---------- video / audio switch ----------
 
 function kindOf(choice) {
@@ -791,54 +576,6 @@ document.addEventListener('change', (e) => {
 
 function syncKind() {
   setKind(kindOf(selectedChoice()));
-}
-
-// ---------- search ----------
-
-let searchCtl = null;
-
-function clearSearch() {
-  searchCtl?.abort();
-  searchCtl = null;
-  $('#search-results').hidden = true;
-  $('#search-results').replaceChildren();
-}
-
-async function runSearch(query) {
-  searchCtl?.abort();
-  const ctl = (searchCtl = new AbortController());
-  const box = $('#search-results');
-  box.hidden = false;
-  $('#search-hint').hidden = true;
-  box.replaceChildren(el('p', { className: 'search-status' }, el('span', { className: 'spinner' }), `Searching YouTube for “${query}”…`));
-  try {
-    const { results } = await client.search(query, { signal: ctl.signal });
-    if (ctl.signal.aborted) return;
-    if (!results.length) {
-      box.replaceChildren(el('p', { className: 'search-status', textContent: `Nothing found for “${query}”.` }));
-      return;
-    }
-    box.replaceChildren(
-      ...results.map((r) => {
-        const img = el('img', { alt: '', referrerPolicy: 'no-referrer', loading: 'lazy' });
-        setThumbnail(img, r.video_id);
-        const button = el(
-          'button',
-          { type: 'button', className: 'search-result' },
-          img,
-          el('span', {}, el('strong', { textContent: r.title }), el('small', { textContent: [r.channel, formatDuration(r.duration_seconds)].filter(Boolean).join(' · ') })),
-        );
-        button.addEventListener('click', () => {
-          clearSearch();
-          takeLinks(`https://www.youtube.com/watch?v=${r.video_id}`);
-        });
-        return button;
-      }),
-    );
-  } catch (err) {
-    if (err.name === 'AbortError' || ctl.signal.aborted) return;
-    box.replaceChildren(el('p', { className: 'search-status inspect-error', textContent: err.message }));
-  }
 }
 
 // ---------- send to YTGrab ----------
@@ -1135,17 +872,6 @@ async function runAction(id, action) {
 
 // ---------- toast ----------
 
-let toastTimer;
-function toast(message, isError = false) {
-  const msg = document.createElement('span');
-  msg.className = 'toast';
-  msg.dataset.kind = isError ? 'error' : 'ok';
-  msg.textContent = message;
-  $('#toast').replaceChildren(msg);
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => $('#toast').replaceChildren(), isError ? 8000 : 4000);
-}
-
 // ---------- form ----------
 
 function setUrlError(message) {
@@ -1284,12 +1010,6 @@ let inspectTimer;
 
 function selectedChoice() {
   return document.querySelector('input[name="choice"]:checked')?.value || 'preset:video-best';
-}
-
-function el(tag, props = {}, ...children) {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children);
-  return node;
 }
 
 function setInspectStatus(...nodes) {
@@ -2069,6 +1789,16 @@ function dismissUpdate() {
 }
 
 function init() {
+  initSearch({ client, open: takeLinks });
+  initWatching({
+    client,
+    presetLabels: PRESET_LABELS,
+    setNavLabel,
+    refreshJobs: async () => {
+      if (!client.isFixture) jobs = await client.listJobs();
+      render();
+    },
+  });
   $('#fixture-note').hidden = !client.isFixture;
   $('#dir-edit').addEventListener('click', (e) =>
     settings?.can_pick ? pickFolder(e.currentTarget) : setDirEditing(true),
