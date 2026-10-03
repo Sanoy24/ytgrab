@@ -113,3 +113,54 @@ func TestShowInFolderAndRemoveFromHistory(t *testing.T) {
 		t.Fatalf("remaining = %+v", jobs)
 	}
 }
+
+func TestClearHistoryWithFiles(t *testing.T) {
+	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	dir := t.TempDir()
+	write := func(name string) string {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte("data"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	file := write("Title [dQw4w9WgXcQ] 1080p.mp4")
+	other := write("important.docx")
+	finishedJob(t, store, "https://youtu.be/dQw4w9WgXcQ", domain.Completed, file)
+	finishedJob(t, store, "https://youtu.be/jNQXAC9IVRw", domain.Completed, filepath.Join(dir, "Gone [jNQXAC9IVRw] 720p.mp4"))
+	finishedJob(t, store, "https://youtu.be/9bZkp7q19f0", domain.Completed, other)
+	finishedJob(t, store, "https://youtu.be/aqz-KE-bpKQ", domain.Failed, "")
+	running := finishedJob(t, store, "https://youtu.be/M7lc1UVf-VE", domain.Downloading, "")
+	// A file that can't be deleted keeps its entry: a non-empty folder stands in for a
+	// file open in another program.
+	stuck := filepath.Join(dir, "Stuck [kJQP7kiw5Fk] 720p.mp4")
+	if err := os.MkdirAll(filepath.Join(stuck, "inside"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	stuckJob := finishedJob(t, store, "https://youtu.be/kJQP7kiw5Fk", domain.Completed, stuck)
+
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/history/clear?delete_files=true", nil))
+	var body clearResult
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &body) != nil {
+		t.Fatalf("clear = %d %s", response.Code, response.Body.String())
+	}
+	if body != (clearResult{Removed: 4, FilesDeleted: 1, Kept: 1}) {
+		t.Fatalf("result = %+v", body)
+	}
+	if _, err := os.Stat(file); !os.IsNotExist(err) {
+		t.Error("the downloaded file was not deleted")
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Error("a file whose name lacks the video ID was deleted")
+	}
+	jobs, _ := store.List(context.Background(), 10)
+	if len(jobs) != 2 || !((jobs[0].ID == running.ID && jobs[1].ID == stuckJob.ID) || (jobs[1].ID == running.ID && jobs[0].ID == stuckJob.ID)) {
+		t.Fatalf("remaining = %+v", jobs)
+	}
+}

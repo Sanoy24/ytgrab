@@ -151,7 +151,7 @@ Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 
 - The **Library** lists finished, failed, and cancelled downloads, with a search box and filters. For a finished download, the play button opens it in your default player, the folder button shows it in its folder, and **Download again** puts its link back on the Download page so you can choose another format. **Retry failed** queues every failed and cancelled download again at once.
 - **Show in folder** opens your file manager with the finished file selected. **Copy path** copies its full path.
 - **Remove** takes an entry off the list. For a finished download it asks first: **Remove from list** keeps the file, **Delete file too** deletes it.
-- **Clear** (next to the History heading) removes all finished, failed, and cancelled entries at once. Your files are kept.
+- **Clear** (next to the Library filters) removes all finished, failed, and cancelled entries at once. It asks first: your files are kept unless you tick **Also delete the downloaded files**, which deletes each finished download's file too (only files YTGrab saved, recognized by the video ID in the name). A file that can't be deleted, for example because it's open in a player, stays in the list so you can try again.
 
 ## Updating YTGrab
 

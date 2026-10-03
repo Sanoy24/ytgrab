@@ -357,15 +357,49 @@ async function clearHistory() {
     toast('The history is already empty.');
     return;
   }
-  if (!confirm(`Remove all ${finished} finished, failed, and cancelled downloads from the list? Downloaded files are kept.`)) return;
+  const files = jobs.filter((j) => j.state === 'completed' && j.output_path).length;
+  const deleteFiles = await askClear(finished, files);
+  if (deleteFiles === null) return;
   try {
-    const { removed } = await client.clearHistory();
-    jobs = jobs.filter((j) => isActive(j.state));
+    const result = await client.clearHistory(deleteFiles);
+    if (!client.isFixture) jobs = await client.listJobs();
+    else jobs = jobs.filter((j) => isActive(j.state));
     render();
-    toast(`Removed ${removed} entr${removed === 1 ? 'y' : 'ies'}. Your files are kept.`);
+    toast(clearMessage(result, deleteFiles), deleteFiles && result.kept > 0);
   } catch (err) {
     toast(err.message, true);
   }
+}
+
+// Asks how to clear: resolves with false (keep files), true (delete them too), or null.
+function askClear(finished, files) {
+  const dialog = $('#clear-dialog');
+  const box = $('#clear-files');
+  const confirmButton = $('#clear-confirm');
+  $('#clear-text').textContent = `${finished === 1 ? 'This removes 1 download' : `This removes all ${finished} finished, failed, and cancelled downloads`} from the Library. Downloads in the queue stay.`;
+  $('#clear-files-row').hidden = !files;
+  $('#clear-files-label').textContent = `Also delete ${files === 1 ? 'the downloaded file' : `the ${files} downloaded files`} from this computer`;
+  box.checked = false;
+  const sync = () => {
+    confirmButton.textContent = box.checked ? `Clear and delete ${files === 1 ? 'file' : 'files'}` : 'Clear list';
+    confirmButton.classList.toggle('btn-primary', !box.checked);
+    confirmButton.classList.toggle('btn-destructive', box.checked);
+  };
+  box.onchange = sync;
+  sync();
+  dialog.returnValue = '';
+  dialog.showModal();
+  return new Promise((resolve) => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'clear' ? box.checked : null), { once: true });
+  });
+}
+
+function clearMessage({ removed, files_deleted: deleted = 0, kept = 0 }, deleteFiles) {
+  const entries = `${removed} entr${removed === 1 ? 'y' : 'ies'}`;
+  if (!deleteFiles) return `Removed ${entries}. Your files are kept.`;
+  let text = `Removed ${entries} and deleted ${deleted} file${deleted === 1 ? '' : 's'}.`;
+  if (kept) text += ` ${kept} file${kept === 1 ? " couldn't" : "s couldn't"} be deleted (open in another program?), so ${kept === 1 ? 'it stays' : 'they stay'} in the list.`;
+  return text;
 }
 
 // Queues every failed and cancelled download again; each resumes from its partial file.

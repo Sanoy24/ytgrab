@@ -8,6 +8,8 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 - **X (Twitter) videos.** Paste a link to an X post with a video, such as `https://x.com/user/status/…`, and pick its quality or take its audio as M4A, MP3, Opus, FLAC, or WAV. Files are named after the post (`Text [post id] 1080x1920.mp4`), and the post's preview image shows in the Library. Portrait videos are labeled by their shorter side, so 1080x1920 is "1080p". X's limits never pause YouTube downloads.
 
+- **Clear can delete files.** Clearing the Library now asks first, with an option to also delete the downloaded files. Files that can't be deleted (open in a player, say) keep their entry.
+
 ### Changed
 
 - **YouTube sign-in** is now **Browser sign-in**, since it also lets yt-dlp open X posts that are shown only to signed-in users.
