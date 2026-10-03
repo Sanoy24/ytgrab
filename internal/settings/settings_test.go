@@ -259,3 +259,25 @@ func TestSponsorBlockIsOffByDefaultAndAllowlisted(t *testing.T) {
 		t.Fatal("not saved")
 	}
 }
+
+func TestDownloadWindowSetting(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, _ := New(ctx, store, t.TempDir(), false)
+	if !manager.DownloadWindow().Always() {
+		t.Fatal("any time by default")
+	}
+	if err := manager.SetDownloadWindow(ctx, "25-3"); !errors.Is(err, ErrInvalidPreference) {
+		t.Fatalf("bad hour accepted: %v", err)
+	}
+	if err := manager.SetDownloadWindow(ctx, "22-6"); err != nil {
+		t.Fatal(err)
+	}
+	if reloaded, _ := New(ctx, store, t.TempDir(), false); reloaded.DownloadWindow().String() != "22-6" {
+		t.Fatal("not saved")
+	}
+}

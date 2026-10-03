@@ -46,6 +46,12 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 				body["paused_until"] = until.UTC()
 			}
 		}
+		// Outside the download window, queued downloads wait until it opens.
+		if waiter, ok := controller.(interface{ WaitingUntil() (time.Time, bool) }); ok {
+			if until, waiting := waiter.WaitingUntil(); waiting {
+				body["window_opens"] = until.UTC()
+			}
+		}
 		writeJSON(w, http.StatusOK, body)
 	})
 	if pauser, ok := controller.(Pauser); ok {

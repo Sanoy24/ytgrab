@@ -45,6 +45,7 @@ type Queue struct {
 	// slots in use.
 	limit    func() int
 	reserved int
+	window   func() domain.Window
 }
 
 // maxWorkers is the most parallel downloads the queue will ever run.
@@ -66,6 +67,24 @@ func New(store Store, downloader Downloader, workers int) *Queue {
 		workers = 4
 	}
 	return &Queue{store: store, downloader: downloader, workers: workers, wake: make(chan struct{}, 1), active: make(map[string]context.CancelFunc), retryDelay: 2 * time.Second, spacing: jitteredSpacing}
+}
+
+// SetWindow limits when downloads may start (see domain.Window); downloads already
+// running are not affected. Call before Start.
+func (queue *Queue) SetWindow(window func() domain.Window) {
+	queue.window = window
+}
+
+// WaitingUntil reports when the download window next opens, while it is closed.
+func (queue *Queue) WaitingUntil() (time.Time, bool) {
+	if queue.window == nil {
+		return time.Time{}, false
+	}
+	window, now := queue.window(), time.Now()
+	if window.Open(now) {
+		return time.Time{}, false
+	}
+	return window.NextOpen(now), true
 }
 
 // SetCooldown shares a pause gate with format inspection. Call before Start.
@@ -148,6 +167,18 @@ func (queue *Queue) worker() {
 		}
 		if queue.cooldown != nil && queue.cooldown.Wait(queue.ctx) != nil {
 			return
+		}
+		if until, waiting := queue.WaitingUntil(); waiting {
+			// Look again when the window opens, a minute from now at most (the setting
+			// may change meanwhile), or when woken.
+			wait := min(time.Until(until), time.Minute)
+			select {
+			case <-queue.ctx.Done():
+				return
+			case <-queue.wake:
+			case <-time.After(wait):
+			}
+			continue
 		}
 		if queue.reserve() {
 			jobs, err := queue.store.Queued(queue.ctx, 1)

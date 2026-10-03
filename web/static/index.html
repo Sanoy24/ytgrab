@@ -206,6 +206,7 @@
             <div class="block-head">
               <h2 id="queue-title">Queue <span class="count" id="queue-count"></span></h2>
             </div>
+            <p class="window-note" id="window-note" role="status" hidden></p>
             <div class="list queue-list" id="queue" aria-busy="true"></div>
           </section>
         </section>
@@ -346,6 +347,68 @@
                 </select>
               </div>
               <p class="hint pref-hint">Uses <a href="https://sponsor.ajay.app/" target="_blank" rel="noopener noreferrer">SponsorBlock</a>, a community list of sponsor, self-promotion, and "like and subscribe" segments. Each download then also asks SponsorBlock about that video.</p>
+            </div>
+            <div id="pref-window-row" hidden>
+              <div class="pref-row">
+                <label for="pref-window-start">Download only between</label>
+                <span class="window-pickers">
+                  <select id="pref-window-start" aria-label="Downloads may start from">
+                  <option value="">Any time</option>
+                  <option value="0">00:00</option>
+                  <option value="1">01:00</option>
+                  <option value="2">02:00</option>
+                  <option value="3">03:00</option>
+                  <option value="4">04:00</option>
+                  <option value="5">05:00</option>
+                  <option value="6">06:00</option>
+                  <option value="7">07:00</option>
+                  <option value="8">08:00</option>
+                  <option value="9">09:00</option>
+                  <option value="10">10:00</option>
+                  <option value="11">11:00</option>
+                  <option value="12">12:00</option>
+                  <option value="13">13:00</option>
+                  <option value="14">14:00</option>
+                  <option value="15">15:00</option>
+                  <option value="16">16:00</option>
+                  <option value="17">17:00</option>
+                  <option value="18">18:00</option>
+                  <option value="19">19:00</option>
+                  <option value="20">20:00</option>
+                  <option value="21">21:00</option>
+                  <option value="22">22:00</option>
+                  <option value="23">23:00</option>
+                  </select>
+                  <span id="pref-window-and">and</span>
+                  <select id="pref-window-end" aria-label="Downloads may start until">
+                  <option value="0">00:00</option>
+                  <option value="1">01:00</option>
+                  <option value="2">02:00</option>
+                  <option value="3">03:00</option>
+                  <option value="4">04:00</option>
+                  <option value="5">05:00</option>
+                  <option value="6">06:00</option>
+                  <option value="7">07:00</option>
+                  <option value="8">08:00</option>
+                  <option value="9">09:00</option>
+                  <option value="10">10:00</option>
+                  <option value="11">11:00</option>
+                  <option value="12">12:00</option>
+                  <option value="13">13:00</option>
+                  <option value="14">14:00</option>
+                  <option value="15">15:00</option>
+                  <option value="16">16:00</option>
+                  <option value="17">17:00</option>
+                  <option value="18">18:00</option>
+                  <option value="19">19:00</option>
+                  <option value="20">20:00</option>
+                  <option value="21">21:00</option>
+                  <option value="22">22:00</option>
+                  <option value="23">23:00</option>
+                  </select>
+                </span>
+              </div>
+              <p class="hint pref-hint">Downloads wait in the queue outside these hours, for example to keep your connection free during the day. Downloads already running finish.</p>
             </div>
             <div class="pref-row" id="pref-speed-row" hidden>
               <label for="pref-speed">Speed limit (per download)</label>

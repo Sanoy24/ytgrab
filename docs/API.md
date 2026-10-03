@@ -37,6 +37,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
 | `PUT` | `/api/settings/preferences` | Set `max_downloads` (1–4) and/or `default_preset`; applies immediately |
 | `GET` | `/api/system/version` | `{ version, latest, update_available, update_command, release_url }`; `latest` is checked against GitHub at most once a day, and `update_command` is empty for copies unpacked from a zip |
+| `PUT` | `/api/settings/preferences` also accepts `download_window` | `""` (any time) or `"start-end"` in whole hours, like `"1-7"` or `"22-6"`; outside it, `GET /api/jobs` includes `window_opens` |
 | `PUT` | `/api/settings/preferences` also accepts `sponsorblock` | `"off"`, `"mark"`, or `"remove"` (sponsor, self-promotion, and interaction segments) |
 | `PUT` | `/api/settings/preferences` also accepts `file_names` | One of `file_name_styles` from `GET /api/settings` |
 | `PUT` | `/api/settings/preferences` also accepts `speed_limit_kbps` | One of `speed_limits` from `GET /api/settings` (kB/s, `0` for no limit) |
