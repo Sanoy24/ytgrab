@@ -16,6 +16,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/autostart"
 	"github.com/Sanoy24/ytgrab/internal/config"
 	"github.com/Sanoy24/ytgrab/internal/reveal"
+	"github.com/Sanoy24/ytgrab/internal/selfupdate"
 	"github.com/Sanoy24/ytgrab/internal/setup"
 	"github.com/Sanoy24/ytgrab/internal/tray"
 )
@@ -63,6 +64,9 @@ func run(args []string) int {
 		return 1
 	}
 	cfg.OpenBrowser = *open
+	if exe, err := os.Executable(); err == nil {
+		selfupdate.CleanUp(exe) // what an earlier update left beside this program
+	}
 
 	// Started from a shortcut on Windows: carry on without a console window, with the
 	// tray icon as the way to open or quit YTGrab.
@@ -94,6 +98,9 @@ func run(args []string) int {
 		serverCfg.Ready, serverCfg.Activity = hooks.Ready, hooks.Activity
 		return app.Run(ctx, serverCfg, os.Stdout)
 	})
+	if errors.Is(err, app.ErrRestart) {
+		return restartUpdated(cfg, args)
+	}
 	if err != nil {
 		var running *app.AlreadyRunningError
 		if errors.As(err, &running) {
@@ -112,6 +119,29 @@ func run(args []string) int {
 		return 1
 	}
 	return 0
+}
+
+// restartUpdated starts the updated program in place of this one, in the background with
+// its tray icon; the server, port, and data folder are already released.
+func restartUpdated(cfg config.Config, args []string) int {
+	cfg.OpenBrowser = false
+	if err := startInBackground(cfg, withoutOpen(args)); err != nil {
+		fmt.Fprintf(os.Stderr, "YTGrab was updated but could not restart (%v); start it again.\n", err)
+		return 1
+	}
+	fmt.Println("YTGrab was updated and restarted in the background.")
+	return 0
+}
+
+// withoutOpen drops --open: the page that asked for the update is still open.
+func withoutOpen(args []string) []string {
+	kept := []string{}
+	for _, arg := range args {
+		if arg != "--open" && arg != "-open" {
+			kept = append(kept, arg)
+		}
+	}
+	return kept
 }
 
 func openPage(url string) {

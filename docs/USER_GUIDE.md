@@ -163,7 +163,9 @@ Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 
 
 ## Updating YTGrab
 
-Once a day YTGrab checks GitHub for a newer release. When there is one, the page shows a notice with the command for the way you installed it: `scoop update ytgrab`, `brew upgrade ytgrab`, the curl installer, or `go install`. Quit YTGrab, run it, and start YTGrab again. For a copy unpacked from a zip, the notice links to the release page; download the new zip and replace the files in your YTGrab folder (your settings and history are kept, because they live in the data folder). **Not now** hides the notice until the next version.
+Once a day YTGrab checks GitHub for a newer release. On Windows and Linux, a copy unpacked from a release archive or put in place by the install script can update itself: press **Update now** in the notice. YTGrab downloads the release for your system, checks it against the checksum published with it, makes sure the new version starts, replaces itself, and restarts in the background (with its tray icon); the page reloads when it's back. Your settings, history, and downloads are kept. It won't update while downloads are running: let them finish or cancel them first.
+
+Otherwise the notice shows the command for the way you installed it: `scoop update ytgrab`, `brew upgrade ytgrab`, the curl installer, or `go install`. Quit YTGrab, run it, and start YTGrab again. For a copy unpacked from a zip, the notice links to the release page; download the new zip and replace the files in your YTGrab folder (your settings and history are kept, because they live in the data folder). **Not now** hides the notice until the next version.
 
 ## Settings and data
 

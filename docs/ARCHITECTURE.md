@@ -43,6 +43,7 @@ internal/picker/             the operating system's folder window
 internal/process/            cross-platform process-tree control
 internal/queue/              scheduling, pause, cancellation, retries
 internal/reveal/             show a file in its folder, open a file or folder
+internal/selfupdate/         one-click updates: download, check, and swap the program
 internal/settings/           user settings (folder, parallel downloads, format, speed, subtitles, …)
 internal/setup/              "ytgrab setup": tool installation
 internal/store/sqlite/       persistence and migrations
@@ -134,6 +135,10 @@ YTGrab's own releases are checked the same way (GitHub's `releases/latest` redir
 `ytgrab doctor` reports tools, folders, and the port. `ytgrab setup` installs what is missing after asking: yt-dlp from its official GitHub release, verified against the published SHA-256 checksums; FFmpeg and Deno through winget or Homebrew; package-manager commands are printed on Linux.
 
 `scripts/package.ps1` builds release archives. The release workflow builds the Windows and Linux archives on Windows and the macOS archives on a Mac (the menu-bar icon needs cgo), publishes them together, updates the Homebrew tap and Scoop bucket, and then installs the release with each method in CI to check it starts. The Windows zip bundles a checksum-verified `yt-dlp.exe`; every archive includes `manifest.json` (versions and hashes) and `SHA256SUMS`. FFmpeg and a JavaScript runtime are installed separately because of their size and licensing.
+
+## Updating itself
+
+`internal/selfupdate` replaces a copy unpacked from a release archive or installed by `install.sh` (Windows x64 and Linux; not Scoop, Homebrew, `go install`, or macOS, which is untested). It downloads `ytgrab-<version>-<os>-<arch>` from the GitHub release with its `.sha256` file and refuses any mismatch, takes only the program from the top of the archive, and runs it with `--version`, which must print the expected version. The program then takes the old one's place: on Windows the running `ytgrab.exe` can only be renamed, so it becomes `ytgrab.exe.old`, which the next start deletes. The handler answers, then ends `app.Run` with `ErrRestart`; by then the port and data folder are free, and `main` starts the new program in the background like a shortcut start. Updates are refused while downloads run.
 
 ## Defaults
 

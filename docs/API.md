@@ -10,6 +10,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | --- | --- | --- |
 | `GET` | `/api/system/health` | Tool status |
 | `POST` | `/api/system/update-ytdlp` | Install or update yt-dlp in YTGrab's tools folder |
+| `POST` | `/api/system/update-ytgrab` | Install the latest YTGrab over this copy when `GET /api/system/version` says `can_update`; answers `{ version, restarting: true }`, then YTGrab restarts. Errors: `no_update`, `downloads_running`, `update_busy`, `update_failed` |
 | `POST` | `/api/system/resume` | End a pause after YouTube limited this network (`204`) |
 | `GET` | `/api/jobs` | Recent jobs, `{ "jobs": [Job] }` |
 | `POST` | `/api/jobs` | Create a job from a preset or an inspected format; optional `section: { start, end }` in seconds downloads only that part (at least 1 second, within 24 hours); optional `split_chapters: true` also saves each chapter as its own file (not with `section`) |
