@@ -273,6 +273,7 @@ test('offers Opus, FLAC, and WAV for audio', async ({ page }) => {
 test('a large library stays fast and is not redrawn on every progress tick', async ({ page }) => {
   await page.goto('/?fixture=big-library#library');
   await expect(page.locator('#history .job')).toHaveCount(405);
+  await expect(page.locator('#library-summary')).toBeVisible(); // file sizes arrive once, redrawing each row
   const mutations = await page.evaluate(async () => {
     let count = 0;
     new MutationObserver((m) => (count += m.length)).observe(document.querySelector('#history'), { subtree: true, childList: true, characterData: true, attributes: true });
