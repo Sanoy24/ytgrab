@@ -43,8 +43,8 @@ var ErrInvalidURL = errors.New("enter a valid link to a single YouTube video, or
 
 // Sites YTGrab downloads from. A job's Site is empty for YouTube, which came first.
 const (
-	SiteYouTube = ""
-	SiteX       = "x"
+	SiteYouTube   = ""
+	SiteX         = "x"
 	SiteReddit    = "reddit"
 	SiteInstagram = "instagram"
 )
