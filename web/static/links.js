@@ -2,6 +2,9 @@
 // every link again before using it.
 
 // X (Twitter) posts with a video: x.com/<user>/status/<id>.
+// Reddit posts with a video: reddit.com/r/<sub>/comments/<id>/, redd.it/<id>, v.redd.it/<id>.
+const REDDIT_HOSTS = new Set(['reddit.com', 'www.reddit.com', 'old.reddit.com', 'new.reddit.com', 'm.reddit.com', 'np.reddit.com', 'sh.reddit.com']);
+
 const X_HOSTS = new Set(['x.com', 'www.x.com', 'mobile.x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com']);
 
 const YT_HOSTS = new Set([
@@ -11,6 +14,19 @@ const YT_HOSTS = new Set([
   'music.youtube.com',
   'youtu.be',
 ]);
+
+// Reddit links become one form per post (or v.redd.it video), as the server writes them.
+function redditLink(host, path) {
+  if (host === 'v.redd.it') {
+    const id = (path.match(/^\/([a-z0-9]{6,20})\/?$/) || [])[1];
+    return id ? { url: `https://v.redd.it/${id}`, site: 'reddit', id } : { error: "This link doesn't point to a Reddit video." };
+  }
+  const id = host === 'redd.it' ? (path.match(/^\/([a-z0-9]{4,10})\/?$/) || [])[1] : (path.match(/\/comments\/([a-z0-9]{4,10})(?:\/|$)/) || [])[1];
+  if (id) return { url: `https://www.reddit.com/comments/${id}`, site: 'reddit', id };
+  if (/\/s\/[A-Za-z0-9]+\/?$/.test(path))
+    return { error: "Reddit's share links can't be read directly. Open the post, then copy the link from the address bar." };
+  return { error: "This Reddit link doesn't point to a post. Open the post and copy its link." };
+}
 
 // Returns { url } or { error }; `note` is an optional non-blocking remark.
 export function validateUrl(raw) {
@@ -37,8 +53,9 @@ export function validateUrl(raw) {
     const url = `https://x.com/i/status/${match[1]}${index > 1 ? `/video/${index}` : ''}`;
     return { url, site: 'x', id: index > 1 ? `${match[1]}-${index}` : match[1] };
   }
+  if (REDDIT_HOSTS.has(host) || host === 'redd.it' || host === 'v.redd.it') return redditLink(host, u.pathname);
   if (!YT_HOSTS.has(host))
-    return { error: 'Only YouTube and X links are supported.' };
+    return { error: 'Only YouTube, X, and Reddit links are supported.' };
 
   const hasVideo =
     (host === 'youtu.be' && u.pathname.length > 1) ||

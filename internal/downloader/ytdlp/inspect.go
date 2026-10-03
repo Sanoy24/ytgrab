@@ -291,6 +291,9 @@ func parseInspection(data []byte, expectedID, site string) (Inspection, error) {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return Inspection{}, &Error{Code: "download_failed", Message: "yt-dlp returned invalid format information."}
 	}
+	if site != domain.SiteYouTube {
+		return parsePostInspection(raw, expectedID, site)
+	}
 	if raw.ID != expectedID {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected video did not match the requested link."}
 	}
@@ -406,6 +409,35 @@ func parseXPost(data []byte, expectedID string) (Inspection, error) {
 				Thumbnail:       domain.SafeThumbnail(entry.Thumbnail),
 			})
 		}
+	}
+	return result, nil
+}
+
+// parsePostInspection reads a post from a site like Reddit, whose videos and audio come as
+// separate streams like YouTube's but are matched by the post's ID (or a v.redd.it video's)
+// and list no sizes, which are estimated from bitrate and length.
+func parsePostInspection(raw rawVideo, expectedID, site string) (Inspection, error) {
+	if raw.DisplayID != expectedID && raw.ID != expectedID {
+		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected post did not match the requested link."}
+	}
+	result := Inspection{VideoID: expectedID, Title: html.UnescapeString(raw.Title), DurationSeconds: raw.Duration, Site: site,
+		Thumbnail: domain.SafeThumbnail(raw.Thumbnail), Video: []Format{}, Audio: []Format{}}
+	for _, format := range raw.Formats {
+		if !(domain.FormatSelection{Kind: "video", ID: format.ID}).Valid() {
+			continue
+		}
+		if format.FileSize == nil && format.FileSizeApprox == nil && format.TotalBitrate != nil && raw.Duration != nil {
+			approx := int64(*format.TotalBitrate * *raw.Duration * 125) // kbit/s x s -> bytes
+			format.FileSizeApprox = &approx
+		}
+		if format.VideoCodec != "none" && format.VideoCodec != "" && format.AudioCodec == "none" {
+			result.Video = append(result.Video, format)
+		} else if format.AudioCodec != "none" && format.AudioCodec != "" && format.VideoCodec == "none" {
+			result.Audio = append(result.Audio, format)
+		}
+	}
+	if len(result.Video) == 0 && len(result.Audio) == 0 {
+		return Inspection{}, &Error{Code: "video_unavailable", Message: "This post has no video."}
 	}
 	return result, nil
 }

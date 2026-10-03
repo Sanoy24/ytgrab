@@ -207,10 +207,11 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"-o", outputTemplate(job, cfg.FileNames),
 	}
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
-	if job.Site == domain.SiteX {
-		args = append(args, xTitleCleanup...)
-	} else {
+	switch job.Site {
+	case domain.SiteYouTube:
 		args = append(args, sponsorBlockArgs(cfg.SponsorBlock)...) // SponsorBlock only knows YouTube
+	case domain.SiteX:
+		args = append(args, xTitleCleanup...)
 	}
 	if cfg.NormalizeAudio && convertsAudio(job) {
 		// EBU R128 loudness normalization while the audio is converted anyway, at the level
@@ -226,10 +227,10 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	if embedsCoverArt(job) {
 		args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
 	}
-	if isVideo(job) && job.Site != domain.SiteX {
+	if isVideo(job) && job.Site == domain.SiteYouTube {
 		args = append(args, subtitleArgs(cfg.SubtitlesMode, cfg.SubtitlesLang)...)
 	}
-	if job.SplitChapters && job.Section == nil && job.Site != domain.SiteX {
+	if job.SplitChapters && job.Section == nil && job.Site == domain.SiteYouTube {
 		// The full file is kept; the chapters go into a folder named like it.
 		folder := strings.TrimSuffix(outputTemplate(job, cfg.FileNames), ".%(ext)s")
 		args = append(args, "--split-chapters", "-o", "chapter:"+folder+"/%(section_number)02d %(section_title).100B.%(ext)s")
@@ -453,9 +454,10 @@ func nameStart(style string) string {
 }
 
 func baseTemplate(job domain.Job) string {
-	if job.Site == domain.SiteX {
-		// The job's video ID is the post's ID, plus "-N" from a post's second video on (digits
-		// and a dash, safe in a template); width x height reads right for portrait videos.
+	if job.Site != domain.SiteYouTube {
+		// The job's video ID is the post's ID (for X, plus "-N" from a post's second video on;
+		// letters, digits, and a dash, safe in a template), which yt-dlp's own id isn't.
+		// Width x height reads right for the many portrait videos.
 		post := "%(title).150B [" + job.VideoID + "]"
 		if isVideo(job) || (job.Preset == nil && job.Format == nil) {
 			return post + " %(width)sx%(height)s.%(ext)s"
@@ -590,13 +592,27 @@ func confirmOutput(directory string, reportedPath string) (string, error) {
 	return path, nil
 }
 
-// classifyFor explains a failure in terms of the site it happened on. X's limits are its
-// own, so they never pause YouTube downloads ("blocked" is reserved for YouTube).
+// siteNames name the sites in failure messages.
+var siteNames = map[string]string{domain.SiteX: "X", domain.SiteReddit: "Reddit"}
+
+// classifyFor explains a failure in terms of the site it happened on. Other sites' limits
+// are their own, so they never pause YouTube downloads ("blocked" is reserved for YouTube).
 func classifyFor(site, stderr string) error {
-	if site != domain.SiteX {
+	if site == domain.SiteYouTube {
 		return classifyFailure(stderr)
 	}
 	lower := strings.ToLower(stderr)
+	if site == domain.SiteReddit {
+		switch {
+		case strings.Contains(lower, "no media found"), strings.Contains(lower, "no video formats found"), strings.Contains(lower, "unsupported url"):
+			return &Error{Code: "video_unavailable", Message: "This post has no video."}
+		case strings.Contains(lower, "login"), strings.Contains(lower, "log in"), strings.Contains(lower, "nsfw"), strings.Contains(lower, "quarantine"), strings.Contains(lower, "http error 403"):
+			return &Error{Code: "signin_required", Message: "Reddit shows this post only to signed-in users. Turn on Browser sign-in in Settings, choosing a browser where you're signed in to Reddit, then retry."}
+		case strings.Contains(lower, "http error 404"), strings.Contains(lower, "does not exist"), strings.Contains(lower, "removed"), strings.Contains(lower, "deleted"):
+			return &Error{Code: "video_unavailable", Message: "This post is unavailable: it may be deleted or removed."}
+		}
+		return siteFailure(site, stderr)
+	}
 	switch {
 	case strings.Contains(lower, "no video could be found"), strings.Contains(lower, "no video formats found"):
 		return &Error{Code: "video_unavailable", Message: "This post has no video."}
@@ -605,11 +621,18 @@ func classifyFor(site, stderr string) error {
 	case strings.Contains(lower, "suspended"), strings.Contains(lower, "protected"), strings.Contains(lower, "unavailable"), strings.Contains(lower, "http error 404"), strings.Contains(lower, "does not exist"):
 		return &Error{Code: "video_unavailable", Message: "This post is unavailable: it may be deleted, protected, or from a suspended account."}
 	}
+	return siteFailure(site, stderr)
+}
+
+// siteFailure words the general failures for a site other than YouTube.
+func siteFailure(site, stderr string) error {
 	err := classifyFailure(stderr)
 	if toolError, ok := err.(*Error); ok {
 		switch toolError.Code {
 		case "blocked":
-			return &Error{Code: "x_limited", Message: "X is limiting requests from this network. Wait a few minutes, then retry."}
+			return &Error{Code: site + "_limited", Message: siteNames[site] + " is limiting requests from this network. Wait a few minutes, then retry."}
+		case "video_unavailable":
+			return &Error{Code: "video_unavailable", Message: "This post is unavailable or private."}
 		case "download_failed":
 			return &Error{Code: "download_failed", Message: "yt-dlp could not download this post's video. Check that yt-dlp is up to date and retry."}
 		}

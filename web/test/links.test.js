@@ -94,3 +94,17 @@ test('several pasted X links are kept, each video once', () => {
   assert.deepEqual(videos.map((v) => v.id), ['1600649710662213632', '1600649710662213632-2', 'jNQXAC9IVRw']);
   assert.equal(skipped, 0);
 });
+
+test('accepts Reddit post links and rewrites them to one form', () => {
+  for (const link of [
+    'https://www.reddit.com/r/videos/comments/6rrwyj/that_small_heart_attack/',
+    'old.reddit.com/r/videos/comments/6rrwyj/',
+    'https://redd.it/6rrwyj',
+  ]) {
+    assert.deepEqual(validateUrl(link), { url: 'https://www.reddit.com/comments/6rrwyj', site: 'reddit', id: '6rrwyj' }, link);
+  }
+  assert.deepEqual(validateUrl('https://v.redd.it/zv89llsvexdz'), { url: 'https://v.redd.it/zv89llsvexdz', site: 'reddit', id: 'zv89llsvexdz' });
+  assert.match(validateUrl('https://www.reddit.com/r/videos/s/AbCdEf1234').error, /share links/);
+  assert.match(validateUrl('https://www.reddit.com/r/videos/').error, /doesn't point to a post/);
+  assert.equal(looksLikeSearch('redd.it/6rrwyj'), false);
+});

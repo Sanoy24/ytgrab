@@ -121,6 +121,8 @@ Field names follow yt-dlp's format info. Errors: `invalid_url`, `video_unavailab
 
 For an X post (`https://x.com/<user>/status/<id>`, also `twitter.com`), the result adds `"site": "x"` and `"thumbnail"`, `video_id` is the post's ID, and `video` lists the MP4 files, which already contain sound (`protocol: "https"`, `tbr`); `audio` is empty, and audio presets take the sound out of the best file. Sizes are estimated from the streamed bitrate. A post with several videos also lists them as `videos: [{ index, video_id, url, duration_seconds, thumbnail }]`; a `/video/N` link (`video_id` `<post id>-N`) inspects and downloads that video alone. X-specific errors: `signin_required` (turn on browser sign-in) and `x_limited` (X is rate-limiting; never pauses YouTube).
 
+A Reddit post (`https://www.reddit.com/r/<sub>/comments/<id>/…`, `redd.it/<id>`, or `v.redd.it/<id>`) adds `"site": "reddit"` and `"thumbnail"`; `video_id` is the post's ID (or the v.redd.it video's), and `video` and `audio` are separate streams like YouTube's, with `filesize_approx` estimated from bitrate. Errors add `signin_required` and `reddit_limited`.
+
 ## Playlists
 
 ```jsonc
