@@ -4,11 +4,12 @@ import "net/http"
 
 // contentSecurityPolicy lets the page load only its own files and the thumbnails of YouTube
 // (i.ytimg.com), X (pbs.twimg.com), Reddit (external-preview.redd.it, preview.redd.it),
-// and Instagram (its regional servers under fbcdn.net and cdninstagram.com),
+// Instagram (its regional servers under fbcdn.net and cdninstagram.com), and Vimeo
+// (i.vimeocdn.com),
 // and forbids other sites from framing it: a framed copy would make requests that count
 // as same-site, so a disguised click could change downloads or delete files.
 const contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; " +
-	"img-src 'self' data: https://i.ytimg.com https://pbs.twimg.com https://external-preview.redd.it https://preview.redd.it https://*.fbcdn.net https://*.cdninstagram.com; connect-src 'self'; object-src 'none'; " +
+	"img-src 'self' data: https://i.ytimg.com https://pbs.twimg.com https://external-preview.redd.it https://preview.redd.it https://*.fbcdn.net https://*.cdninstagram.com https://i.vimeocdn.com; connect-src 'self'; object-src 'none'; " +
 	"base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 
 // secureHeaders adds browser protections to every response.

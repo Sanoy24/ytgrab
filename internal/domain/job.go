@@ -39,7 +39,7 @@ const (
 	AudioWAV  Preset = "audio-wav"
 )
 
-var ErrInvalidURL = errors.New("enter a valid link to a single YouTube video, or an X, Reddit, or Instagram post")
+var ErrInvalidURL = errors.New("enter a valid link to a single YouTube or Vimeo video, or an X, Reddit, or Instagram post")
 
 // Sites YTGrab downloads from. A job's Site is empty for YouTube, which came first.
 const (
@@ -47,6 +47,13 @@ const (
 	SiteX         = "x"
 	SiteReddit    = "reddit"
 	SiteInstagram = "instagram"
+	SiteVimeo     = "vimeo"
+)
+
+// vimeoIDPattern matches Vimeo video IDs; vimeoHashPattern the key of an unlisted video.
+var (
+	vimeoIDPattern   = regexp.MustCompile(`^[0-9]{5,12}$`)
+	vimeoHashPattern = regexp.MustCompile(`^[0-9a-f]{6,20}$`)
 )
 
 // instagramCodePattern matches Instagram post codes ("Dd_8Q80veb1"); they never contain
@@ -72,7 +79,9 @@ var postIDPattern = regexp.MustCompile(`^[0-9]{5,20}$`)
 var ErrInvalidPreset = errors.New("choose a supported download preset")
 var ErrInvalidFormat = errors.New("Choose a format from a recent inspection.")
 var videoIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
-var formatIDPattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,32}$`)
+
+// Vimeo's IDs name the delivery network, like "hls-akfire_interconnect_quic-audio-high-English".
+var formatIDPattern = regexp.MustCompile(`^[0-9A-Za-z_-]{1,64}$`)
 
 type FormatSelection struct {
 	Kind string `json:"kind"`
@@ -252,6 +261,8 @@ func ParseVideoURL(raw string) (string, string, error) {
 			}
 		}
 		return "", "", ErrInvalidURL
+	case "vimeo.com", "www.vimeo.com", "player.vimeo.com":
+		return vimeoLink(parsed)
 	case "youtu.be":
 		videoID = strings.Trim(parsed.Path, "/")
 	case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com":
@@ -295,6 +306,39 @@ func XPost(url string) (post string, index int) {
 		index = 1
 	}
 	return post, index
+}
+
+// vimeoLink turns a Vimeo video link (vimeo.com/<id>, an unlisted vimeo.com/<id>/<hash>,
+// channel and group links, or the player) into the embedded player's link. The player
+// plays public and unlisted videos without signing in; vimeo.com's own page asks for it.
+func vimeoLink(parsed *url.URL) (string, string, error) {
+	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+	hash := parsed.Query().Get("h")
+	id := ""
+	switch {
+	case parsed.Hostname() == "player.vimeo.com":
+		if len(parts) == 2 && parts[0] == "video" {
+			id = parts[1]
+		}
+	case len(parts) >= 1 && vimeoIDPattern.MatchString(parts[0]):
+		id = parts[0] // vimeo.com/<id>, or vimeo.com/<id>/<hash> when unlisted
+		if len(parts) == 2 && hash == "" {
+			hash = parts[1]
+		}
+	default:
+		// vimeo.com/channels/<name>/<id>, /groups/<name>/videos/<id>, /showcase/<n>/video/<id>
+		if last := parts[len(parts)-1]; len(parts) >= 3 && vimeoIDPattern.MatchString(last) {
+			id = last
+		}
+	}
+	if !vimeoIDPattern.MatchString(id) || (hash != "" && !vimeoHashPattern.MatchString(hash)) {
+		return "", "", ErrInvalidURL
+	}
+	link := "https://player.vimeo.com/video/" + id
+	if hash != "" {
+		link += "?h=" + hash
+	}
+	return link, id, nil
 }
 
 // InstagramItemURL links to one video of an Instagram post (from 1, as yt-dlp counts a
@@ -356,12 +400,14 @@ func SiteOf(url string) string {
 		return SiteReddit
 	case strings.HasPrefix(url, "https://www.instagram.com/"):
 		return SiteInstagram
+	case strings.HasPrefix(url, "https://player.vimeo.com/"):
+		return SiteVimeo
 	}
 	return SiteYouTube
 }
 
 // thumbnailHosts are the image servers, other than YouTube's, that the page may load.
-var thumbnailHosts = []string{"https://pbs.twimg.com/", "https://external-preview.redd.it/", "https://preview.redd.it/"}
+var thumbnailHosts = []string{"https://pbs.twimg.com/", "https://external-preview.redd.it/", "https://preview.redd.it/", "https://i.vimeocdn.com/"}
 
 // thumbnailDomains are image servers named per region, like Instagram's
 // instagram.fadd1-1.fna.fbcdn.net; any host under them is allowed.

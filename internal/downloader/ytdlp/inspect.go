@@ -2,6 +2,7 @@ package ytdlp
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"math"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -432,6 +434,7 @@ func parsePostInspection(raw rawVideo, expectedID, site string) (Inspection, err
 // streamsInspection lists a post's separate video and audio streams, as Reddit and
 // Instagram serve them, estimating sizes from bitrate and length when both are known.
 func streamsInspection(raw rawVideo, expectedID, site string) (Inspection, error) {
+	var unnamed []Format
 	result := Inspection{VideoID: expectedID, Title: html.UnescapeString(raw.Title), DurationSeconds: raw.Duration, Site: site,
 		Thumbnail: domain.SafeThumbnail(raw.Thumbnail), Video: []Format{}, Audio: []Format{}}
 	for _, format := range raw.Formats {
@@ -446,10 +449,31 @@ func streamsInspection(raw rawVideo, expectedID, site string) (Inspection, error
 			result.Video = append(result.Video, format)
 		} else if format.AudioCodec != "none" && format.AudioCodec != "" && format.VideoCodec == "none" {
 			result.Audio = append(result.Audio, format)
+		} else if format.VideoCodec == "none" && format.AudioCodec == "" {
+			unnamed = append(unnamed, format)
+		}
+	}
+	// Vimeo's audio streams say they have no video but not which audio codec (AAC, in MP4);
+	// use them when no stream names its codec, offered as the M4A files they are saved as,
+	// the "high" one first.
+	if len(result.Audio) == 0 {
+		slices.SortStableFunc(unnamed, func(a, b Format) int {
+			return cmp.Compare(btoi(!strings.Contains(a.ID, "-high")), btoi(!strings.Contains(b.ID, "-high")))
+		})
+		for _, format := range unnamed {
+			format.Ext = "m4a"
+			result.Audio = append(result.Audio, format)
 		}
 	}
 	if len(result.Video) == 0 && len(result.Audio) == 0 {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "This post has no video."}
 	}
 	return result, nil
+}
+
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

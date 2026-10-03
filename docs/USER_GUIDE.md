@@ -125,6 +125,12 @@ Paste the link to a Reddit post with a video, such as `https://www.reddit.com/r/
 
 Reddit's **Share** button makes short `/s/…` links that only redirect, so YTGrab can't read them: open the post and copy the link from the address bar instead. Posts in age-restricted or private communities need **Browser sign-in** with a browser where you're signed in to Reddit. Subtitles, chapters, and SponsorBlock don't apply, and Reddit's limits never pause YouTube downloads.
 
+## Download from Vimeo
+
+Paste a Vimeo link: `https://vimeo.com/22439234`, an unlisted video's `vimeo.com/<id>/<key>` link, a channel or group link to a video, or a `player.vimeo.com` link. Vimeo's own pages ask downloaders to sign in, so YTGrab reads the video through Vimeo's embedded player, which plays public and unlisted videos for anyone. You get the video's qualities with estimated sizes and its audio, saved as MP4 or M4A and named like `The Mountain [22439234] 1280x720.mp4`.
+
+Some videos can't be downloaded this way: when the owner lets the video play only on certain websites, YTGrab says so; private or password-protected videos need **Browser sign-in** with a browser where you're signed in to Vimeo. Copy-protected (DRM) videos can't be downloaded at all; YTGrab says so and removes the cover image it fetched.
+
 ## Download from Instagram
 
 Paste the link to a public Instagram reel or post with a video, such as `https://www.instagram.com/reel/DeAVy0uTbPn/` (the link from **Share → Copy link** works as is). YTGrab lists the video's qualities and audio, like a YouTube video; Instagram doesn't say how long a video is, so no sizes are shown. Videos are saved as MP4, named after the post: `Video by account [DeAVy0uTbPn] 1080x1920.mp4`. When a post has several videos, YTGrab lists them all ticked, like an X post with several; their files get `.2`, `.3`, … after the code.

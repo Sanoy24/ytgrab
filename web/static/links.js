@@ -2,6 +2,10 @@
 // every link again before using it.
 
 // X (Twitter) posts with a video: x.com/<user>/status/<id>.
+// Vimeo videos: vimeo.com/<id>, unlisted vimeo.com/<id>/<hash>, channel and group links, and
+// the embedded player.
+const VIMEO_HOSTS = new Set(['vimeo.com', 'www.vimeo.com', 'player.vimeo.com']);
+
 // Instagram posts and reels: instagram.com/reel/<code>/, /p/<code>/, /<user>/reel/<code>/.
 const INSTAGRAM_HOSTS = new Set(['instagram.com', 'www.instagram.com', 'm.instagram.com']);
 
@@ -17,6 +21,25 @@ const YT_HOSTS = new Set([
   'music.youtube.com',
   'youtu.be',
 ]);
+
+// Vimeo links become the embedded player's link, as the server writes them: the player
+// plays public and unlisted videos without signing in.
+function vimeoLink(u) {
+  const parts = u.pathname.split('/').filter(Boolean);
+  let hash = u.searchParams.get('h') || '';
+  let id = '';
+  if (u.hostname.toLowerCase() === 'player.vimeo.com') {
+    if (parts.length === 2 && parts[0] === 'video') id = parts[1];
+  } else if (/^\d{5,12}$/.test(parts[0] || '')) {
+    id = parts[0];
+    if (parts.length === 2 && !hash) hash = parts[1];
+  } else if (parts.length >= 3) {
+    id = parts[parts.length - 1];
+  }
+  if (!/^\d{5,12}$/.test(id) || (hash && !/^[0-9a-f]{6,20}$/.test(hash)))
+    return { error: "This Vimeo link doesn't point to a video. Open the video and copy its link." };
+  return { url: `https://player.vimeo.com/video/${id}${hash ? `?h=${hash}` : ''}`, site: 'vimeo', id };
+}
 
 // Instagram links become one form per post, as the server writes them; ?item=N is YTGrab's
 // own link to one video of a carousel (photo positions like ?img_index= are ignored).
@@ -69,8 +92,9 @@ export function validateUrl(raw) {
   }
   if (REDDIT_HOSTS.has(host) || host === 'redd.it' || host === 'v.redd.it') return redditLink(host, u.pathname);
   if (INSTAGRAM_HOSTS.has(host)) return instagramLink(u);
+  if (VIMEO_HOSTS.has(host)) return vimeoLink(u);
   if (!YT_HOSTS.has(host))
-    return { error: 'Only YouTube, X, Reddit, and Instagram links are supported.' };
+    return { error: 'Only YouTube, Vimeo, X, Reddit, and Instagram links are supported.' };
 
   const hasVideo =
     (host === 'youtu.be' && u.pathname.length > 1) ||
