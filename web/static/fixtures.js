@@ -228,3 +228,22 @@ export const watches = [
     last_checked: new Date(Date.now() - 30 * 3600_000).toISOString(), last_new: 0, downloaded: 41,
   },
 ];
+
+// An X post with two videos (the first is shown; both are listed).
+export const xPost = {
+  video_id: '1600649710662213632',
+  title: 'Jocelyn Laidlaw - How the story unfolded',
+  duration_seconds: 113.49,
+  chapters: 0,
+  site: 'x',
+  thumbnail: '',
+  videos: [
+    { index: 1, video_id: '1600649710662213632', url: 'https://x.com/i/status/1600649710662213632', duration_seconds: 113.49 },
+    { index: 2, video_id: '1600649710662213632-2', url: 'https://x.com/i/status/1600649710662213632/video/2', duration_seconds: 102.226 },
+  ],
+  video: [
+    { format_id: 'http-2176', ext: 'mp4', width: 1280, height: 720, protocol: 'https', filesize_approx: 9_000_000 },
+    { format_id: 'http-832', ext: 'mp4', width: 640, height: 360, protocol: 'https', filesize_approx: 3_500_000 },
+  ],
+  audio: [],
+};

@@ -29,9 +29,13 @@ export function validateUrl(raw) {
     return { error: 'Only http and https links are supported.' };
   const host = u.hostname.toLowerCase();
   if (X_HOSTS.has(host)) {
-    const id = (u.pathname.match(/\/status\/(\d{5,20})(?:\/|$)/) || [])[1];
-    if (!id) return { error: "This X link doesn't point to a post. Open the post and copy its link." };
-    return { url: `https://x.com/i/status/${id}`, site: 'x' };
+    const match = u.pathname.match(/\/status\/(\d{5,20})(?:\/video\/(\d+))?(?:\/|$)/);
+    if (!match) return { error: "This X link doesn't point to a post. Open the post and copy its link." };
+    // /video/N picks one video of a post with several; the first is the post itself.
+    const n = Number(match[2]);
+    const index = n >= 2 && n <= 4 ? n : 1;
+    const url = `https://x.com/i/status/${match[1]}${index > 1 ? `/video/${index}` : ''}`;
+    return { url, site: 'x', id: index > 1 ? `${match[1]}-${index}` : match[1] };
   }
   if (!YT_HOSTS.has(host))
     return { error: 'Only YouTube and X links are supported.' };
@@ -83,7 +87,7 @@ export function parseLinks(text) {
   let skipped = 0;
   for (const token of tokens) {
     const result = validateUrl(token);
-    const id = result.url ? videoIdOf(result.url) : '';
+    const id = result.url ? result.id || videoIdOf(result.url) : '';
     if (!id) {
       skipped++;
     } else if (!seen.has(id)) {

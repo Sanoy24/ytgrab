@@ -32,7 +32,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/history/clear` | Remove all finished, failed, and cancelled jobs, `{ "removed": 3 }`; files are kept. `?delete_files=true` also deletes each finished job's file (same check as `delete_file`) and returns `{ "removed", "files_deleted", "kept" }`; `kept` jobs stay because their file couldn't be deleted |
 | `GET` | `/api/inspect?url=…` | A video's formats, grouped into video and audio |
 | `GET` | `/api/playlist?url=…&start=1` | One page of up to 50 playlist entries for review; `next` gives the following page's `start` |
-| `POST` | `/api/playlist/jobs` | One preset job per confirmed video ID; the page also uses it for several pasted links. Optional `folder` (for example the playlist title) saves into that subfolder, made safe with the same rules on every system |
+| `POST` | `/api/playlist/jobs` | One preset job per confirmed video ID (`video_ids`) or link (`urls`: single YouTube videos or X posts); the page sends links for several pasted links and for the videos of an X post. Optional `folder` (for example the playlist title) saves into that subfolder, made safe with the same rules on every system |
 | `GET` | `/api/settings` | Output-folder settings |
 | `PUT` | `/api/settings` | Set the output folder to a typed path |
 | `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
@@ -119,7 +119,7 @@ Returns `201` with the job. Errors: `invalid_url`, `invalid_preset`, `invalid_fo
 
 Field names follow yt-dlp's format info. Errors: `invalid_url`, `video_unavailable`, `blocked` (YouTube is rate-limiting or asking for a bot check), `network`, `dependency_missing`.
 
-For an X post (`https://x.com/<user>/status/<id>`, also `twitter.com`), the result adds `"site": "x"` and `"thumbnail"`, `video_id` is the post's ID, and `video` lists the MP4 files, which already contain sound (`protocol: "https"`, `tbr`); `audio` is empty, and audio presets take the sound out of the best file. Sizes are estimated from the streamed bitrate. X-specific errors: `signin_required` (turn on browser sign-in) and `x_limited` (X is rate-limiting; never pauses YouTube).
+For an X post (`https://x.com/<user>/status/<id>`, also `twitter.com`), the result adds `"site": "x"` and `"thumbnail"`, `video_id` is the post's ID, and `video` lists the MP4 files, which already contain sound (`protocol: "https"`, `tbr`); `audio` is empty, and audio presets take the sound out of the best file. Sizes are estimated from the streamed bitrate. A post with several videos also lists them as `videos: [{ index, video_id, url, duration_seconds, thumbnail }]`; a `/video/N` link (`video_id` `<post id>-N`) inspects and downloads that video alone. X-specific errors: `signin_required` (turn on browser sign-in) and `x_limited` (X is rate-limiting; never pauses YouTube).
 
 ## Playlists
 

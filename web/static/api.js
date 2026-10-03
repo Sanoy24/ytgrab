@@ -177,6 +177,7 @@ class FixtureClient {
     }
     if (url.includes('xxxxxxxxxxx'))
       throw new ApiError('video_unavailable', 'This video is unavailable or private.');
+    if (url.includes('x.com/i/status/1600649710662213632')) return structuredClone(fx.xPost); // two videos
     return structuredClone(fx.inspection);
   }
 
@@ -204,12 +205,14 @@ class FixtureClient {
     return { ...structuredClone(fx.playlist), start: 1, next: null };
   }
 
-  async createPlaylistJobs({ video_ids, preset, folder }) {
+  async createPlaylistJobs({ video_ids = [], urls = [], preset, folder }) {
     await delay(500);
     const created = [];
     let skipped = 0;
-    for (const id of new Set(video_ids)) {
-      const url = `https://www.youtube.com/watch?v=${id}`;
+    const links = [...video_ids.map((id) => `https://www.youtube.com/watch?v=${id}`), ...urls];
+    for (const url of new Set(links)) {
+      const x = url.match(/^https:\/\/x\.com\/i\/status\/(\d+)(?:\/video\/(\d))?/);
+      const id = x ? (x[2] ? `${x[1]}-${x[2]}` : x[1]) : new URL(url).searchParams.get('v') || url.split('/').pop();
       if (this.jobs.some((j) => j.url === url && isActive(j.state))) {
         skipped++;
         continue;
@@ -218,13 +221,14 @@ class FixtureClient {
       const at = new Date().toISOString();
       const job = {
         id: `job_${this.nextId++}`, url, video_id: id, title: entry?.title ?? null, preset, format: null,
+        ...(x ? { site: 'x' } : {}),
         state: 'queued', attempt: 1, progress: null, output_path: null, error: null, created_at: at, updated_at: at,
         ...(folder ? { folder } : {}),
       };
       this.jobs.unshift(job);
       created.push(job);
     }
-    skipped += video_ids.length - new Set(video_ids).size;
+    skipped += links.length - new Set(links).size;
     this.emit();
     return { jobs: structuredClone(created), skipped };
   }

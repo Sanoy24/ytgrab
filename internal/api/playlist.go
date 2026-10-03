@@ -64,11 +64,14 @@ func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore
 	})
 	mux.HandleFunc("POST /api/playlist/jobs", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
-			VideoIDs []string       `json:"video_ids"`
-			Preset   *domain.Preset `json:"preset"`
-			Folder   string         `json:"folder"` // optional; saved into this subfolder
+			VideoIDs []string `json:"video_ids"`
+			// URLs are links to single YouTube videos or X posts, from several pasted links
+			// or the videos of one X post; sent instead of, or with, video IDs.
+			URLs   []string       `json:"urls"`
+			Preset *domain.Preset `json:"preset"`
+			Folder string         `json:"folder"` // optional; saved into this subfolder
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 16384)
+		r.Body = http.MaxBytesReader(w, r.Body, 65536)
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&input); err != nil || decoder.Decode(new(any)) != io.EOF {
@@ -79,7 +82,7 @@ func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore
 			writeError(w, http.StatusBadRequest, "invalid_preset", "Choose a preset for the playlist videos.")
 			return
 		}
-		if len(input.VideoIDs) == 0 || len(input.VideoIDs) > domain.MaxPlaylistJobs {
+		if count := len(input.VideoIDs) + len(input.URLs); count == 0 || count > domain.MaxPlaylistJobs {
 			writeError(w, http.StatusBadRequest, "invalid_request", fmt.Sprintf("Choose between 1 and %d videos.", domain.MaxPlaylistJobs))
 			return
 		}
@@ -87,17 +90,29 @@ func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore
 		var jobs []domain.Job
 		seen := map[string]bool{}
 		skipped := 0
+		links := make([]string, 0, len(input.VideoIDs)+len(input.URLs))
 		for _, id := range input.VideoIDs {
 			if !domain.ValidVideoID(id) {
 				writeError(w, http.StatusBadRequest, "invalid_request", "One of the video IDs is not valid.")
 				return
 			}
+			links = append(links, domain.VideoURL(id))
+		}
+		for _, link := range input.URLs {
+			if _, _, err := domain.ParseVideoURL(link); err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_request", "One of the links isn't a single YouTube video or X post.")
+				return
+			}
+			links = append(links, link)
+		}
+		for _, link := range links {
+			link, id, _ := domain.ParseVideoURL(link) // the same form however it was written
 			if seen[id] {
 				skipped++
 				continue
 			}
 			seen[id] = true
-			job, err := domain.NewJob(domain.VideoURL(id), *input.Preset)
+			job, err := domain.NewJob(link, *input.Preset)
 			if errors.Is(err, domain.ErrInvalidPreset) {
 				writeError(w, http.StatusBadRequest, "invalid_preset", err.Error())
 				return

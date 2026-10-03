@@ -72,8 +72,25 @@ test('accepts X post links and rewrites them to one form', () => {
     'twitter.com/OpenAIDevs/status/2105708732323909827',
     'https://mobile.twitter.com/a/status/2105708732323909827/video/1',
   ]) {
-    assert.deepEqual(validateUrl(link), { url: 'https://x.com/i/status/2105708732323909827', site: 'x' }, link);
+    assert.deepEqual(validateUrl(link), { url: 'https://x.com/i/status/2105708732323909827', site: 'x', id: '2105708732323909827' }, link);
   }
   assert.match(validateUrl('https://x.com/OpenAIDevs').error, /doesn't point to a post/);
   assert.equal(looksLikeSearch('x.com/OpenAIDevs/status/2105708732323909827'), false);
+});
+
+test('links to one video of an X post with several', () => {
+  assert.deepEqual(validateUrl('https://x.com/a/status/1600649710662213632/video/2'), {
+    url: 'https://x.com/i/status/1600649710662213632/video/2',
+    site: 'x',
+    id: '1600649710662213632-2',
+  });
+  assert.equal(validateUrl('https://x.com/a/status/1600649710662213632/video/9').url, 'https://x.com/i/status/1600649710662213632');
+});
+
+test('several pasted X links are kept, each video once', () => {
+  const { videos, skipped } = parseLinks(
+    'https://x.com/a/status/1600649710662213632 twitter.com/a/status/1600649710662213632 https://x.com/a/status/1600649710662213632/video/2 https://youtu.be/jNQXAC9IVRw',
+  );
+  assert.deepEqual(videos.map((v) => v.id), ['1600649710662213632', '1600649710662213632-2', 'jNQXAC9IVRw']);
+  assert.equal(skipped, 0);
 });
