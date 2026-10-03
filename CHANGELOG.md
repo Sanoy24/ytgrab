@@ -10,7 +10,6 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 - **File names.** Choose to name files by title, channel and title, date and title, or to keep a folder per channel.
 - **Split into chapters.** For videos with chapters, also save each chapter as its own numbered file, in a folder next to the full download.
 - **Cover art for Opus and FLAC.** Like M4A and MP3, they now get the video's thumbnail as cover art.
-- **winget support.** Releases can be sent to winget, and the update notice recognizes winget installs (`winget upgrade Sanoy24.YTGrab`).
 
 ### Fixed
 
