@@ -72,6 +72,18 @@ class FixtureClient {
     this.pausedUntil = null;
   }
 
+  async search(query, { signal } = {}) {
+    await delay(600, signal);
+    if (query.toLowerCase().includes('nothing')) return { results: [] };
+    return {
+      results: [
+        { video_id: 'jNQXAC9IVRw', title: 'Me at the zoo', channel: 'jawed', duration_seconds: 19 },
+        { video_id: 'aqz-KE-bpKQ', title: 'Big Buck Bunny 60fps 4K - Official Blender Foundation Short Film', channel: 'Blender', duration_seconds: 635 },
+        { video_id: 'M7lc1UVf-VE', title: 'YouTube Developers Live: Embedded Web Player Customization', channel: 'Google for Developers', duration_seconds: 1344 },
+      ],
+    };
+  }
+
   async listWatches() {
     await delay(150);
     this.watches ??= this.scenario === 'empty' ? [] : structuredClone(fx.watches);
@@ -475,6 +487,10 @@ class HttpClient {
       this.windowOpens = r.window_opens ?? null;
       return r.jobs ?? r;
     });
+  }
+  // { results: [{ video_id, title, channel, duration_seconds }] } for words typed instead of a link.
+  search(query, { signal } = {}) {
+    return this.request('GET', `/api/search?q=${encodeURIComponent(query)}`, undefined, signal);
   }
   // Watched channels and playlists: { watches, interval_hours, max_backfill, max_per_check }.
   listWatches() {

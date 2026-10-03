@@ -85,3 +85,11 @@ export function parseLinks(text) {
   }
   return { videos, skipped };
 }
+
+// Words typed instead of a link, to search YouTube for: anything that isn't a link and
+// doesn't mention a web address.
+export function looksLikeSearch(text) {
+  const value = text.trim();
+  if (value.length < 2 || /(https?:\/\/|www\.|youtu\.be|youtube\.|\.com\b)/i.test(value)) return false;
+  return Boolean(validateUrl(value).error);
+}

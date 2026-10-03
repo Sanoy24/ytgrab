@@ -356,3 +356,19 @@ test('sets a download window and says when queued downloads will start', async (
   await page.getByRole('button', { name: /^Download/ }).click();
   await expect(page.locator('#window-note')).toBeHidden();
 });
+
+test('searches YouTube from the link field', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  const input = page.locator('#url');
+  await input.fill('me at the zoo');
+  await expect(page.locator('#search-hint')).toBeVisible();
+  await input.press('Enter');
+  await expect(page.locator('.search-result')).toHaveCount(3);
+  await page.locator('.search-result', { hasText: 'Me at the zoo' }).click();
+  await expect(input).toHaveValue('https://www.youtube.com/watch?v=jNQXAC9IVRw');
+  await expect(page.locator('#search-results')).toBeHidden();
+  await expect(page.locator('#inspect')).toContainText('full walkthrough'); // the sample inspection
+  await input.fill('nothing at all');
+  await input.press('Enter');
+  await expect(page.locator('#search-results')).toContainText('Nothing found');
+});

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { parseLinks, validateUrl, videoIdOf } from '../static/links.js';
+import { looksLikeSearch, parseLinks, validateUrl, videoIdOf } from '../static/links.js';
 
 test('accepts single-video links and adds a missing scheme', () => {
   for (const link of [
@@ -57,4 +57,11 @@ test('splits several pasted links, dropping repeats and non-video links', () => 
     https://vimeo.com/123 not-a-link`);
   assert.deepEqual(parsed.videos.map((v) => v.id), ['dQw4w9WgXcQ', 'aBcDeFgHiJk']);
   assert.equal(parsed.skipped, 3);
+});
+
+test('tells search words from links', () => {
+  for (const words of ['lofi hip hop', 'gemma 4 explained', 'cats']) assert.equal(looksLikeSearch(words), true, words);
+  for (const link of ['https://youtu.be/dQw4w9WgXcQ', 'youtube.com/watch?v=dQw4w9WgXcQ', 'www.youtube.com/@x', 'x', '', 'vimeo.com/123']) {
+    assert.equal(looksLikeSearch(link), false, link);
+  }
 });

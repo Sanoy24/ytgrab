@@ -20,6 +20,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/jobs/{id}/resume` | Return a paused job to the queue; it continues from the partial file |
 | `POST` | `/api/jobs/{id}/top` | Start a queued or paused job before the other waiting ones |
 | `POST` | `/api/jobs/{id}/retry` | Retry a failed or cancelled job |
+| `GET` | `/api/search?q=words` | `{ results: [{ video_id, title, channel, duration_seconds }] }`, up to 12 videos; `invalid_query` for fewer than 2 or more than 200 characters |
 | `GET` | `/api/watches` | `{ watches: [Watch], interval_hours, max_backfill, max_per_check }` |
 | `POST` | `/api/watches` | `{ url, preset, folder, backfill, min_minutes, keywords, interval_hours }` (minutes 0–600, keywords up to 200 characters, interval 1, 6, or 24): lists the channel or playlist, counts what's there as seen, queues the newest `backfill` (0–10) videos; `watch_exists` if it's already watched |
 | `POST` | `/api/watches/{id}/check` | Check now; returns the watch with `last_new` |
