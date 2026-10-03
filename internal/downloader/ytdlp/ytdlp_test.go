@@ -158,6 +158,9 @@ func TestMetadataIsEmbedded(t *testing.T) {
 	m4a, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioM4A)
 	mp3, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioMP3)
 	video, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.VideoBest)
+	opusPreset, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioOpus)
+	flacPreset, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioFLAC)
+	wavPreset, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.AudioWAV)
 	opus, _ := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: "audio", ID: "251", Ext: "webm", Label: "Audio · WEBM"})
 	pickedM4A, _ := domain.NewFormatJob("https://youtu.be/jNQXAC9IVRw", domain.FormatSelection{Kind: "audio", ID: "140", Ext: "m4a", Label: "Audio · M4A"})
 	for name, test := range map[string]struct {
@@ -169,6 +172,9 @@ func TestMetadataIsEmbedded(t *testing.T) {
 		"picked m4a":   {pickedM4A, true},
 		"picked opus":  {opus, false}, // WebM can't hold cover art; embedding would fail the job
 		"video preset": {video, false},
+		"opus preset":  {opusPreset, true},
+		"flac preset":  {flacPreset, true},
+		"wav preset":   {wavPreset, false}, // WAV has nowhere to put it
 	} {
 		joined := strings.Join(buildArgs(test.job, config.Config{}), " ")
 		if !strings.Contains(joined, "--embed-metadata") || !strings.Contains(joined, "--embed-chapters") {
