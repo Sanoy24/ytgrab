@@ -16,8 +16,8 @@ jobs:
   build-windows-linux:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -35,7 +35,7 @@ jobs:
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1 -Version $version -Platforms "windows,linux"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: archives-windows-linux
           path: dist/
@@ -45,8 +45,8 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -65,7 +65,7 @@ jobs:
             otool -L "$RUNNER_TEMP/ytgrab" | grep -q AppKit || { echo "$archive was built without the menu-bar icon"; exit 1; }
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: archives-macos
           path: dist/
@@ -75,9 +75,9 @@ jobs:
     needs: [build-windows-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: archives-*
           path: dist
@@ -119,7 +119,7 @@ jobs:
     env:
       PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.PACKAGES_TOKEN != ''
 
       - name: Update the Homebrew formula and Scoop manifest
