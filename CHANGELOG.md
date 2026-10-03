@@ -2,12 +2,13 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.12.0] - 2026-10-03
+
+YTGrab now downloads from X (Twitter) too.
 
 ### Added
 
 - **X (Twitter) videos.** Paste a link to an X post with a video, such as `https://x.com/user/status/…`, and pick its quality or take its audio as M4A, MP3, Opus, FLAC, or WAV. Files are named after the post (`Text [post id] 1080x1920.mp4`), and the post's preview image shows in the Library. Portrait videos are labeled by their shorter side, so 1080x1920 is "1080p". X's limits never pause YouTube downloads.
-
 - **Clear can delete files.** Clearing the Library now asks first, with an option to also delete the downloaded files. Files that can't be deleted (open in a player, say) keep their entry.
 
 ### Changed
@@ -140,6 +141,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.12.0]: https://github.com/Sanoy24/ytgrab/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/Sanoy24/ytgrab/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/Sanoy24/ytgrab/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/Sanoy24/ytgrab/compare/v1.8.0...v1.9.0
