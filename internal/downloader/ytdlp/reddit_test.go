@@ -62,3 +62,18 @@ func TestRedditFailures(t *testing.T) {
 		}
 	}
 }
+
+// Converting Reddit's preview image fails (it claims to be PNG but isn't), which made
+// yt-dlp fail an otherwise finished audio download.
+func TestRedditAudioHasNoCoverArt(t *testing.T) {
+	picked, err := domain.NewFormatJob(redditPost, domain.FormatSelection{Kind: "audio", ID: "dash-AUDIO-1", Ext: "m4a", Label: "Audio · M4A 131 kbps"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	preset, _ := domain.NewJob(redditPost, domain.AudioMP3)
+	for _, job := range []domain.Job{picked, preset} {
+		if args := strings.Join(buildArgs(job, config.Config{}), " "); strings.Contains(args, "--embed-thumbnail") {
+			t.Errorf("cover art embedded for Reddit: %s", args)
+		}
+	}
+}
