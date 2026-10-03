@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Sanoy24/ytgrab/internal/domain"
@@ -33,6 +34,38 @@ func ownedOutput(job domain.Job) (string, bool) {
 	}
 	path := *job.OutputPath
 	return path, strings.Contains(filepath.Base(path), "["+job.VideoID+"]")
+}
+
+// chapterFile matches the files "Split into chapters" writes: "01 Intro.m4a".
+var chapterFile = regexp.MustCompile(`^[0-9]{2,3} .*\.[A-Za-z0-9]{2,5}$`)
+
+// removeOutput deletes a finished download's file and, when it was split into chapters,
+// the chapter files in the folder named like it. Only chapter files are removed from that
+// folder, which is then removed if nothing else is left in it. A file that is already gone
+// is not an error.
+func removeOutput(job domain.Job, path string) (removed bool, err error) {
+	if err := os.Remove(path); err == nil {
+		removed = true
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return false, err
+	}
+	if !job.SplitChapters {
+		return removed, nil
+	}
+	folder := strings.TrimSuffix(path, filepath.Ext(path))
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return removed, nil // no chapter folder
+	}
+	for _, entry := range entries {
+		if entry.Type().IsRegular() && chapterFile.MatchString(entry.Name()) {
+			if err := os.Remove(filepath.Join(folder, entry.Name())); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return removed, err
+			}
+		}
+	}
+	_ = os.Remove(folder) // only succeeds when empty
+	return removed, nil
 }
 
 func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
@@ -100,7 +133,7 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 				writeError(w, http.StatusBadRequest, "not_deletable", "This file can't be deleted from YTGrab. Remove it from the list instead.")
 				return
 			}
-			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			if _, err := removeOutput(job, path); err != nil {
 				writeError(w, http.StatusConflict, "delete_failed", "The file could not be deleted. It may be open in another program.")
 				return
 			}
@@ -160,12 +193,14 @@ func clearWithFiles(ctx context.Context, store JobStore, deleter jobDeleter) (cl
 				continue
 			}
 			if path, owned := ownedOutput(job); owned {
-				if err := os.Remove(path); err == nil {
-					result.FilesDeleted++
-				} else if !errors.Is(err, os.ErrNotExist) {
+				removed, err := removeOutput(job, path)
+				if err != nil {
 					kept[job.ID] = true
 					result.Kept++
 					continue
+				}
+				if removed {
+					result.FilesDeleted++
 				}
 			}
 			if err := deleter.Delete(ctx, job.ID); err == nil {

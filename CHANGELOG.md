@@ -8,6 +8,11 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 - **X posts with several videos.** YTGrab lists every video of the post, all ticked; untick any and add the rest with one preset. Each is saved as its own file. A `/video/2` link goes straight to that video.
 
+### Changed
+
+- Deleting a download's file also deletes its chapter files from **Split into chapters**, and their folder when nothing else is in it.
+- The **Send to YTGrab** bookmark says it works on X posts too.
+
 ### Fixed
 
 - Several X links pasted at once were skipped as if they weren't video links.
