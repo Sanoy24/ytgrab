@@ -73,10 +73,10 @@ export function formatWhen(iso) {
 
 // YouTube's standard preview image for a video. Loaded straight from YouTube's image
 // server, without sending which page asked for it.
-// Also accepts a post's preview image, which the server keeps only from X's and Reddit's
-// image servers (the hosts the page's Content-Security-Policy allows).
+// Also accepts a post's preview image, which the server keeps only from X's, Reddit's, and
+// Instagram's image servers (the hosts the page's Content-Security-Policy allows).
 export function thumbnailUrl(videoId) {
-  if (/^https:\/\/(pbs\.twimg\.com|external-preview\.redd\.it|preview\.redd\.it)\/[^\s"'<>]+$/.test(videoId || '')) return videoId;
+  if (/^https:\/\/(pbs\.twimg\.com|external-preview\.redd\.it|preview\.redd\.it|[a-z0-9.-]+\.fbcdn\.net|[a-z0-9.-]+\.cdninstagram\.com)\/[^\s"'<>]+$/.test(videoId || '')) return videoId;
   return /^[A-Za-z0-9_-]{11}$/.test(videoId || '') ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : '';
 }
 

@@ -2,6 +2,9 @@
 // every link again before using it.
 
 // X (Twitter) posts with a video: x.com/<user>/status/<id>.
+// Instagram posts and reels: instagram.com/reel/<code>/, /p/<code>/, /<user>/reel/<code>/.
+const INSTAGRAM_HOSTS = new Set(['instagram.com', 'www.instagram.com', 'm.instagram.com']);
+
 // Reddit posts with a video: reddit.com/r/<sub>/comments/<id>/, redd.it/<id>, v.redd.it/<id>.
 const REDDIT_HOSTS = new Set(['reddit.com', 'www.reddit.com', 'old.reddit.com', 'new.reddit.com', 'm.reddit.com', 'np.reddit.com', 'sh.reddit.com']);
 
@@ -14,6 +17,17 @@ const YT_HOSTS = new Set([
   'music.youtube.com',
   'youtu.be',
 ]);
+
+// Instagram links become one form per post, as the server writes them; ?item=N is YTGrab's
+// own link to one video of a carousel (photo positions like ?img_index= are ignored).
+function instagramLink(u) {
+  const code = (u.pathname.match(/\/(?:p|reels?|tv)\/([A-Za-z0-9_-]{5,40})(?:\/|$)/) || [])[1];
+  if (!code) return { error: "This Instagram link doesn't point to a post or reel. Open it and copy its link." };
+  const n = Number(u.searchParams.get('item'));
+  const index = Number.isInteger(n) && n >= 2 && n <= 20 ? n : 1;
+  const url = `https://www.instagram.com/p/${code}/${index > 1 ? `?item=${index}` : ''}`;
+  return { url, site: 'instagram', id: index > 1 ? `${code}.${index}` : code };
+}
 
 // Reddit links become one form per post (or v.redd.it video), as the server writes them.
 function redditLink(host, path) {
@@ -54,8 +68,9 @@ export function validateUrl(raw) {
     return { url, site: 'x', id: index > 1 ? `${match[1]}-${index}` : match[1] };
   }
   if (REDDIT_HOSTS.has(host) || host === 'redd.it' || host === 'v.redd.it') return redditLink(host, u.pathname);
+  if (INSTAGRAM_HOSTS.has(host)) return instagramLink(u);
   if (!YT_HOSTS.has(host))
-    return { error: 'Only YouTube, X, and Reddit links are supported.' };
+    return { error: 'Only YouTube, X, Reddit, and Instagram links are supported.' };
 
   const hasVideo =
     (host === 'youtu.be' && u.pathname.length > 1) ||

@@ -1209,9 +1209,10 @@ function cachedInspection(url) {
 }
 
 // Resolves to the grouped formats, or null when inspection failed or was superseded.
-// An X post with several videos opens the review list, unless the link names one of them.
+// An X or Instagram post with several videos opens the review list, unless the link names
+// one of them.
 function showInspection(url, grouped) {
-  if (grouped.videos?.length > 1 && !url.includes('/video/')) enterPostVideos(url, grouped);
+  if (grouped.videos?.length > 1 && !/\/video\/\d|[?&]item=\d/.test(url)) enterPostVideos(url, grouped);
   else showFormats(grouped, selectedChoice());
 }
 
@@ -1308,7 +1309,7 @@ function formatRow(choice, checked) {
 }
 
 // Sites other than YouTube, as job cards name them.
-const SITE_NAMES = { x: 'X', reddit: 'Reddit' };
+const SITE_NAMES = { x: 'X', reddit: 'Reddit', instagram: 'Instagram' };
 
 const X_AUDIO = { kind: 'preset', id: 'audio-m4a', label: 'M4A', detail: "The post's audio, no re-encoding" };
 

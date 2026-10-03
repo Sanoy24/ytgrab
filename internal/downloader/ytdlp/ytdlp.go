@@ -246,16 +246,32 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, xFormatArgs(job)...)
 		return append(args, "--playlist-items", strconv.Itoa(index), "--", post)
 	}
+	target := job.URL
+	if job.Site == domain.SiteInstagram {
+		// Like X: yt-dlp reads a carousel's videos from the post's link; pick one.
+		post, index := domain.PostItem(job.URL)
+		target = post
+		args = append(args, "--playlist-items", strconv.Itoa(index))
+	}
+	finish := func(args []string) []string {
+		if job.Site == domain.SiteInstagram && isVideo(job) {
+			// Instagram's VP9 comes in MP4 with AAC audio. yt-dlp won't pair those in MP4 by
+			// itself and falls back to MKV, but MP4 holds them fine and plays more widely.
+			// The later option wins.
+			args = append(args, "--merge-output-format", "mp4")
+		}
+		return append(args, "--", target)
+	}
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
 			args = append(args, "-f", videoSelector(*job.Format), "--merge-output-format", "mp4/webm/mkv")
 		} else {
 			args = append(args, "-f", job.Format.ID)
 		}
-		return append(args, "--", job.URL)
+		return finish(args)
 	}
 	if job.Preset == nil {
-		return append(args, "--", job.URL)
+		return finish(args)
 	}
 	switch *job.Preset {
 	case domain.VideoBest:
@@ -276,7 +292,7 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	case domain.AudioWAV:
 		args = append(args, "-f", "ba", "-x", "--audio-format", "wav")
 	}
-	return append(args, "--", job.URL)
+	return finish(args)
 }
 
 // xTitleCleanup decodes the HTML entities X leaves in post text, so file names and tags
@@ -598,7 +614,7 @@ func confirmOutput(directory string, reportedPath string) (string, error) {
 }
 
 // siteNames name the sites in failure messages.
-var siteNames = map[string]string{domain.SiteX: "X", domain.SiteReddit: "Reddit"}
+var siteNames = map[string]string{domain.SiteX: "X", domain.SiteReddit: "Reddit", domain.SiteInstagram: "Instagram"}
 
 // classifyFor explains a failure in terms of the site it happened on. Other sites' limits
 // are their own, so they never pause YouTube downloads ("blocked" is reserved for YouTube).
@@ -615,6 +631,19 @@ func classifyFor(site, stderr string) error {
 			return &Error{Code: "signin_required", Message: "Reddit shows this post only to signed-in users. Turn on Browser sign-in in Settings, choosing a browser where you're signed in to Reddit, then retry."}
 		case strings.Contains(lower, "http error 404"), strings.Contains(lower, "does not exist"), strings.Contains(lower, "removed"), strings.Contains(lower, "deleted"):
 			return &Error{Code: "video_unavailable", Message: "This post is unavailable: it may be deleted or removed."}
+		}
+		return siteFailure(site, stderr)
+	}
+	if site == domain.SiteInstagram {
+		switch {
+		case strings.Contains(lower, "no video formats found"), strings.Contains(lower, "there is no video in this post"):
+			return &Error{Code: "video_unavailable", Message: "This post has no video."}
+		case strings.Contains(lower, "rate-limit"), strings.Contains(lower, "rate limit"), strings.Contains(lower, "http error 429"):
+			return &Error{Code: "instagram_limited", Message: "Instagram is limiting requests from this network. Wait a few minutes, then retry."}
+		case strings.Contains(lower, "empty media response"), strings.Contains(lower, "login"), strings.Contains(lower, "log in"), strings.Contains(lower, "private"):
+			return &Error{Code: "signin_required", Message: "Instagram shows this post only to signed-in users (a private account, an age-restricted post, or a deleted one). If you can see it in your browser, turn on Browser sign-in in Settings with a browser where you're signed in to Instagram, then retry."}
+		case strings.Contains(lower, "http error 404"), strings.Contains(lower, "not available"):
+			return &Error{Code: "video_unavailable", Message: "This post is unavailable: it may be deleted or private."}
 		}
 		return siteFailure(site, stderr)
 	}

@@ -125,6 +125,12 @@ Paste the link to a Reddit post with a video, such as `https://www.reddit.com/r/
 
 Reddit's **Share** button makes short `/s/…` links that only redirect, so YTGrab can't read them: open the post and copy the link from the address bar instead. Posts in age-restricted or private communities need **Browser sign-in** with a browser where you're signed in to Reddit. Subtitles, chapters, and SponsorBlock don't apply, and Reddit's limits never pause YouTube downloads.
 
+## Download from Instagram
+
+Paste the link to a public Instagram reel or post with a video, such as `https://www.instagram.com/reel/DeAVy0uTbPn/` (the link from **Share → Copy link** works as is). YTGrab lists the video's qualities and audio, like a YouTube video; Instagram doesn't say how long a video is, so no sizes are shown. Videos are saved as MP4, named after the post: `Video by account [DeAVy0uTbPn] 1080x1920.mp4`. When a post has several videos, YTGrab lists them all ticked, like an X post with several; their files get `.2`, `.3`, … after the code.
+
+Public posts download without signing in. Posts from private accounts, age-restricted posts, and stories need **Browser sign-in** with a browser where you're signed in to Instagram; heavy use can get an account limited, so a secondary account is safer. Instagram's preview images expire after a while, so older entries in the Library may lose their picture; the files aren't affected.
+
 ## Search YouTube
 
 Type words instead of a link in the link field, such as `big buck bunny`, and press Enter. YTGrab shows up to 12 videos with their thumbnail, channel, and length; click one to load its formats as if you had pasted its link. Searching only happens when you press Enter, and each search is one request to YouTube through the same pacing as everything else.

@@ -7,6 +7,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 ### Added
 
 - **Update with one click.** On Windows and Linux, a copy unpacked from a release archive or installed with the install script can update itself from the update notice: YTGrab downloads the release, checks its checksum and that it starts, replaces itself, and restarts.
+- **Instagram videos.** Paste a link to a public Instagram reel or post and pick its quality or audio, or use a preset; posts with several videos list them all. Private and age-restricted posts work with Browser sign-in.
 - **Reddit videos.** Paste a link to a Reddit post with a video (`reddit.com`, `old.reddit.com`, `redd.it`, or `v.redd.it`) and pick its quality or audio, or use a preset. Reddit's limits never pause YouTube downloads.
 - **Library sizes, sorting, and export.** Finished downloads show their file size, the Library totals them, and files moved or deleted outside YTGrab are marked. Sort by newest, oldest, largest, or title, and export the list as a CSV file.
 - **X posts with several videos.** YTGrab lists every video of the post, all ticked; untick any and add the rest with one preset. Each is saved as its own file. A `/video/2` link goes straight to that video.
