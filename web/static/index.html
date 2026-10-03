@@ -217,6 +217,7 @@
           <header class="view-head">
             <h2 id="history-title">Library <span class="count" id="history-count"></span></h2>
             <p class="view-sub">Finished, failed, and cancelled downloads.</p>
+            <p class="library-summary" id="library-summary" hidden></p>
           </header>
           <div class="library-tools">
             <label class="search">
@@ -229,7 +230,17 @@
               <button type="button" class="chip" data-filter="completed" aria-pressed="false">Completed</button>
               <button type="button" class="chip" data-filter="problems" aria-pressed="false">Failed / cancelled</button>
             </div>
+            <label class="history-sort">
+              <span class="visually-hidden">Sort the library</span>
+              <select id="history-sort">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="largest">Largest first</option>
+                <option value="title">Title A–Z</option>
+              </select>
+            </label>
             <button type="button" class="btn btn-small" id="retry-failed" hidden>Retry failed</button>
+            <button type="button" class="btn-link history-clear" id="export-history">Export CSV</button>
             <button type="button" class="btn-link history-clear" id="clear-history">Clear</button>
           </div>
           <div class="list card library-list" id="history" aria-busy="true"></div>

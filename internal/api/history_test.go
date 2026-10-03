@@ -219,3 +219,32 @@ func TestDeletingASplitDownloadRemovesItsChapters(t *testing.T) {
 		t.Error("the empty chapter folder was kept")
 	}
 }
+
+func TestLibraryFiles(t *testing.T) {
+	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	dir := t.TempDir()
+	file := filepath.Join(dir, "Title [dQw4w9WgXcQ] 1080p.mp4")
+	if err := os.WriteFile(file, make([]byte, 1234), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	here := finishedJob(t, store, "https://youtu.be/dQw4w9WgXcQ", domain.Completed, file)
+	gone := finishedJob(t, store, "https://youtu.be/jNQXAC9IVRw", domain.Completed, filepath.Join(dir, "Gone [jNQXAC9IVRw] 720p.mp4"))
+	finishedJob(t, store, "https://youtu.be/aqz-KE-bpKQ", domain.Failed, "")
+
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/library/files", nil))
+	var body struct {
+		Files map[string]libraryFile `json:"files"`
+	}
+	if response.Code != http.StatusOK || json.Unmarshal(response.Body.Bytes(), &body) != nil {
+		t.Fatalf("files = %d %s", response.Code, response.Body.String())
+	}
+	if len(body.Files) != 2 || body.Files[here.ID] != (libraryFile{Bytes: 1234}) || !body.Files[gone.ID].Missing {
+		t.Fatalf("files = %+v", body.Files)
+	}
+}

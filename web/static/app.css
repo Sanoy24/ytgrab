@@ -745,3 +745,11 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 22px; }
 .btn.btn-destructive { background: var(--err); border-color: var(--err); color: #fff; }
 .btn.btn-destructive:hover { background: color-mix(in srgb, var(--err) 88%, black); }
+
+/* Library sizes, sorting, and export */
+.library-summary { margin: 6px 0 0; color: var(--text); font-size: 0.875rem; font-weight: 550; }
+.history-sort select {
+  font: inherit; font-size: 0.8rem; padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--surface); color: var(--text);
+}
+.job-missing { color: var(--err); }

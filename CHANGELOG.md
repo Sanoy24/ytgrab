@@ -7,6 +7,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 ### Added
 
 - **Reddit videos.** Paste a link to a Reddit post with a video (`reddit.com`, `old.reddit.com`, `redd.it`, or `v.redd.it`) and pick its quality or audio, or use a preset. Reddit's limits never pause YouTube downloads.
+- **Library sizes, sorting, and export.** Finished downloads show their file size, the Library totals them, and files moved or deleted outside YTGrab are marked. Sort by newest, oldest, largest, or title, and export the list as a CSV file.
 - **X posts with several videos.** YTGrab lists every video of the post, all ticked; untick any and add the rest with one preset. Each is saved as its own file. A `/video/2` link goes straight to that video.
 
 ### Changed

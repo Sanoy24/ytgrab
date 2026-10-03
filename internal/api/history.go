@@ -113,6 +113,28 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
+	// The Library's file sizes, read on demand rather than with every job list: one look
+	// at each finished download's file, which also tells moved or deleted files apart.
+	mux.HandleFunc("GET /api/library/files", func(w http.ResponseWriter, r *http.Request) {
+		jobs, err := store.List(r.Context(), 500)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "storage", "Could not read the library.")
+			return
+		}
+		files := map[string]libraryFile{}
+		for _, job := range jobs {
+			if job.State != domain.Completed || job.OutputPath == nil {
+				continue
+			}
+			if info, err := os.Stat(*job.OutputPath); err == nil && info.Mode().IsRegular() {
+				files[job.ID] = libraryFile{Bytes: info.Size()}
+			} else {
+				files[job.ID] = libraryFile{Missing: true}
+			}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"files": files})
+	})
+
 	deleter, ok := store.(jobDeleter)
 	if !ok {
 		return
@@ -165,6 +187,13 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		}
 		writeJSON(w, http.StatusOK, map[string]int{"removed": removed})
 	})
+}
+
+// libraryFile is a finished download's file as it is now: its size, or missing when it was
+// moved or deleted outside YTGrab.
+type libraryFile struct {
+	Bytes   int64 `json:"bytes"`
+	Missing bool  `json:"missing,omitempty"`
 }
 
 // clearResult reports a clear that also deleted files. Kept counts finished downloads
