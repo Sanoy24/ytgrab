@@ -237,3 +237,25 @@ func TestFileNameStyleIsAllowlisted(t *testing.T) {
 		t.Fatal("not saved")
 	}
 }
+
+func TestSponsorBlockIsOffByDefaultAndAllowlisted(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, _ := New(ctx, store, t.TempDir(), false)
+	if manager.SponsorBlock() != "off" {
+		t.Fatalf("default = %q", manager.SponsorBlock())
+	}
+	if err := manager.SetSponsorBlock(ctx, "sponsor,all"); !errors.Is(err, ErrInvalidPreference) {
+		t.Fatalf("arbitrary value accepted: %v", err)
+	}
+	if err := manager.SetSponsorBlock(ctx, "remove"); err != nil {
+		t.Fatal(err)
+	}
+	if reloaded, _ := New(ctx, store, t.TempDir(), false); reloaded.SponsorBlock() != "remove" {
+		t.Fatal("not saved")
+	}
+}

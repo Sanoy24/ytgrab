@@ -324,3 +324,11 @@ test('watches a channel and manages the watch', async ({ page }) => {
   await card.getByRole('button', { name: /^Stop watching/ }).click();
   await expect(page.locator('.watch')).toHaveCount(2);
 });
+
+test('marks or removes sponsor segments', async ({ page }) => {
+  await page.goto('/?fixture=empty#settings');
+  const select = page.getByLabel('Sponsor segments');
+  await expect(select).toHaveValue('off');
+  await select.selectOption('remove');
+  await expect(page.locator('#toast')).toContainText('cut out of new downloads');
+});

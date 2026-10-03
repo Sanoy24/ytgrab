@@ -308,6 +308,7 @@ class FixtureClient {
       start_at_login_label: 'Start with Windows',
       auto_update_ytdlp: this.autoUpdate ?? true,
       file_names: this.fileNames ?? 'title',
+      sponsorblock: this.sponsorBlock ?? 'off',
       file_name_styles: ['title', 'channel-title', 'date-title', 'channel-folder'],
       speed_limit_kbps: this.speedLimit ?? 0,
       speed_limits: [0, 500, 1000, 2000, 5000, 10000],
@@ -318,8 +319,9 @@ class FixtureClient {
     };
   }
 
-  async setPreferences({ max_downloads, default_preset, speed_limit_kbps, auto_update_ytdlp, file_names }) {
+  async setPreferences({ max_downloads, default_preset, speed_limit_kbps, auto_update_ytdlp, file_names, sponsorblock }) {
     await delay(200);
+    if (sponsorblock !== undefined) this.sponsorBlock = sponsorblock;
     if (file_names !== undefined) this.fileNames = file_names;
     if (auto_update_ytdlp !== undefined) this.autoUpdate = auto_update_ytdlp;
     if (speed_limit_kbps !== undefined) this.speedLimit = speed_limit_kbps;

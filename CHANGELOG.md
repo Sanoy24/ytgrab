@@ -2,6 +2,12 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **SponsorBlock.** Mark sponsor reads, self-promotion, and "like and subscribe" reminders as chapters, or cut them out, using the community SponsorBlock list.
+
 ## [1.10.0] - 2026-10-03
 
 ### Added
@@ -114,6 +120,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[Unreleased]: https://github.com/Sanoy24/ytgrab/compare/v1.10.0...HEAD
 [1.10.0]: https://github.com/Sanoy24/ytgrab/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/Sanoy24/ytgrab/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/Sanoy24/ytgrab/compare/v1.7.0...v1.8.0

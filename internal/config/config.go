@@ -32,6 +32,8 @@ type Config struct {
 	SpeedLimitKBps int
 	// FileNames is the naming style (see settings.FileNameStyles); filled in per download.
 	FileNames string
+	// SponsorBlock is "off", "mark", or "remove"; filled in per download.
+	SponsorBlock string
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
 	OpenBrowser bool
