@@ -35,14 +35,22 @@ class FixtureClient {
 
   async version() {
     await delay(150);
-    const update = this.scenario === 'default';
+    const self = this.scenario === 'self-update';
+    const update = (this.scenario === 'default' || self) && !this.selfUpdated;
     return {
-      version: '1.7.0',
-      latest: update ? '1.8.0' : '1.7.0',
+      version: this.selfUpdated ? '1.8.0' : '1.7.0',
+      latest: update || this.selfUpdated ? '1.8.0' : '1.7.0',
       update_available: update,
-      update_command: update ? 'scoop update ytgrab' : undefined,
+      update_command: update && !self ? 'scoop update ytgrab' : undefined,
+      can_update: update && self ? true : undefined,
       release_url: 'https://github.com/Sanoy24/ytgrab/releases/latest',
     };
+  }
+
+  async updateYTGrab() {
+    await delay(800);
+    this.selfUpdated = true;
+    return { version: '1.8.0', restarting: true };
   }
 
   async health() {
@@ -552,6 +560,10 @@ class HttpClient {
   clearHistory(deleteFiles = false) {
     const query = deleteFiles ? '?delete_files=true' : '';
     return this.request('POST', `/api/history/clear${query}`).then((result) => this.afterChange(result));
+  }
+  // Installs the latest YTGrab over this copy, which then restarts: { version, restarting }.
+  updateYTGrab() {
+    return this.request('POST', '/api/system/update-ytgrab');
   }
   // Installs or updates yt-dlp on the server; resolves with { version, previous, updated }.
   updateYtdlp() {

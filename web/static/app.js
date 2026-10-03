@@ -1944,14 +1944,57 @@ function renderUpdate() {
   $('#update-banner').hidden = !show;
   if (!show) return;
   $('#update-title').textContent = `YTGrab ${info.latest} is available (you have ${info.version}).`;
-  const command = info.update_command || '';
-  $('#update-how').textContent = command
-    ? 'To update, quit YTGrab, run this, then start it again:'
-    : 'Download it from the release page and replace the files in your YTGrab folder.';
+  const command = info.can_update ? '' : info.update_command || '';
+  $('#update-how').textContent = info.can_update
+    ? 'YTGrab can install it for you: it downloads the update, checks it, and restarts. Your downloads list is kept.'
+    : command
+      ? 'To update, quit YTGrab, run this, then start it again:'
+      : 'Download it from the release page and replace the files in your YTGrab folder.';
+  $('#update-now').hidden = !info.can_update;
   $('#update-command').hidden = !command;
   $('#update-command').textContent = command;
   $('#update-copy').hidden = !command;
   $('#update-notes').href = info.release_url;
+}
+
+// Installs the update, then waits for the restarted YTGrab to answer with the new version
+// and reloads the page from it.
+async function installUpdate(button) {
+  button.disabled = true;
+  button.textContent = 'Updating…';
+  $('#update-how').textContent = 'Downloading and checking the update. This takes a moment.';
+  let result;
+  try {
+    result = await client.updateYTGrab();
+  } catch (err) {
+    toast(err.message, true);
+    button.disabled = false;
+    button.textContent = 'Update now';
+    renderUpdate();
+    return;
+  }
+  $('#update-title').textContent = `Restarting YTGrab ${result.version}…`;
+  $('#update-how').textContent = 'The page reloads when it is back.';
+  button.hidden = true;
+  if (client.isFixture) {
+    versionInfo = await client.version();
+    renderUpdate();
+    toast(`YTGrab ${result.version} is installed.`);
+    return;
+  }
+  const deadline = Date.now() + 90_000;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      if ((await client.version()).version === result.version) {
+        location.reload();
+        return;
+      }
+    } catch {
+      // Still restarting.
+    }
+  }
+  $('#update-how').textContent = "YTGrab hasn't come back yet. Start it again from the Start menu or your terminal, then reload this page.";
 }
 
 async function copyUpdateCommand() {
@@ -2167,6 +2210,7 @@ function init() {
   });
 
   $('#update-copy').addEventListener('click', copyUpdateCommand);
+  $('#update-now').addEventListener('click', (e) => installUpdate(e.currentTarget));
   $('#update-dismiss').addEventListener('click', dismissUpdate);
 
   loadHealth();

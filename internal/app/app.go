@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/activity"
@@ -30,6 +31,10 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
+	// An installed update ends the run like Quit, then reports ErrRestart.
+	ctx, stopRun := context.WithCancel(ctx)
+	defer stopRun()
+	var restarting atomic.Bool
 	// Claim the port before touching the database: a second launch must not run recovery
 	// or start workers against the running copy's jobs.
 	listener, err := net.Listen("tcp", cfg.ListenAddress)
@@ -85,8 +90,18 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 		update:   updater.UpdateYtdlp,
 		output:   output,
 	}.run(ctx)
+	ytgrab := ytgrabUpdatesFor(cfg.Version)
+	ytgrab.running = jobQueue.Running
+	ytgrab.restart = func() {
+		restarting.Store(true)
+		stopRun()
+	}
 	serving = true
-	return serve(ctx, cfg, output, listener, store, jobQueue, serverSettings{Manager: appSettings, Picker: picker.New(), ytdlpUpdater: updater, ytgrabUpdates: ytgrabUpdatesFor(cfg.Version), loginStart: loginStart{autostart.ForThisProgram()}})
+	err = serve(ctx, cfg, output, listener, store, jobQueue, serverSettings{Manager: appSettings, Picker: picker.New(), ytdlpUpdater: updater, ytgrabUpdates: ytgrab, loginStart: loginStart{autostart.ForThisProgram()}})
+	if err == nil && restarting.Load() {
+		return ErrRestart
+	}
+	return err
 }
 
 // serverSettings adds the desktop folder window, yt-dlp updates, and starting at sign-in

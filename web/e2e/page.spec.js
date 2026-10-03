@@ -451,3 +451,14 @@ test('shows file sizes, sorts the library, and exports it', async ({ page }) => 
   await page.reload();
   await expect(page.getByLabel('Sort the library')).toHaveValue('title');
 });
+
+test('installs a YTGrab update when this copy can update itself', async ({ page }) => {
+  await page.goto('/?fixture=self-update');
+  const banner = page.locator('#update-banner');
+  await expect(banner).toContainText('YTGrab 1.8.0 is available (you have 1.7.0).');
+  await expect(banner).toContainText('YTGrab can install it for you');
+  await expect(page.locator('#update-command')).toBeHidden();
+  await page.getByRole('button', { name: 'Update now' }).click();
+  await expect(page.locator('#toast')).toContainText('YTGrab 1.8.0 is installed.');
+  await expect(banner).toBeHidden();
+});
