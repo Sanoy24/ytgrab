@@ -362,6 +362,10 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .preset:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 #format-choices .btn-link { margin-top: 12px; }
 
+/* Split into chapters */
+.split-chapters { display: flex; gap: 8px; align-items: flex-start; margin-top: 16px; font-size: 0.875rem; cursor: pointer; }
+.split-chapters input { margin-top: 3px; accent-color: var(--accent); }
+
 /* Only part of the video */
 .clip { margin-top: 16px; }
 .clip summary { width: fit-content; cursor: pointer; color: var(--muted); font-size: 0.875rem; }

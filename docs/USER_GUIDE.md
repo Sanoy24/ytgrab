@@ -98,6 +98,10 @@ Files include the video's title, channel, upload date, and chapters; M4A, MP3, O
 
 Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`), so different qualities of one video never overwrite each other.
 
+## Split a video into chapters
+
+When the video's creator marked chapters, the Download page says how many and offers **Also save each of the N chapters as its own file**. YTGrab then saves the whole video as usual, plus a folder of the same name with one file per chapter, numbered and titled (`01 Intro.m4a`, `02 Docs.m4a`, …). It works for video and audio formats; it can't be combined with **Only part of the video**. Removing the download with its file deletes the full file but not the chapter folder.
+
 ## Send to YTGrab from YouTube
 
 In **Settings**, drag the **Send to YTGrab** button to your browser's bookmarks bar (press Ctrl+Shift+B, or Cmd+Shift+B on a Mac, if the bar is hidden). Then, on any YouTube video or playlist page, click the bookmark: YTGrab opens, in the same tab each time, with that link in the field and its formats loading. Choose a format and press **Add to queue**. The bookmark only fills in the link; nothing is downloaded until you add it.

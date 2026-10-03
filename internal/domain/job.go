@@ -85,6 +85,8 @@ type Job struct {
 	Folder string `json:"folder,omitempty"`
 	// Priority orders the queue: higher starts first, then older. "Move to top" raises it.
 	Priority int64 `json:"priority,omitempty"`
+	// SplitChapters also saves each chapter as its own file, in a folder next to the video.
+	SplitChapters bool `json:"split_chapters,omitempty"`
 	// Section, when set, downloads only that part of the video.
 	Section   *Section  `json:"section,omitempty"`
 	Error     *JobError `json:"error"`

@@ -283,3 +283,14 @@ test('a large library stays fast and is not redrawn on every progress tick', asy
   await page.locator('#history-search').fill('episode 39');
   await expect(page.locator('#history .job')).toHaveCount(11); // 39 and 390–399
 });
+
+test('offers to split a video with chapters', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await expect(page.locator('#split-row')).toBeHidden();
+  await page.locator('#url').fill('https://youtu.be/aBcDeFgHiJk');
+  await expect(page.locator('#inspect')).toContainText('12 chapters');
+  await page.getByLabel('Also save each of the 12 chapters as its own file').check();
+  await page.locator('#submit').click();
+  await expect(page.locator('#queue .job-meta').first()).toContainText('split into chapters');
+  await expect(page.locator('#split-row')).toBeHidden();
+});
