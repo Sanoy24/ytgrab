@@ -23,6 +23,7 @@ Configuration comes from environment variables:
 | `YTGRAB_TOOLS_DIR` | searched before the other tool locations |
 | `YTGRAB_DATA_DIR` | `ytgrab` in the user config folder (`%AppData%` on Windows) |
 | `YTGRAB_DOWNLOAD_DIR` | `Downloads/ytgrab`; setting it skips the first-run folder choice |
+| `YTGRAB_NO_TRAY` | `1` turns off the tray or menu-bar icon (for example on a machine without a desktop) |
 
 Use a separate `YTGRAB_DATA_DIR` while developing to keep your own settings and history untouched.
 

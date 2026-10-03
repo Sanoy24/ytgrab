@@ -6,7 +6,7 @@ A local YouTube downloader with a clean browser interface. Paste a link, pick th
 [![Go](https://img.shields.io/github/go-mod/go-version/Sanoy24/ytgrab)](go.mod)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-![YTGrab showing a download queue with live progress and download history](docs/images/screenshot.png)
+![YTGrab's Download page: a pasted YouTube link with its thumbnail, quality choices, and the queue below](docs/images/screenshot.png)
 
 ## Features
 

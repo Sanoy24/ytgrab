@@ -152,6 +152,7 @@ Optional environment variables, set before starting:
 | `YTGRAB_TOOLS_DIR` | Extra folder searched first for `yt-dlp`, `ffmpeg`, `ffprobe`, `deno`, `node`. |
 | `YTGRAB_DATA_DIR` | Folder for the job database. |
 | `YTGRAB_DOWNLOAD_DIR` | Initial output folder when none has been saved in the page. |
+| `YTGRAB_NO_TRAY` | Set to `1` to run without the tray or menu-bar icon. |
 
 Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and `ytgrab setup` are described under Install; `ytgrab --version` prints the version.
 
