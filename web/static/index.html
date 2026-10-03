@@ -89,7 +89,7 @@
                 inputmode="url"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="https://youtube.com/watch?v=…"
+                placeholder="Paste a YouTube link, or type to search"
                 aria-describedby="url-hint url-error"
                 required
               />
@@ -97,6 +97,8 @@
             </div>
             <p class="hint visually-hidden" id="url-hint">A video, a playlist, or several video links at once.</p>
             <p class="field-error" id="url-error" role="alert" hidden></p>
+            <p class="hint search-hint" id="search-hint" hidden>Press Enter to search YouTube</p>
+            <div class="search-results" id="search-results" aria-live="polite" hidden></div>
 
             <div class="inspect" id="inspect" role="status" aria-live="polite"></div>
 

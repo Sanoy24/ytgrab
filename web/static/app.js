@@ -1,6 +1,6 @@
 import { createClient, isActive } from './api.js';
 import { formatDuration, groupFormats, matchPreset, readSection } from './formats.js';
-import { parseLinks, validateUrl, videoIdOf } from './links.js';
+import { looksLikeSearch, parseLinks, validateUrl, videoIdOf } from './links.js';
 
 const client = createClient();
 const $ = (sel) => document.querySelector(sel);
@@ -793,6 +793,54 @@ function syncKind() {
   setKind(kindOf(selectedChoice()));
 }
 
+// ---------- search ----------
+
+let searchCtl = null;
+
+function clearSearch() {
+  searchCtl?.abort();
+  searchCtl = null;
+  $('#search-results').hidden = true;
+  $('#search-results').replaceChildren();
+}
+
+async function runSearch(query) {
+  searchCtl?.abort();
+  const ctl = (searchCtl = new AbortController());
+  const box = $('#search-results');
+  box.hidden = false;
+  $('#search-hint').hidden = true;
+  box.replaceChildren(el('p', { className: 'search-status' }, el('span', { className: 'spinner' }), `Searching YouTube for “${query}”…`));
+  try {
+    const { results } = await client.search(query, { signal: ctl.signal });
+    if (ctl.signal.aborted) return;
+    if (!results.length) {
+      box.replaceChildren(el('p', { className: 'search-status', textContent: `Nothing found for “${query}”.` }));
+      return;
+    }
+    box.replaceChildren(
+      ...results.map((r) => {
+        const img = el('img', { alt: '', referrerPolicy: 'no-referrer', loading: 'lazy' });
+        setThumbnail(img, r.video_id);
+        const button = el(
+          'button',
+          { type: 'button', className: 'search-result' },
+          img,
+          el('span', {}, el('strong', { textContent: r.title }), el('small', { textContent: [r.channel, formatDuration(r.duration_seconds)].filter(Boolean).join(' · ') })),
+        );
+        button.addEventListener('click', () => {
+          clearSearch();
+          takeLinks(`https://www.youtube.com/watch?v=${r.video_id}`);
+        });
+        return button;
+      }),
+    );
+  } catch (err) {
+    if (err.name === 'AbortError' || ctl.signal.aborted) return;
+    box.replaceChildren(el('p', { className: 'search-status inspect-error', textContent: err.message }));
+  }
+}
+
 // ---------- send to YTGrab ----------
 
 // The bookmark opens this page (in one reused tab) with the YouTube page's address in
@@ -1152,6 +1200,10 @@ function clipSection(url) {
 async function onSubmit(e) {
   e.preventDefault();
   if (!requireFolder()) return;
+  if (looksLikeSearch($('#url').value)) {
+    runSearch($('#url').value.trim());
+    return;
+  }
   const several = parseLinks($('#url').value);
   if (several && !playlist?.batch) enterBatch(several);
   if (playlist) {
@@ -1265,6 +1317,13 @@ function resetFormats() {
 
 function scheduleInspect(immediate = false) {
   clearTimeout(inspectTimer);
+  const words = looksLikeSearch($('#url').value);
+  $('#search-hint').hidden = !words;
+  if (!words) clearSearch();
+  if (words) {
+    if (inspectedUrl || playlist) resetFormats();
+    return;
+  }
   const several = parseLinks($('#url').value);
   if (several) {
     inspectTimer = setTimeout(() => enterBatch(several), immediate ? 0 : 500);
