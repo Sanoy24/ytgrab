@@ -72,6 +72,8 @@ While YouTube is limiting this network, `GET /api/jobs` also returns `"paused_un
     "stream": "video"                // "video" or "audio" while a merged download fetches each part
   },
   "output_path": null,               // set when completed
+  "site": "x",                       // only for X posts (omitted for YouTube); video_id is then the post's ID
+  "thumbnail": "https://pbs.twimg.com/…", // X posts only: the preview image
   "error": null,                     // { "code": "interrupted", "message": "…" }
   "created_at": "2026-09-26T12:00:00Z",
   "updated_at": "2026-09-26T12:02:00Z"
@@ -116,6 +118,8 @@ Returns `201` with the job. Errors: `invalid_url`, `invalid_preset`, `invalid_fo
 ```
 
 Field names follow yt-dlp's format info. Errors: `invalid_url`, `video_unavailable`, `blocked` (YouTube is rate-limiting or asking for a bot check), `network`, `dependency_missing`.
+
+For an X post (`https://x.com/<user>/status/<id>`, also `twitter.com`), the result adds `"site": "x"` and `"thumbnail"`, `video_id` is the post's ID, and `video` lists the MP4 files, which already contain sound (`protocol: "https"`, `tbr`); `audio` is empty, and audio presets take the sound out of the best file. Sizes are estimated from the streamed bitrate. X-specific errors: `signin_required` (turn on browser sign-in) and `x_limited` (X is rate-limiting; never pauses YouTube).
 
 ## Playlists
 

@@ -73,7 +73,9 @@ export function formatWhen(iso) {
 
 // YouTube's standard preview image for a video. Loaded straight from YouTube's image
 // server, without sending which page asked for it.
+// Also accepts an X preview image, which the server keeps only from pbs.twimg.com.
 export function thumbnailUrl(videoId) {
+  if (/^https:\/\/pbs\.twimg\.com\/[^\s"'<>]+$/.test(videoId || '')) return videoId;
   return /^[A-Za-z0-9_-]{11}$/.test(videoId || '') ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : '';
 }
 

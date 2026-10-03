@@ -2,6 +2,16 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **X (Twitter) videos.** Paste a link to an X post with a video, such as `https://x.com/user/status/…`, and pick its quality or take its audio as M4A, MP3, Opus, FLAC, or WAV. Files are named after the post (`Text [post id] 1080x1920.mp4`), and the post's preview image shows in the Library. Portrait videos are labeled by their shorter side, so 1080x1920 is "1080p". X's limits never pause YouTube downloads.
+
+### Changed
+
+- **YouTube sign-in** is now **Browser sign-in**, since it also lets yt-dlp open X posts that are shown only to signed-in users.
+
 ## [1.11.0] - 2026-10-03
 
 ### Security

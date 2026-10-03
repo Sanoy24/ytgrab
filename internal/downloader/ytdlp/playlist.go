@@ -85,6 +85,13 @@ func (inspector *Inspector) rememberTitles(list Playlist) {
 	}
 }
 
+// CachedThumbnail returns an X post's preview image from a recent inspection, or "".
+func (inspector *Inspector) CachedThumbnail(videoID string) string {
+	inspector.mu.Lock()
+	defer inspector.mu.Unlock()
+	return inspector.cache[videoID].result.Thumbnail
+}
+
 // CachedTitle returns a title known from a recent inspection or playlist listing.
 func (inspector *Inspector) CachedTitle(videoID string) string {
 	inspector.mu.Lock()

@@ -33,7 +33,7 @@ func TestSplitChapters(t *testing.T) {
 
 func TestInspectionCountsChapters(t *testing.T) {
 	data := []byte(`{"id":"M7lc1UVf-VE","title":"x","chapters":[{"title":"Intro"},{"title":"Docs"}],"formats":[{"format_id":"140","ext":"m4a","vcodec":"none","acodec":"mp4a.40.2"}]}`)
-	got, err := parseInspection(data, "M7lc1UVf-VE")
+	got, err := parseInspection(data, "M7lc1UVf-VE", "")
 	if err != nil || got.Chapters != 2 {
 		t.Fatalf("chapters = %d, %v", got.Chapters, err)
 	}

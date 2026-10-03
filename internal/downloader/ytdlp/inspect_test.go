@@ -12,7 +12,7 @@ import (
 func TestParseInspectionAndCachedSelection(t *testing.T) {
 	const id = "jNQXAC9IVRw"
 	data := []byte(`{"id":"jNQXAC9IVRw","title":"Example","duration":19,"formats":[{"format_id":"137","ext":"mp4","height":1080,"width":1920,"fps":30,"vcodec":"avc1.640028","acodec":"none","filesize_approx":1000},{"format_id":"140","ext":"m4a","vcodec":"none","acodec":"mp4a.40.2","abr":129.5,"filesize":200},{"format_id":"18","ext":"mp4","vcodec":"avc1","acodec":"mp4a","filesize":300},{"format_id":"bad+selector","ext":"mp4","vcodec":"avc1","acodec":"none"}]}`)
-	result, err := parseInspection(data, id)
+	result, err := parseInspection(data, id, "")
 	if err != nil || len(result.Video) != 1 || len(result.Audio) != 1 || result.Video[0].ID != "137" || result.Audio[0].ID != "140" {
 		t.Fatalf("inspection = %+v, %v", result, err)
 	}
@@ -31,7 +31,7 @@ func TestParseInspectionAndCachedSelection(t *testing.T) {
 	if _, ok := inspector.Select(id, "video", "137+ba"); ok {
 		t.Fatal("free-form selector accepted")
 	}
-	if _, err := parseInspection(data, "dQw4w9WgXcQ"); err == nil {
+	if _, err := parseInspection(data, "dQw4w9WgXcQ", ""); err == nil {
 		t.Fatal("mismatched video ID accepted")
 	}
 }

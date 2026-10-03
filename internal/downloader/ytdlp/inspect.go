@@ -29,6 +29,8 @@ type Format struct {
 	AudioCodec     string   `json:"acodec,omitempty"`
 	AudioBitrate   *float64 `json:"abr,omitempty"`
 	FileSize       *int64   `json:"filesize"`
+	Protocol       string   `json:"protocol,omitempty"`
+	TotalBitrate   *float64 `json:"tbr,omitempty"`
 	FileSizeApprox *int64   `json:"filesize_approx"`
 	Language       string   `json:"language,omitempty"`
 }
@@ -38,8 +40,11 @@ type Inspection struct {
 	Title           string   `json:"title"`
 	DurationSeconds *float64 `json:"duration_seconds"`
 	Chapters        int      `json:"chapters"` // how many chapters the creator marked
-	Video           []Format `json:"video"`
-	Audio           []Format `json:"audio"`
+	// Site is "" for YouTube or "x"; X posts also carry their preview image.
+	Site      string   `json:"site,omitempty"`
+	Thumbnail string   `json:"thumbnail,omitempty"`
+	Video     []Format `json:"video"`
+	Audio     []Format `json:"audio"`
 }
 
 type cachedInspection struct {
@@ -76,8 +81,11 @@ func (inspector *Inspector) Inspect(ctx context.Context, rawURL string) (Inspect
 		return cached.result, nil
 	}
 	inspector.mu.Unlock()
-	if err := inspector.cooldownError(); err != nil {
-		return Inspection{}, err
+	youtube := domain.SiteOf(url) == domain.SiteYouTube
+	if youtube {
+		if err := inspector.cooldownError(); err != nil { // a YouTube pause doesn't stop X
+			return Inspection{}, err
+		}
 	}
 	release, err := inspector.throttle(ctx)
 	if err != nil {
@@ -91,7 +99,9 @@ func (inspector *Inspector) Inspect(ctx context.Context, rawURL string) (Inspect
 	}
 	inspector.mu.Unlock()
 	result, err := inspector.extract(ctx, url, videoID)
-	inspector.noteResult(err)
+	if youtube {
+		inspector.noteResult(err)
+	}
 	if err != nil {
 		return Inspection{}, err
 	}
@@ -130,7 +140,11 @@ func (inspector *Inspector) Select(videoID string, kind string, id string) (doma
 		}
 		if kind == "video" {
 			if format.Height != nil {
-				label = fmt.Sprintf("Video · %dp", *format.Height)
+				short := *format.Height
+				if format.Width != nil && *format.Width < short {
+					short = *format.Width
+				}
+				label = fmt.Sprintf("Video · %dp", short)
 			} else {
 				label = "Video · " + strings.ToUpper(format.Ext)
 			}
@@ -209,7 +223,7 @@ func (inspector *Inspector) extract(ctx context.Context, url string, videoID str
 	if err != nil {
 		return Inspection{}, err
 	}
-	return parseInspection(output, videoID)
+	return parseInspection(output, videoID, domain.SiteOf(url))
 }
 
 // runJSON runs yt-dlp for machine-readable metadata with a timeout and bounded output.
@@ -238,21 +252,27 @@ func (inspector *Inspector) runJSON(ctx context.Context, path string, args []str
 		return nil, runCtx.Err()
 	}
 	if err != nil {
-		return nil, classifyFailure(diagnostic.String())
+		// The URL is always the last argument, after "--".
+		return nil, classifyFor(domain.SiteOf(args[len(args)-1]), diagnostic.String())
 	}
 	return output.Bytes(), nil
 }
 
-func parseInspection(data []byte, expectedID string) (Inspection, error) {
+func parseInspection(data []byte, expectedID, site string) (Inspection, error) {
 	var raw struct {
-		ID       string     `json:"id"`
-		Title    string     `json:"title"`
-		Duration *float64   `json:"duration"`
-		Chapters []struct{} `json:"chapters"`
-		Formats  []Format   `json:"formats"`
+		ID        string     `json:"id"`
+		DisplayID string     `json:"display_id"`
+		Thumbnail string     `json:"thumbnail"`
+		Title     string     `json:"title"`
+		Duration  *float64   `json:"duration"`
+		Chapters  []struct{} `json:"chapters"`
+		Formats   []Format   `json:"formats"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return Inspection{}, &Error{Code: "download_failed", Message: "yt-dlp returned invalid format information."}
+	}
+	if site == domain.SiteX {
+		return parseXInspection(raw.DisplayID, raw.Title, raw.Duration, raw.Thumbnail, raw.Formats, expectedID)
 	}
 	if raw.ID != expectedID {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected video did not match the requested link."}
@@ -270,6 +290,57 @@ func parseInspection(data []byte, expectedID string) (Inspection, error) {
 	}
 	if len(result.Video) == 0 && len(result.Audio) == 0 {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "No downloadable formats were found for this video."}
+	}
+	return result, nil
+}
+
+// parseXInspection lists an X post's MP4 files, which already contain sound, as the video
+// choices. X lists no file sizes, so they are estimated from bitrate and length. Audio
+// choices come from the page's presets (taken out of the best file).
+func parseXInspection(postID, title string, duration *float64, thumbnail string, formats []Format, expectedID string) (Inspection, error) {
+	if postID != expectedID {
+		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected post did not match the requested link."}
+	}
+	result := Inspection{VideoID: postID, Title: title, DurationSeconds: duration, Site: domain.SiteX,
+		Thumbnail: domain.SafeThumbnail(thumbnail), Video: []Format{}, Audio: []Format{}}
+	// The MP4s' listed bitrate is nominal and runs about twice the real size; the
+	// streaming copy at the same resolution reports a realistic video bitrate, plus audio.
+	streamed := map[[2]int]float64{}
+	audioKbps := 0.0
+	for _, format := range formats {
+		if format.TotalBitrate == nil || format.Protocol == "https" {
+			continue
+		}
+		if format.Height != nil && format.Width != nil {
+			streamed[[2]int{*format.Width, *format.Height}] = *format.TotalBitrate
+		} else if format.VideoCodec == "none" && *format.TotalBitrate > audioKbps {
+			audioKbps = *format.TotalBitrate
+		}
+	}
+	for _, format := range formats {
+		if format.Protocol != "https" || format.Height == nil || !(domain.FormatSelection{Kind: "video", ID: format.ID}).Valid() {
+			continue
+		}
+		// yt-dlp fills filesize_approx from the nominal bitrate, so replace its guess.
+		if format.FileSize == nil && duration != nil {
+			kbps := 0.0
+			if format.Width != nil {
+				if video, ok := streamed[[2]int{*format.Width, *format.Height}]; ok {
+					kbps = video + audioKbps
+				}
+			}
+			if kbps == 0 && format.TotalBitrate != nil {
+				kbps = *format.TotalBitrate
+			}
+			if kbps > 0 {
+				approx := int64(kbps * *duration * 125) // kbit/s x s -> bytes
+				format.FileSizeApprox = &approx
+			}
+		}
+		result.Video = append(result.Video, format)
+	}
+	if len(result.Video) == 0 {
+		return Inspection{}, &Error{Code: "video_unavailable", Message: "This post has no video."}
 	}
 	return result, nil
 }
