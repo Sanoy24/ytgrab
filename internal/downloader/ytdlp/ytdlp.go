@@ -378,6 +378,11 @@ func subtitleArgs(mode, lang string) []string {
 }
 
 func embedsCoverArt(job domain.Job) bool {
+	// Reddit's preview images claim one image type and are served as another, so converting
+	// them fails, which fails the whole download; a video still isn't album art anyway.
+	if job.Site == domain.SiteReddit {
+		return false
+	}
 	if job.Format != nil {
 		return job.Format.Kind == "audio" && job.Format.Ext == "m4a"
 	}
