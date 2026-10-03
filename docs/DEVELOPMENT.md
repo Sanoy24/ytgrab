@@ -108,6 +108,10 @@ powershell -ExecutionPolicy Bypass -File scripts\package.ps1 -Version 1.3.0 -All
 - [Local API](API.md)
 - [User guide](USER_GUIDE.md)
 
+## Dependency updates
+
+Dependabot ([`.github/dependabot.yml`](../.github/dependabot.yml)) opens one grouped pull request a week each for Go modules, the web test tooling in `web/`, and GitHub Actions versions. They go through CI like any other change; merge them when the checks pass. yt-dlp isn't a dependency of the code: releases bundle the latest official build, and YTGrab keeps it up to date on users' machines.
+
 ## App icon
 
 The icon is drawn by [`scripts/make-icon.py`](../scripts/make-icon.py) (needs Pillow) into `packaging/icon/`. Windows builds pick it up from `cmd/ytgrab/rsrc_windows_*.syso`, which Go links automatically. After changing the icon, regenerate both:

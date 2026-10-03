@@ -1,0 +1,27 @@
+# Weekly dependency updates as pull requests; CI must pass before any is merged.
+# Updates are grouped so each ecosystem opens at most one pull request a week.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      go:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /web # test tooling only; the page itself has no npm dependencies
+    schedule:
+      interval: weekly
+    groups:
+      web-tests:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
