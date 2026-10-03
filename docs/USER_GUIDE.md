@@ -119,6 +119,12 @@ Paste the link to an X post that has a video, such as `https://x.com/user/status
 
 Most posts download without signing in. If X shows a post only to signed-in users (age-restricted or from a protected account you follow), turn on **Browser sign-in** in Settings with a browser where you're signed in to X. When a post has several videos, YTGrab lists them all ticked: untick any you don't want, choose a preset, and press **Add N videos**. Each is saved as its own file, with `-2`, `-3`, … after the post ID from the second video on. A link that ends in `/video/2` goes straight to that video's formats. Subtitles, chapters, and SponsorBlock are YouTube features and don't apply to X. If X limits requests, only that download fails: YouTube downloads carry on.
 
+## Download from Reddit
+
+Paste the link to a Reddit post with a video, such as `https://www.reddit.com/r/videos/comments/6rrwyj/…` (also `old.reddit.com`, `redd.it/…`, or a `v.redd.it/…` video link). YTGrab lists the video's qualities and audio with estimated sizes, like a YouTube video: pick one, or use a preset. Files are named after the post, such as `Title [6rrwyj] 720x1280.mp4`.
+
+Reddit's **Share** button makes short `/s/…` links that only redirect, so YTGrab can't read them: open the post and copy the link from the address bar instead. Posts in age-restricted or private communities need **Browser sign-in** with a browser where you're signed in to Reddit. Subtitles, chapters, and SponsorBlock don't apply, and Reddit's limits never pause YouTube downloads.
+
 ## Search YouTube
 
 Type words instead of a link in the link field, such as `big buck bunny`, and press Enter. YTGrab shows up to 12 videos with their thumbnail, channel, and length; click one to load its formats as if you had pasted its link. Searching only happens when you press Enter, and each search is one request to YouTube through the same pacing as everything else.

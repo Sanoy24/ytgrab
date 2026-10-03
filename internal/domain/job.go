@@ -39,12 +39,20 @@ const (
 	AudioWAV  Preset = "audio-wav"
 )
 
-var ErrInvalidURL = errors.New("enter a valid link to a single YouTube video or X post")
+var ErrInvalidURL = errors.New("enter a valid link to a single YouTube video, X post, or Reddit post")
 
 // Sites YTGrab downloads from. A job's Site is empty for YouTube, which came first.
 const (
 	SiteYouTube = ""
 	SiteX       = "x"
+	SiteReddit  = "reddit"
+)
+
+// redditPostPattern matches Reddit post IDs (base 36); redditVideoPattern matches v.redd.it
+// video IDs.
+var (
+	redditPostPattern  = regexp.MustCompile(`^[a-z0-9]{4,10}$`)
+	redditVideoPattern = regexp.MustCompile(`^[a-z0-9]{6,20}$`)
 )
 
 // MaxPostVideos is the most videos an X post can hold.
@@ -94,7 +102,8 @@ type Job struct {
 	Attempt    int              `json:"attempt"`
 	Progress   *Progress        `json:"progress"`
 	OutputPath *string          `json:"output_path"`
-	// Site is SiteYouTube ("") or SiteX. For X, VideoID is the post's ID.
+	// Site is SiteYouTube (""), SiteX, or SiteReddit. For X and Reddit, VideoID is the post's
+	// ID (or a v.redd.it video's).
 	Site string `json:"site,omitempty"`
 	// Thumbnail is an X post's preview image (pbs.twimg.com only); YouTube's are derived
 	// from the video ID.
@@ -195,6 +204,26 @@ func ParseVideoURL(raw string) (string, string, error) {
 			}
 		}
 		return "", "", ErrInvalidURL
+	case "reddit.com", "www.reddit.com", "old.reddit.com", "new.reddit.com", "m.reddit.com", "np.reddit.com", "sh.reddit.com":
+		// https://www.reddit.com/r/<sub>/comments/<id>/<slug>/, also /comments/<id>. Share
+		// links (/r/<sub>/s/<code>) only redirect to a post, so they aren't accepted.
+		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+		for i := 0; i+1 < len(parts); i++ {
+			if parts[i] == "comments" && redditPostPattern.MatchString(parts[i+1]) {
+				return "https://www.reddit.com/comments/" + parts[i+1], parts[i+1], nil
+			}
+		}
+		return "", "", ErrInvalidURL
+	case "redd.it":
+		if id := strings.Trim(parsed.Path, "/"); redditPostPattern.MatchString(id) {
+			return "https://www.reddit.com/comments/" + id, id, nil
+		}
+		return "", "", ErrInvalidURL
+	case "v.redd.it":
+		if id := strings.Trim(parsed.Path, "/"); redditVideoPattern.MatchString(id) {
+			return "https://v.redd.it/" + id, id, nil
+		}
+		return "", "", ErrInvalidURL
 	case "youtu.be":
 		videoID = strings.Trim(parsed.Path, "/")
 	case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com":
@@ -242,17 +271,27 @@ func XPost(url string) (post string, index int) {
 
 // SiteOf tells which site a link from ParseVideoURL belongs to.
 func SiteOf(url string) string {
-	if strings.HasPrefix(url, "https://x.com/") {
+	switch {
+	case strings.HasPrefix(url, "https://x.com/"):
 		return SiteX
+	case strings.HasPrefix(url, "https://www.reddit.com/"), strings.HasPrefix(url, "https://v.redd.it/"):
+		return SiteReddit
 	}
 	return SiteYouTube
 }
 
-// SafeThumbnail keeps an X preview image only when it comes from X's image server, the one
-// other image host the page may load.
+// thumbnailHosts are the image servers, other than YouTube's, that the page may load.
+var thumbnailHosts = []string{"https://pbs.twimg.com/", "https://external-preview.redd.it/", "https://preview.redd.it/"}
+
+// SafeThumbnail keeps a post's preview image only when it comes from one of thumbnailHosts.
 func SafeThumbnail(url string) string {
-	if strings.HasPrefix(url, "https://pbs.twimg.com/") && len(url) < 512 && !strings.ContainsAny(url, "\"<> ") {
-		return url
+	if len(url) >= 1024 || strings.ContainsAny(url, "\"<> \\") {
+		return ""
+	}
+	for _, host := range thumbnailHosts {
+		if strings.HasPrefix(url, host) {
+			return url
+		}
 	}
 	return ""
 }

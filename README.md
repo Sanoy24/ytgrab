@@ -1,6 +1,6 @@
 # YTGrab
 
-A local YouTube and X (Twitter) video downloader with a clean browser interface. Paste a link, pick the exact quality you want, and watch it download — everything runs on your own computer.
+A local YouTube, X (Twitter), and Reddit video downloader with a clean browser interface. Paste a link, pick the exact quality you want, and watch it download — everything runs on your own computer.
 
 [![CI](https://github.com/Sanoy24/ytgrab/actions/workflows/ci.yml/badge.svg)](https://github.com/Sanoy24/ytgrab/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/github/go-mod/go-version/Sanoy24/ytgrab)](go.mod)
@@ -13,7 +13,7 @@ A local YouTube and X (Twitter) video downloader with a clean browser interface.
 - **Pick the real quality.** Paste a link and choose from the video's actual resolutions and audio streams, with sizes — or use a quick preset (best, 1080p, 720p, M4A, MP3).
 - **Playlists, with a review step.** Browse any length of playlist 50 at a time, untick what you don't want, and confirm before anything is queued (up to 200 at once), optionally into a folder named after the playlist. Or paste a whole list of video links at once.
 - **Just the part you need.** Download a section of a video by start and end time, add subtitles in your language, and cap the download speed.
-- **X (Twitter) posts too.** Paste a link to an X post with a video to save it in any of its qualities, or just its audio.
+- **X (Twitter) and Reddit posts too.** Paste a link to an X or Reddit post with a video to save it in any of its qualities, or just its audio.
 - **Live progress.** Speed, size, and time left for every download, updated as it happens.
 - **Resume instead of restart.** Cancel, retry, or close the app mid-download — a retry continues from the partial file.
 - **Sensible files.** Names include the quality (`Title [id] 1080p.mp4`); H.264 picks are saved as MP4.

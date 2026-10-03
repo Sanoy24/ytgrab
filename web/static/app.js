@@ -78,7 +78,7 @@ function renderJob(job) {
   const title = el.querySelector('.job-title');
   title.textContent = jobTitle(job);
   title.title = job.title || job.url;
-  setThumbnail(el.querySelector('.job-thumb img'), job.site === 'x' ? job.thumbnail : job.video_id);
+  setThumbnail(el.querySelector('.job-thumb img'), job.site ? job.thumbnail : job.video_id);
 
   const badge = el.querySelector('.badge');
   badge.dataset.state = job.state;
@@ -86,7 +86,7 @@ function renderJob(job) {
 
   const format = PRESET_LABELS[job.preset] || job.format?.label || job.preset || 'Custom format';
   const meta = [format, formatWhen(job.updated_at)];
-  if (job.site === 'x') meta.unshift('X');
+  if (SITE_NAMES[job.site]) meta.unshift(SITE_NAMES[job.site]);
   if (job.section) meta.splice(1, 0, `${formatDuration(job.section.start)}–${formatDuration(job.section.end)}`);
   if (job.split_chapters) meta.splice(1, 0, 'split into chapters');
   if (job.attempt > 1) meta.push(`attempt ${job.attempt}`);
@@ -1205,6 +1205,9 @@ function formatRow(choice, checked) {
   return el('label', { className: 'preset' }, input, text);
 }
 
+// Sites other than YouTube, as job cards name them.
+const SITE_NAMES = { x: 'X', reddit: 'Reddit' };
+
 const X_AUDIO = { kind: 'preset', id: 'audio-m4a', label: 'M4A', detail: "The post's audio, no re-encoding" };
 
 // Conversions offered next to the video's own audio formats.
@@ -1263,7 +1266,7 @@ function showFormats(grouped, previous) {
     parts.push(el('br'), whole);
   }
   const thumb = el('img', { className: 'inspect-thumb', alt: '', referrerPolicy: 'no-referrer' });
-  setThumbnail(thumb, grouped.site === 'x' ? grouped.thumbnail : url ? videoIdOf(url) : '');
+  setThumbnail(thumb, grouped.site ? grouped.thumbnail : url ? videoIdOf(url) : '');
   setInspectStatus(thumb, el('div', { className: 'inspect-text' }, ...parts));
 }
 
