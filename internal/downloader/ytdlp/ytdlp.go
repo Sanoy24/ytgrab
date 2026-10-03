@@ -198,8 +198,8 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	if cfg.SpeedLimitKBps > 0 {
 		args = append(args, "--limit-rate", strconv.Itoa(cfg.SpeedLimitKBps)+"K")
 	}
-	// Title, artist, date, and chapters go into the file; cover art only where every
-	// player supports it (M4A, MP3), since a failed embed would fail the whole job.
+	// Title, artist, date, and chapters go into the file; cover art only into formats that
+	// hold it (M4A, MP3, Opus, FLAC), since a failed embed would fail the whole job.
 	args = append(args, "--embed-metadata", "--embed-chapters")
 	if embedsCoverArt(job) {
 		args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
@@ -275,7 +275,14 @@ func embedsCoverArt(job domain.Job) bool {
 	if job.Format != nil {
 		return job.Format.Kind == "audio" && job.Format.Ext == "m4a"
 	}
-	return job.Preset != nil && (*job.Preset == domain.AudioM4A || *job.Preset == domain.AudioMP3)
+	// WAV can't hold cover art; yt-dlp would fail the job trying.
+	switch {
+	case job.Preset == nil:
+		return false
+	case *job.Preset == domain.AudioM4A, *job.Preset == domain.AudioMP3, *job.Preset == domain.AudioOpus, *job.Preset == domain.AudioFLAC:
+		return true
+	}
+	return false
 }
 
 // minFreeSpace is the least free space a download may start with; below it, a download
