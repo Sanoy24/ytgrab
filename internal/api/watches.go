@@ -15,9 +15,9 @@ import (
 // Watcher follows channels and playlists and queues their new videos.
 type Watcher interface {
 	List(context.Context) ([]domain.Watch, error)
-	Add(ctx context.Context, url string, preset domain.Preset, folder bool, backfill int) (domain.Watch, error)
+	Add(ctx context.Context, url string, opts watch.Options) (domain.Watch, error)
 	Check(ctx context.Context, id string) (domain.Watch, error)
-	Update(ctx context.Context, id string, preset *domain.Preset, folder, paused *bool) (domain.Watch, error)
+	Update(ctx context.Context, id string, changes watch.Changes) (domain.Watch, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -35,7 +35,7 @@ func writeWatchError(w http.ResponseWriter, r *http.Request, err error) {
 		writeError(w, http.StatusBadRequest, "mix_playlist", err.Error())
 	case errors.Is(err, domain.ErrInvalidPreset):
 		writeError(w, http.StatusBadRequest, "invalid_preset", err.Error())
-	case errors.Is(err, watch.ErrInvalidBackfill):
+	case errors.Is(err, watch.ErrInvalidBackfill), errors.Is(err, domain.ErrInvalidWatchOptions):
 		writeError(w, http.StatusBadRequest, "invalid_request", err.Error())
 	case errors.Is(err, sqlitestore.ErrWatchExists):
 		writeError(w, http.StatusConflict, "watch_exists", err.Error())
@@ -73,15 +73,21 @@ func addWatchRoutes(mux *http.ServeMux, watches Watcher) {
 	})
 	mux.HandleFunc("POST /api/watches", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
-			URL      string        `json:"url"`
-			Preset   domain.Preset `json:"preset"`
-			Folder   bool          `json:"folder"`
-			Backfill int           `json:"backfill"`
+			URL           string        `json:"url"`
+			Preset        domain.Preset `json:"preset"`
+			Folder        bool          `json:"folder"`
+			Backfill      int           `json:"backfill"`
+			MinMinutes    int           `json:"min_minutes"`
+			Keywords      string        `json:"keywords"`
+			IntervalHours int           `json:"interval_hours"`
 		}
 		if !decodeOne(w, r, &input) {
 			return
 		}
-		added, err := watches.Add(r.Context(), input.URL, input.Preset, input.Folder, input.Backfill)
+		added, err := watches.Add(r.Context(), input.URL, watch.Options{
+			Preset: input.Preset, Folder: input.Folder, Backfill: input.Backfill,
+			MinMinutes: input.MinMinutes, Keywords: input.Keywords, IntervalHours: input.IntervalHours,
+		})
 		if err != nil {
 			writeWatchError(w, r, err)
 			return
@@ -98,14 +104,20 @@ func addWatchRoutes(mux *http.ServeMux, watches Watcher) {
 	})
 	mux.HandleFunc("PUT /api/watches/{id}", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
-			Preset *domain.Preset `json:"preset"`
-			Folder *bool          `json:"folder"`
-			Paused *bool          `json:"paused"`
+			Preset        *domain.Preset `json:"preset"`
+			Folder        *bool          `json:"folder"`
+			Paused        *bool          `json:"paused"`
+			MinMinutes    *int           `json:"min_minutes"`
+			Keywords      *string        `json:"keywords"`
+			IntervalHours *int           `json:"interval_hours"`
 		}
 		if !decodeOne(w, r, &input) {
 			return
 		}
-		updated, err := watches.Update(r.Context(), r.PathValue("id"), input.Preset, input.Folder, input.Paused)
+		updated, err := watches.Update(r.Context(), r.PathValue("id"), watch.Changes{
+			Preset: input.Preset, Folder: input.Folder, Paused: input.Paused,
+			MinMinutes: input.MinMinutes, Keywords: input.Keywords, IntervalHours: input.IntervalHours,
+		})
 		if err != nil {
 			writeWatchError(w, r, err)
 			return

@@ -265,6 +265,31 @@
                 </select>
               </label>
             </div>
+            <details class="watch-more">
+              <summary>Filters and how often to check</summary>
+              <div class="watch-options">
+                <label>Minimum length
+                  <select id="watch-min">
+                    <option value="0">Any length</option>
+                    <option value="2">2 minutes (skips Shorts)</option>
+                    <option value="5">5 minutes</option>
+                    <option value="10">10 minutes</option>
+                    <option value="20">20 minutes</option>
+                  </select>
+                </label>
+                <label>Only titles containing
+                  <input type="text" id="watch-keywords" maxlength="200" placeholder="any title" autocomplete="off" />
+                </label>
+                <label>Check every
+                  <select id="watch-interval">
+                    <option value="1">hour</option>
+                    <option value="6" selected>6 hours</option>
+                    <option value="24">day</option>
+                  </select>
+                </label>
+              </div>
+              <p class="hint">Separate several words with commas; a title needs one of them. Upcoming premieres and live streams wait until they can be downloaded.</p>
+            </details>
             <label class="playlist-folder"><input type="checkbox" id="watch-folder" checked /> Save into a folder named after the channel or playlist</label>
             <div class="compose-actions watch-actions">
               <button type="submit" class="btn btn-primary btn-cta" id="watch-add">Start watching</button>

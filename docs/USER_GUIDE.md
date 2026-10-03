@@ -100,10 +100,11 @@ Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`
 
 ## Watch channels and playlists
 
-Open **Watching**, paste a channel link (`youtube.com/@name`, `/channel/…`, `/c/…`, or `/user/…`) or a playlist link, choose a format, and press **Start watching**. YTGrab then checks it every 6 hours while it's running and adds new videos to the queue by themselves. Notifications and the tray tell you when they finish.
+Open **Watching**, paste a channel link (`youtube.com/@name`, `/channel/…`, `/c/…`, or `/user/…`) or a playlist link, choose a format, and press **Start watching**. YTGrab then checks it (every 6 hours unless you choose otherwise) while it's running and adds new videos to the queue by themselves. Notifications and the tray tell you when they finish.
 
 - **Start with** decides what happens right away: **Only new uploads** (the default) downloads nothing that's already there; the other choices also download the latest 1, 5, or 10 videos.
 - Videos go into a folder named after the channel or playlist unless you untick that.
+- **Filters and how often to check**: a **Minimum length** (2 minutes skips Shorts), **Only titles containing** (comma-separated words; a title needs one of them), and **Check every** hour, 6 hours, or day. Videos a filter skips are never downloaded later, even if you change the filter. Upcoming premieres and live streams are left until they can be downloaded.
 - A channel check looks at its 30 newest uploads; a playlist check looks at the whole playlist (up to 500 videos). One check adds at most 25 videos; any more wait for the next check.
 - **Check now** checks straight away, **Pause** stops checking until you resume, and **Stop watching** removes the watch but keeps what it downloaded.
 - Checks use one request to YouTube each and go through the same pause as everything else when YouTube is limiting your network, so watching a few channels doesn't make blocks more likely. Watching hundreds might.
