@@ -18,9 +18,11 @@ func TestParsePlaylistSkipsUnavailableAndCaps(t *testing.T) {
 		{"_type":"url","id":"dQw4w9WgXcQ","title":"One","duration":213.0},
 		{"_type":"url","id":"jNQXAC9IVRw","title":"[Private video]","duration":null},
 		{"_type":"url","id":"aqz-KE-bpKQ","title":"[Deleted video]"},
-		{"_type":"url","id":"bad id","title":"Broken"}]}`)
+		{"_type":"url","id":"bad id","title":"Broken"},
+		{"_type":"url","id":"nTu8Ew4jsmE","title":null,"duration":null},
+		{"_type":"url","id":"6sx0zTiTO3k","title":"[Unavailable video]"}]}`)
 	list, err := parsePlaylist(data, "PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb", 1)
-	if err != nil || list.Title != "Lectures" || len(list.Entries) != 1 || list.Entries[0].VideoID != "dQw4w9WgXcQ" || list.Unavailable != 3 || list.Truncated {
+	if err != nil || list.Title != "Lectures" || len(list.Entries) != 1 || list.Entries[0].VideoID != "dQw4w9WgXcQ" || list.Unavailable != 5 || list.Truncated {
 		t.Fatalf("playlist = %+v, %v", list, err)
 	}
 

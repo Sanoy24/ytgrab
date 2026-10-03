@@ -111,6 +111,9 @@ func playlistArgs(url string, start int) []string {
 	}
 }
 
+// unavailableTitles are what flat playlist listings show for videos that can't be played.
+var unavailableTitles = map[string]bool{"": true, "[Private video]": true, "[Deleted video]": true, "[Unavailable video]": true}
+
 func parsePlaylist(data []byte, expectedID string, start int) (Playlist, error) {
 	var raw struct {
 		ID      string `json:"id"`
@@ -134,8 +137,9 @@ func parsePlaylist(data []byte, expectedID string, start int) (Playlist, error) 
 			list.Truncated = true
 			break
 		}
-		// Flat listings keep private and deleted videos as placeholders.
-		if !domain.ValidVideoID(entry.ID) || entry.Title == "[Private video]" || entry.Title == "[Deleted video]" {
+		// Flat listings keep private and deleted videos as placeholders, some only as a bare
+		// ID with no title.
+		if !domain.ValidVideoID(entry.ID) || unavailableTitles[entry.Title] {
 			list.Unavailable++
 			continue
 		}

@@ -78,7 +78,7 @@ func parseListing(data []byte, kind string) (Listing, error) {
 		}
 	}
 	for _, entry := range raw.Entries {
-		if !domain.ValidVideoID(entry.ID) || entry.Title == "[Private video]" || entry.Title == "[Deleted video]" {
+		if !domain.ValidVideoID(entry.ID) || unavailableTitles[entry.Title] {
 			continue
 		}
 		listing.Entries = append(listing.Entries, PlaylistEntry{VideoID: entry.ID, Title: entry.Title, DurationSeconds: entry.Duration, LiveStatus: entry.LiveStatus})
