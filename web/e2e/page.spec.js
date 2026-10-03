@@ -408,3 +408,21 @@ test('clears the library, optionally deleting the files', async ({ page }) => {
   await expect(page.locator('#toast')).toContainText(/Removed 5 entries and deleted \d+ files?\./);
   await expect(page.locator('#history .job')).toHaveCount(0);
 });
+
+test('lists every video of an X post with several', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.locator('#url').fill('https://x.com/CTVJLaidlaw/status/1600649710662213632');
+  await expect(page.locator('#playlist-title')).toHaveText('This post has 2 videos');
+  await expect(page.locator('#playlist-legend')).toHaveText('Videos to add');
+  await expect(page.locator('#playlist-items li')).toHaveText([/Video 1\s*1:53/, /Video 2\s*1:42/]);
+  await page.locator('#playlist-items li').nth(0).getByRole('checkbox').uncheck();
+  await expect(page.locator('#submit')).toHaveText('Add 1 video');
+  await page.locator('#submit').click();
+  await expect(page.locator('#toast')).toContainText('Added 1 video');
+  await expect(page.locator('#queue .job')).toHaveCount(1);
+
+  // A link to one of the videos shows that video's formats instead.
+  await page.locator('#url').fill('https://x.com/CTVJLaidlaw/status/1600649710662213632/video/2');
+  await expect(page.locator('#playlist')).toBeHidden();
+  await expect(page.locator('#video-formats')).toContainText('720p');
+});

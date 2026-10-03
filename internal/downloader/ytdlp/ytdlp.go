@@ -240,7 +240,10 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "--download-sections", "*"+seconds(job.Section.Start)+"-"+seconds(job.Section.End), "--force-keyframes-at-cuts")
 	}
 	if job.Site == domain.SiteX {
-		return append(append(args, xFormatArgs(job)...), "--", job.URL)
+		// yt-dlp reads every video of a post from the post's link; --playlist-items picks one.
+		post, index := domain.XPost(job.URL)
+		args = append(args, xFormatArgs(job)...)
+		return append(args, "--playlist-items", strconv.Itoa(index), "--", post)
 	}
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
@@ -451,9 +454,9 @@ func nameStart(style string) string {
 
 func baseTemplate(job domain.Job) string {
 	if job.Site == domain.SiteX {
-		// display_id is the post's ID (id is the video's); width x height reads right for
-		// portrait videos.
-		const post = "%(title).150B [%(display_id)s]"
+		// The job's video ID is the post's ID, plus "-N" from a post's second video on (digits
+		// and a dash, safe in a template); width x height reads right for portrait videos.
+		post := "%(title).150B [" + job.VideoID + "]"
 		if isVideo(job) || (job.Preset == nil && job.Format == nil) {
 			return post + " %(width)sx%(height)s.%(ext)s"
 		}

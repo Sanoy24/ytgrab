@@ -92,3 +92,38 @@ func TestPlaylistListingAndConfirmedJobs(t *testing.T) {
 		t.Fatalf("repeat = %d: %s", again.Code, again.Body.String())
 	}
 }
+
+func TestJobsFromSeveralLinks(t *testing.T) {
+	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	handler := NewHandlerWithInspector(func(context.Context) deps.Report { return deps.Report{} }, store, nil, fakePlaylistInspector{})
+	request := func(body string) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/playlist/jobs", bytes.NewBufferString(body)))
+		return response
+	}
+	if got := request(`{"urls":["https://x.com/a/status/1600649710662213632","https://example.com/video"],"preset":"video-720"}`); got.Code != http.StatusBadRequest {
+		t.Fatalf("bad link = %d: %s", got.Code, got.Body.String())
+	}
+	got := request(`{"urls":["https://x.com/a/status/1600649710662213632","https://x.com/i/status/1600649710662213632/video/2","https://twitter.com/a/status/1600649710662213632","https://youtu.be/jNQXAC9IVRw"],"preset":"video-720"}`)
+	var result struct {
+		Jobs    []domain.Job `json:"jobs"`
+		Skipped int          `json:"skipped"`
+	}
+	if got.Code != http.StatusCreated || json.Unmarshal(got.Body.Bytes(), &result) != nil || len(result.Jobs) != 3 || result.Skipped != 1 {
+		t.Fatalf("create = %d: %s", got.Code, got.Body.String())
+	}
+	want := [][3]string{
+		{"https://x.com/i/status/1600649710662213632", "1600649710662213632", "x"},
+		{"https://x.com/i/status/1600649710662213632/video/2", "1600649710662213632-2", "x"},
+		{"https://youtu.be/jNQXAC9IVRw", "jNQXAC9IVRw", ""},
+	}
+	for i, job := range result.Jobs {
+		if job.URL != want[i][0] || job.VideoID != want[i][1] || job.Site != want[i][2] {
+			t.Errorf("job %d = %s %s %q", i, job.URL, job.VideoID, job.Site)
+		}
+	}
+}

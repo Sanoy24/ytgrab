@@ -1,6 +1,7 @@
 package ytdlp
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -24,7 +25,7 @@ func TestXArguments(t *testing.T) {
 		}
 		args := buildArgs(job, config.Config{SponsorBlock: "remove", SubtitlesMode: "embed", SubtitlesLang: "en"})
 		joined := strings.Join(args, " ")
-		if !strings.Contains(joined, strings.Join(want, " ")+" -- https://x.com/i/status/2106270671584313722") {
+		if !strings.Contains(joined, strings.Join(want, " ")+" --playlist-items 1 -- https://x.com/i/status/2106270671584313722") {
 			t.Errorf("%s: args end %v", preset, args[len(args)-10:])
 		}
 		if strings.Contains(joined, "sponsorblock") || strings.Contains(joined, "--write-subs") || strings.Contains(joined, "merge-output") {
@@ -35,11 +36,11 @@ func TestXArguments(t *testing.T) {
 		}
 	}
 	video, _ := domain.NewJob(xPost, domain.Video720)
-	if got := argAfter(buildArgs(video, config.Config{}), "-o"); got != "%(title).150B [%(display_id)s] %(width)sx%(height)s.%(ext)s" {
+	if got := argAfter(buildArgs(video, config.Config{}), "-o"); got != "%(title).150B [2106270671584313722] %(width)sx%(height)s.%(ext)s" {
 		t.Errorf("video name = %q", got)
 	}
 	audio, _ := domain.NewJob(xPost, domain.AudioM4A)
-	if got := argAfter(buildArgs(audio, config.Config{}), "-o"); got != "%(title).150B [%(display_id)s].%(ext)s" {
+	if got := argAfter(buildArgs(audio, config.Config{}), "-o"); got != "%(title).150B [2106270671584313722].%(ext)s" {
 		t.Errorf("audio name = %q", got)
 	}
 	picked, _ := domain.NewFormatJob(xPost, domain.FormatSelection{Kind: "video", ID: "http-2176", Label: "Video · 720p"})
@@ -88,3 +89,42 @@ func TestXFailuresDontPauseYouTube(t *testing.T) {
 }
 
 func estimate(kbps, seconds float64) int64 { return int64(kbps * seconds * 125) }
+
+func TestXPostWithSeveralVideos(t *testing.T) {
+	second, err := domain.NewJob("https://x.com/CTVJLaidlaw/status/1600649710662213632/video/2", domain.Video720)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := buildArgs(second, config.Config{})
+	if joined := strings.Join(args, " "); !strings.HasSuffix(joined, "--playlist-items 2 -- https://x.com/i/status/1600649710662213632") {
+		t.Errorf("args = %s", joined)
+	}
+	if got := argAfter(args, "-o"); got != "%(title).150B [1600649710662213632-2] %(width)sx%(height)s.%(ext)s" {
+		t.Errorf("name = %q", got)
+	}
+
+	// yt-dlp prints one JSON object per video.
+	video := func(id string, duration float64, thumb string) string {
+		return fmt.Sprintf(`{"id":%q,"display_id":"1600649710662213632","title":"Jocelyn Laidlaw - How","duration":%v,"thumbnail":"https://pbs.twimg.com/%s.jpg",
+			"formats":[{"format_id":"http-832","ext":"mp4","width":640,"height":360,"protocol":"https","tbr":832}]}`, id, duration, thumb)
+	}
+	data := []byte(video("1600649511827038209", 113.49, "one") + "\n" + video("1600649511827013632", 102.226, "two") + "\n")
+	first, err := parseInspection(data, "1600649710662213632", domain.SiteX)
+	if err != nil || first.VideoID != "1600649710662213632" || *first.DurationSeconds != 113.49 || len(first.Videos) != 2 {
+		t.Fatalf("first = %+v, %v", first, err)
+	}
+	if v := first.Videos[1]; v.Index != 2 || v.VideoID != "1600649710662213632-2" || v.URL != "https://x.com/i/status/1600649710662213632/video/2" || *v.DurationSeconds != 102.226 || v.Thumbnail != "https://pbs.twimg.com/two.jpg" {
+		t.Errorf("second listed as %+v", v)
+	}
+	got, err := parseInspection(data, "1600649710662213632-2", domain.SiteX)
+	if err != nil || got.VideoID != "1600649710662213632-2" || *got.DurationSeconds != 102.226 || got.Thumbnail != "https://pbs.twimg.com/two.jpg" {
+		t.Fatalf("second = %+v, %v", got, err)
+	}
+	if _, err := parseInspection(data, "1600649710662213632-3", domain.SiteX); err == nil || !strings.Contains(err.Error(), "only 2 videos") {
+		t.Errorf("a third video = %v", err)
+	}
+	single, err := parseInspection([]byte(video("1600649511827038209", 113.49, "one")), "1600649710662213632", domain.SiteX)
+	if err != nil || len(single.Videos) != 0 {
+		t.Errorf("single = %+v, %v", single, err)
+	}
+}

@@ -40,3 +40,23 @@ func TestXPostLinks(t *testing.T) {
 		t.Error("SafeThumbnail")
 	}
 }
+
+func TestXPostWithSeveralVideos(t *testing.T) {
+	for link, want := range map[string][2]string{
+		"https://x.com/CTVJLaidlaw/status/1600649710662213632/video/2": {"https://x.com/i/status/1600649710662213632/video/2", "1600649710662213632-2"},
+		"https://x.com/CTVJLaidlaw/status/1600649710662213632/video/1": {"https://x.com/i/status/1600649710662213632", "1600649710662213632"},
+		"https://x.com/CTVJLaidlaw/status/1600649710662213632/video/9": {"https://x.com/i/status/1600649710662213632", "1600649710662213632"},
+		"https://x.com/CTVJLaidlaw/status/1600649710662213632/photo/2": {"https://x.com/i/status/1600649710662213632", "1600649710662213632"},
+	} {
+		url, videoID, err := ParseVideoURL(link)
+		if err != nil || url != want[0] || videoID != want[1] {
+			t.Errorf("%s: %q %q %v", link, url, videoID, err)
+		}
+	}
+	if post, index := XPost("https://x.com/i/status/1600649710662213632/video/2"); post != "https://x.com/i/status/1600649710662213632" || index != 2 {
+		t.Errorf("XPost = %q %d", post, index)
+	}
+	if post, index := XPost("https://x.com/i/status/1600649710662213632"); post != "https://x.com/i/status/1600649710662213632" || index != 1 {
+		t.Errorf("XPost = %q %d", post, index)
+	}
+}

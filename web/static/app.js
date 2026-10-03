@@ -1093,6 +1093,7 @@ function scheduleInspect(immediate = false) {
     inspectTimer = setTimeout(() => enterPlaylist(result.playlistUrl), immediate ? 0 : 500);
     return;
   }
+  if (playlist?.url === `post:${result.url}`) return;
   if (playlist) exitPlaylist();
   if (result.url === inspectedUrl) return;
   inspectTimer = setTimeout(() => inspect(result.url), immediate ? 0 : 500);
@@ -1106,6 +1107,35 @@ function cachedInspection(url) {
 }
 
 // Resolves to the grouped formats, or null when inspection failed or was superseded.
+// An X post with several videos opens the review list, unless the link names one of them.
+function showInspection(url, grouped) {
+  if (grouped.videos?.length > 1 && !url.includes('/video/')) enterPostVideos(url, grouped);
+  else showFormats(grouped, selectedChoice());
+}
+
+// The post's videos reuse the review list: all ticked, one format for every video.
+function enterPostVideos(url, grouped) {
+  const key = `post:${url}`;
+  if (playlist?.url === key) return;
+  setInspectStatus();
+  showPresets(selectedChoice());
+  const list = {
+    title: `This post has ${grouped.videos.length} videos`,
+    meta: 'Each is saved as its own file.',
+    batch: true,
+    entries: grouped.videos.map((v) => ({
+      video_id: v.video_id,
+      url: v.url,
+      title: `Video ${v.index}`,
+      duration_seconds: v.duration_seconds,
+    })),
+  };
+  playlist = { url: key, list, batch: true };
+  $('#playlist').hidden = false;
+  $('#clip').hidden = true;
+  renderPlaylist(list);
+}
+
 async function inspect(url) {
   inspectCtl?.abort();
   const ctl = (inspectCtl = new AbortController());
@@ -1113,7 +1143,7 @@ async function inspect(url) {
 
   const cached = cachedInspection(url);
   if (cached) {
-    showFormats(cached, selectedChoice());
+    showInspection(url, cached);
     return cached;
   }
 
@@ -1127,10 +1157,11 @@ async function inspect(url) {
       chapters: info.chapters || 0,
       site: info.site || '',
       thumbnail: info.thumbnail || '',
+      videos: info.videos || [],
     };
     inspections.set(url, { grouped, at: Date.now() });
     if (ctl.signal.aborted) return null;
-    showFormats(grouped, selectedChoice());
+    showInspection(url, grouped);
     return grouped;
   } catch (err) {
     if (err.name === 'AbortError' || ctl.signal.aborted) return null;
@@ -1309,7 +1340,7 @@ function enterBatch({ videos, skipped }) {
   inspectedUrl = '';
   setInspectStatus();
   showPresets(selectedChoice());
-  setUrlError(videos.length ? '' : 'None of these are links to single YouTube videos.');
+  setUrlError(videos.length ? '' : 'None of these are links to single YouTube videos or X posts.');
   if (!videos.length) {
     if (playlist) exitPlaylist();
     return;
@@ -1317,7 +1348,7 @@ function enterBatch({ videos, skipped }) {
   const list = {
     title: 'Several links',
     batch: true,
-    entries: videos.map((v) => ({ video_id: v.id, title: v.url.replace(/^https:\/\/(www\.)?/, '') })),
+    entries: videos.map((v) => ({ video_id: v.id, url: v.url, title: v.url.replace(/^https:\/\/(www\.)?/, '') })),
     skippedLinks: skipped,
   };
   playlist = { url: key, list, batch: true };
@@ -1335,7 +1366,8 @@ function renderPlaylist(list, append = false) {
   const n = list.entries.length;
   const unit = list.batch ? 'link' : 'video';
   const shown = list.next && list.total ? `Showing ${n} of ${list.total} videos` : `${n} ${unit}${n === 1 ? '' : 's'}`;
-  $('#playlist-meta').textContent = shown;
+  $('#playlist-meta').textContent = list.meta || shown;
+  $('#playlist-legend').textContent = list.batch ? 'Videos to add' : 'Playlist videos';
   const notes = [];
   if (list.total > MAX_PLAYLIST_JOBS) notes.push(`Up to ${MAX_PLAYLIST_JOBS} videos can be added at a time.`);
   if (list.unavailable) {
@@ -1365,7 +1397,7 @@ function renderPlaylist(list, append = false) {
         el(
           'label',
           {},
-          el('input', { type: 'checkbox', value: entry.video_id, checked: true }),
+          el('input', { type: 'checkbox', value: entry.url || entry.video_id, checked: true }),
           el('span', { textContent: entry.title || entry.video_id }),
           el('small', { textContent: formatDuration(entry.duration_seconds) }),
         ),
@@ -1418,7 +1450,8 @@ async function submitPlaylist() {
   button.disabled = true;
   button.textContent = 'Adding…';
   try {
-    const result = await client.createPlaylistJobs({ video_ids: ids, preset, folder });
+    // Pasted links and a post's videos are sent as links; a playlist's entries as IDs.
+    const result = await client.createPlaylistJobs(playlist.batch ? { urls: ids, preset } : { video_ids: ids, preset, folder });
     if (!client.isFixture) jobs = await client.listJobs();
     const added = result.jobs.length;
     const skipped = result.skipped ? ` ${result.skipped} already in the queue.` : '';

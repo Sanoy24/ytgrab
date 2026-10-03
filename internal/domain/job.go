@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -45,6 +46,9 @@ const (
 	SiteYouTube = ""
 	SiteX       = "x"
 )
+
+// MaxPostVideos is the most videos an X post can hold.
+const MaxPostVideos = 4
 
 // postIDPattern matches X post IDs, which are numbers.
 var postIDPattern = regexp.MustCompile(`^[0-9]{5,20}$`)
@@ -177,11 +181,17 @@ func ParseVideoURL(raw string) (string, string, error) {
 	switch host {
 	case "x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com":
 		// https://x.com/<user>/status/<id>, also /i/status/<id> and /i/web/status/<id>,
-		// optionally followed by /video/1 or /photo/1.
+		// optionally followed by /video/N (one video of a post with several) or /photo/1.
 		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
 		for i := 0; i+1 < len(parts); i++ {
 			if parts[i] == "status" && postIDPattern.MatchString(parts[i+1]) {
-				return "https://x.com/i/status/" + parts[i+1], parts[i+1], nil
+				index := 1
+				if i+3 < len(parts) && parts[i+2] == "video" {
+					if n, err := strconv.Atoi(parts[i+3]); err == nil && n >= 1 && n <= MaxPostVideos {
+						index = n
+					}
+				}
+				return XVideoURL(parts[i+1], index), XVideoID(parts[i+1], index), nil
 			}
 		}
 		return "", "", ErrInvalidURL
@@ -201,6 +211,33 @@ func ParseVideoURL(raw string) (string, string, error) {
 		return "", "", ErrInvalidURL
 	}
 	return parsed.String(), videoID, nil
+}
+
+// XVideoURL links to one video of an X post; the first is the post itself.
+func XVideoURL(postID string, index int) string {
+	if index <= 1 {
+		return "https://x.com/i/status/" + postID
+	}
+	return "https://x.com/i/status/" + postID + "/video/" + strconv.Itoa(index)
+}
+
+// XVideoID names one video of an X post: the post's ID, plus "-N" from the second video on,
+// so files and jobs for different videos of one post never collide.
+func XVideoID(postID string, index int) string {
+	if index <= 1 {
+		return postID
+	}
+	return postID + "-" + strconv.Itoa(index)
+}
+
+// XPost splits a link from XVideoURL into the post's link and the video's position (from 1).
+func XPost(url string) (post string, index int) {
+	post, rest, _ := strings.Cut(url, "/video/")
+	index, err := strconv.Atoi(rest)
+	if err != nil || index < 1 {
+		index = 1
+	}
+	return post, index
 }
 
 // SiteOf tells which site a link from ParseVideoURL belongs to.

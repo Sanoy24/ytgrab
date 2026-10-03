@@ -117,7 +117,7 @@ When the video's creator marked chapters, the Download page says how many and of
 
 Paste the link to an X post that has a video, such as `https://x.com/user/status/1234567890` (copy it with **Share → Copy link**; `twitter.com` links work too). YTGrab lists the post's video qualities with estimated sizes, and offers the audio as M4A or a conversion. X's files already contain sound, so nothing is merged; portrait videos are labeled by their shorter side (a 1080x1920 video is "1080p"). Files are named after the post's text and ID, such as `Text [1234567890] 720x1280.mp4`.
 
-Most posts download without signing in. If X shows a post only to signed-in users (age-restricted or from a protected account you follow), turn on **Browser sign-in** in Settings with a browser where you're signed in to X. A post with several videos downloads the first one. Subtitles, chapters, and SponsorBlock are YouTube features and don't apply to X. If X limits requests, only that download fails: YouTube downloads carry on.
+Most posts download without signing in. If X shows a post only to signed-in users (age-restricted or from a protected account you follow), turn on **Browser sign-in** in Settings with a browser where you're signed in to X. When a post has several videos, YTGrab lists them all ticked: untick any you don't want, choose a preset, and press **Add N videos**. Each is saved as its own file, with `-2`, `-3`, … after the post ID from the second video on. A link that ends in `/video/2` goes straight to that video's formats. Subtitles, chapters, and SponsorBlock are YouTube features and don't apply to X. If X limits requests, only that download fails: YouTube downloads carry on.
 
 ## Search YouTube
 
@@ -135,7 +135,7 @@ For a single video, open **Only part of the video** below the formats and enter 
 
 ## Download several videos at once
 
-Paste several video links into the link field at once, one per line or separated by spaces (from a document, a chat, or a list you made). YTGrab shows them in a list like a playlist: untick any you don't want, choose a preset, and press **Add N videos**. Repeated links are added once. Playlist links and anything that isn't a single-video link are skipped, with a note saying how many; paste a playlist on its own to review its videos.
+Paste several video links (YouTube videos or X posts) into the link field at once, one per line or separated by spaces (from a document, a chat, or a list you made). YTGrab shows them in a list like a playlist: untick any you don't want, choose a preset, and press **Add N videos**. Repeated links are added once. Playlist links and anything that isn't a single-video link are skipped, with a note saying how many; paste a playlist on its own to review its videos.
 
 ## Download a playlist
 

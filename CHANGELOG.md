@@ -2,6 +2,17 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **X posts with several videos.** YTGrab lists every video of the post, all ticked; untick any and add the rest with one preset. Each is saved as its own file. A `/video/2` link goes straight to that video.
+
+### Fixed
+
+- Several X links pasted at once were skipped as if they weren't video links.
+- Inspecting an X post with several videos failed, and downloading one could fetch every video into a single file name.
+
 ## [1.12.0] - 2026-10-03
 
 YTGrab now downloads from X (Twitter) too.

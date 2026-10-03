@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"io"
 	"math"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -42,10 +44,32 @@ type Inspection struct {
 	DurationSeconds *float64 `json:"duration_seconds"`
 	Chapters        int      `json:"chapters"` // how many chapters the creator marked
 	// Site is "" for YouTube or "x"; X posts also carry their preview image.
-	Site      string   `json:"site,omitempty"`
-	Thumbnail string   `json:"thumbnail,omitempty"`
-	Video     []Format `json:"video"`
-	Audio     []Format `json:"audio"`
+	Site      string `json:"site,omitempty"`
+	Thumbnail string `json:"thumbnail,omitempty"`
+	// Videos lists every video of an X post that has several; empty otherwise.
+	Videos []PostVideo `json:"videos,omitempty"`
+	Video  []Format    `json:"video"`
+	Audio  []Format    `json:"audio"`
+}
+
+// PostVideo is one video of an X post with several.
+type PostVideo struct {
+	Index           int      `json:"index"` // from 1, as in /video/N links
+	VideoID         string   `json:"video_id"`
+	URL             string   `json:"url"`
+	DurationSeconds *float64 `json:"duration_seconds"`
+	Thumbnail       string   `json:"thumbnail,omitempty"`
+}
+
+// rawVideo is the part of yt-dlp's JSON for one video that inspection reads.
+type rawVideo struct {
+	ID        string     `json:"id"`
+	DisplayID string     `json:"display_id"`
+	Thumbnail string     `json:"thumbnail"`
+	Title     string     `json:"title"`
+	Duration  *float64   `json:"duration"`
+	Chapters  []struct{} `json:"chapters"`
+	Formats   []Format   `json:"formats"`
 }
 
 type cachedInspection struct {
@@ -260,20 +284,12 @@ func (inspector *Inspector) runJSON(ctx context.Context, path string, args []str
 }
 
 func parseInspection(data []byte, expectedID, site string) (Inspection, error) {
-	var raw struct {
-		ID        string     `json:"id"`
-		DisplayID string     `json:"display_id"`
-		Thumbnail string     `json:"thumbnail"`
-		Title     string     `json:"title"`
-		Duration  *float64   `json:"duration"`
-		Chapters  []struct{} `json:"chapters"`
-		Formats   []Format   `json:"formats"`
+	if site == domain.SiteX {
+		return parseXPost(data, expectedID)
 	}
+	var raw rawVideo
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return Inspection{}, &Error{Code: "download_failed", Message: "yt-dlp returned invalid format information."}
-	}
-	if site == domain.SiteX {
-		return parseXInspection(raw.DisplayID, raw.Title, raw.Duration, raw.Thumbnail, raw.Formats, expectedID)
 	}
 	if raw.ID != expectedID {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected video did not match the requested link."}
@@ -298,12 +314,9 @@ func parseInspection(data []byte, expectedID, site string) (Inspection, error) {
 // parseXInspection lists an X post's MP4 files, which already contain sound, as the video
 // choices. X lists no file sizes, so they are estimated from bitrate and length. Audio
 // choices come from the page's presets (taken out of the best file).
-func parseXInspection(postID, title string, duration *float64, thumbnail string, formats []Format, expectedID string) (Inspection, error) {
-	if postID != expectedID {
-		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected post did not match the requested link."}
-	}
+func parseXInspection(videoID, title string, duration *float64, thumbnail string, formats []Format) (Inspection, error) {
 	// X leaves HTML entities in post text ("R&amp;D"); decode them as the download does.
-	result := Inspection{VideoID: postID, Title: html.UnescapeString(title), DurationSeconds: duration, Site: domain.SiteX,
+	result := Inspection{VideoID: videoID, Title: html.UnescapeString(title), DurationSeconds: duration, Site: domain.SiteX,
 		Thumbnail: domain.SafeThumbnail(thumbnail), Video: []Format{}, Audio: []Format{}}
 	// The MP4s' listed bitrate is nominal and runs about twice the real size; the
 	// streaming copy at the same resolution reports a realistic video bitrate, plus audio.
@@ -343,6 +356,56 @@ func parseXInspection(postID, title string, duration *float64, thumbnail string,
 	}
 	if len(result.Video) == 0 {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "This post has no video."}
+	}
+	return result, nil
+}
+
+// parseXPost reads an X post's videos, which yt-dlp prints one JSON line each, and returns
+// the one the link names: the first, or N for a /video/N link. A post with several videos
+// also lists them all, so the page can offer each.
+func parseXPost(data []byte, expectedID string) (Inspection, error) {
+	postID, index := expectedID, 1
+	if id, n, found := strings.Cut(expectedID, "-"); found {
+		postID = id
+		index, _ = strconv.Atoi(n)
+	}
+	var entries []rawVideo
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	for {
+		var entry rawVideo
+		if err := decoder.Decode(&entry); errors.Is(err, io.EOF) {
+			break
+		} else if err != nil {
+			return Inspection{}, &Error{Code: "download_failed", Message: "yt-dlp returned invalid format information."}
+		}
+		if entry.DisplayID != postID {
+			return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected post did not match the requested link."}
+		}
+		if len(entries) < domain.MaxPostVideos {
+			entries = append(entries, entry)
+		}
+	}
+	if len(entries) == 0 {
+		return Inspection{}, &Error{Code: "video_unavailable", Message: "This post has no video."}
+	}
+	if index < 1 || index > len(entries) {
+		return Inspection{}, &Error{Code: "video_unavailable", Message: fmt.Sprintf("This post has only %d video%s.", len(entries), map[bool]string{true: "", false: "s"}[len(entries) == 1])}
+	}
+	chosen := entries[index-1]
+	result, err := parseXInspection(expectedID, chosen.Title, chosen.Duration, chosen.Thumbnail, chosen.Formats)
+	if err != nil {
+		return Inspection{}, err
+	}
+	if len(entries) > 1 {
+		for i, entry := range entries {
+			result.Videos = append(result.Videos, PostVideo{
+				Index:           i + 1,
+				VideoID:         domain.XVideoID(postID, i+1),
+				URL:             domain.XVideoURL(postID, i+1),
+				DurationSeconds: entry.Duration,
+				Thumbnail:       domain.SafeThumbnail(entry.Thumbnail),
+			})
+		}
 	}
 	return result, nil
 }
