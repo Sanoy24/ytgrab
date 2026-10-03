@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"math"
 	"os/exec"
 	"strings"
@@ -301,7 +302,8 @@ func parseXInspection(postID, title string, duration *float64, thumbnail string,
 	if postID != expectedID {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected post did not match the requested link."}
 	}
-	result := Inspection{VideoID: postID, Title: title, DurationSeconds: duration, Site: domain.SiteX,
+	// X leaves HTML entities in post text ("R&amp;D"); decode them as the download does.
+	result := Inspection{VideoID: postID, Title: html.UnescapeString(title), DurationSeconds: duration, Site: domain.SiteX,
 		Thumbnail: domain.SafeThumbnail(thumbnail), Video: []Format{}, Audio: []Format{}}
 	// The MP4s' listed bitrate is nominal and runs about twice the real size; the
 	// streaming copy at the same resolution reports a realistic video bitrate, plus audio.

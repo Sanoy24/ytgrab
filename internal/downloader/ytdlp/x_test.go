@@ -49,7 +49,7 @@ func TestXArguments(t *testing.T) {
 }
 
 func TestXInspection(t *testing.T) {
-	data := []byte(`{"id":"2106270368000606208","display_id":"2106270671584313722","title":"Parth Sharma - Reintroducing WensityUI","duration":64.277,
+	data := []byte(`{"id":"2106270368000606208","display_id":"2106270671584313722","title":"Parth Sharma - React &amp; Tailwind","duration":64.277,
 		"thumbnail":"https://pbs.twimg.com/amplify_video_thumb/2106270368000606208/img/x.jpg?name=orig",
 		"formats":[
 		{"format_id":"hls-audio-128000-Audio","ext":"mp4","vcodec":"none","protocol":"m3u8_native","tbr":128},
@@ -58,7 +58,7 @@ func TestXInspection(t *testing.T) {
 		{"format_id":"hls-381","ext":"mp4","vcodec":"avc1.4D401F","acodec":"none","width":640,"height":360,"protocol":"m3u8_native"},
 		{"format_id":"http-10368","ext":"mp4","width":1920,"height":1080,"protocol":"https","tbr":10368,"filesize_approx":83305000}]}`)
 	got, err := parseInspection(data, "2106270671584313722", domain.SiteX)
-	if err != nil || got.Site != "x" || len(got.Video) != 2 || len(got.Audio) != 0 || got.Thumbnail == "" {
+	if err != nil || got.Site != "x" || len(got.Video) != 2 || len(got.Audio) != 0 || got.Thumbnail == "" || got.Title != "Parth Sharma - React & Tailwind" {
 		t.Fatalf("inspection = %+v, %v", got, err)
 	}
 	// 1080p: the streamed copy's 3274 kbps plus 128 kbps of audio, not the MP4's nominal 10368.
