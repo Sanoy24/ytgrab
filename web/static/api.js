@@ -26,6 +26,7 @@ class FixtureClient {
   constructor(scenario) {
     this.scenario = scenario;
     this.jobs = scenario === 'empty' ? [] : structuredClone(fx.jobs);
+    if (scenario === 'big-library') this.jobs.push(...bigLibrary(400));
     this.nextId = 100;
     this.downloadsDir = String.raw`C:\Users\me\Downloads\ytgrab`;
     this.listeners = new Set();
@@ -621,6 +622,24 @@ const MAX_STREAMS = 4;
 // In the queue: waiting, running, or paused (a paused download keeps its place).
 export const isActive = (state) =>
   ['queued', 'inspecting', 'downloading', 'processing', 'paused'].includes(state);
+
+// A long history for performance checks: finished downloads of the sample videos.
+function bigLibrary(n) {
+  const ids = ['dQw4w9WgXcQ', 'jNQXAC9IVRw', 'M7lc1UVf-VE', '9bZkp7q19f0', 'kJQP7kiw5Fk', 'YE7VzlLtp-4', 'aqz-KE-bpKQ'];
+  const start = Date.parse('2026-09-01T00:00:00Z');
+  return Array.from({ length: n }, (_, i) => {
+    const at = new Date(start + i * 3_600_000).toISOString();
+    const id = ids[i % ids.length];
+    const failed = i % 17 === 0;
+    return {
+      id: `big_${i}`, url: `https://www.youtube.com/watch?v=${id}`, video_id: id, title: `Archive episode ${i + 1}`,
+      preset: i % 3 ? 'video-best' : 'audio-m4a', format: null, state: failed ? 'failed' : 'completed', attempt: 1, progress: null,
+      output_path: failed ? null : String.raw`C:\Users\me\Downloads\ytgrab\Archive episode ` + `${i + 1} [${id}].mp4`,
+      error: failed ? { code: 'video_unavailable', message: 'This video is private or has been removed.' } : null,
+      created_at: at, updated_at: at,
+    };
+  });
+}
 
 const delay = (ms, signal) =>
   new Promise((resolve, reject) => {

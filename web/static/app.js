@@ -97,6 +97,18 @@ function jobTitle(job) {
 const template = $('#job-template');
 const nodes = new Map(); // job id -> element, reused so focus survives updates
 
+// What a row shows; a row is redrawn only when this changes. Progress ticks arrive every
+// second, and redrawing hundreds of unchanged Library rows each time wastes power.
+function rowKey(job) {
+  return [
+    job.updated_at, job.state, job.title, job.attempt, job.output_path,
+    JSON.stringify(job.progress), job.priority || 0,
+    formatWhen(job.updated_at), pending.has(job.id), confirmingRemove.has(job.id),
+    // Move to top depends on the other waiting downloads.
+    job.state === 'queued' || job.state === 'paused' ? firstWaiting(job) : '',
+  ].join('|');
+}
+
 function renderJob(job) {
   let el = nodes.get(job.id);
   if (!el) {
@@ -104,6 +116,9 @@ function renderJob(job) {
     el.dataset.id = job.id;
     nodes.set(job.id, el);
   }
+  const key = rowKey(job);
+  if (el.dataset.key === key) return el;
+  el.dataset.key = key;
   const title = el.querySelector('.job-title');
   title.textContent = jobTitle(job);
   title.title = job.title || job.url;
@@ -382,6 +397,14 @@ function notify(title, body, tag) {
 function announceFinished() {
   const previous = lastStates;
   lastStates = new Map(jobs.map((j) => [j.id, j.state]));
+  if (previous) {
+    const ended = jobs.filter((j) => isActive(previous.get(j.id) || '') && !isActive(j.state) && j.state !== 'cancelled');
+    if (ended.length) {
+      $('#announcer').textContent = ended
+        .map((j) => `${j.state === 'completed' ? 'Download finished' : 'Download failed'}: ${jobTitle(j)}.`)
+        .join(' ');
+    }
+  }
   if (!previous || !notifyOn || !document.hidden) return;
   for (const job of jobs) {
     const before = previous.get(job.id);
@@ -506,6 +529,9 @@ function render() {
   $('#retry-failed').textContent = `Retry failed (${failed.length})`;
   $('#queue-nav-count').textContent = queue.length || '';
   $('#library-nav-count').textContent = history.length || '';
+  // The counts are drawn as badges; give the buttons names that read naturally.
+  setNavLabel('download', 'Download', queue.length, 'in the queue');
+  setNavLabel('library', 'Library', history.length, history.length === 1 ? 'download' : 'downloads');
   renderNow(queue);
 
   $('#queue-count').textContent = queue.length ? `(${queue.length})` : '';
@@ -542,6 +568,11 @@ function render() {
   // Drop cached nodes for jobs that no longer exist.
   const ids = new Set(jobs.map((j) => j.id));
   for (const id of nodes.keys()) if (!ids.has(id)) nodes.delete(id);
+}
+
+function setNavLabel(view, name, count, noun) {
+  const button = document.querySelector(`.nav-item[data-view="${view}"]`);
+  button.setAttribute('aria-label', count ? `${name}, ${count} ${noun}` : name);
 }
 
 // ---------- views ----------

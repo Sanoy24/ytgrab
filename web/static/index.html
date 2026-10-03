@@ -13,6 +13,7 @@
     <script type="module" src="app.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#url">Skip to the link field</a>
     <div class="app">
       <aside class="sidebar">
         <h1 class="brand"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a4e"/><stop offset="1" stop-color="#c4302b"/></linearGradient></defs><rect width="100" height="100" rx="24" fill="url(#logo-g)"/><path d="M44 18h12v26h16L50 66 28 44h16zM20 60h10v12h40V60h10v22H20z" fill="#fff"/></svg><span>YTGrab</span></h1>
@@ -199,7 +200,7 @@
             <div class="block-head">
               <h2 id="queue-title">Queue <span class="count" id="queue-count"></span></h2>
             </div>
-            <div class="list queue-list" id="queue" aria-live="polite" aria-busy="true"></div>
+            <div class="list queue-list" id="queue" aria-busy="true"></div>
           </section>
         </section>
 
@@ -325,6 +326,8 @@
 
     <div class="drop-overlay" id="drop-overlay" hidden><div>Drop the link to download it</div></div>
     <div class="toast-region" id="toast" role="status" aria-live="polite"></div>
+    <!-- Finished and failed downloads are announced here, not every progress tick. -->
+    <div class="visually-hidden" id="announcer" role="status" aria-live="polite"></div>
 
     <template id="job-template">
       <article class="job">

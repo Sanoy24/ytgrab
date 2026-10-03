@@ -269,3 +269,17 @@ test('offers Opus, FLAC, and WAV for audio', async ({ page }) => {
   await page.locator('#submit').click();
   await expect(page.locator('#queue .job-meta').first()).toContainText('Audio · FLAC');
 });
+
+test('a large library stays fast and is not redrawn on every progress tick', async ({ page }) => {
+  await page.goto('/?fixture=big-library#library');
+  await expect(page.locator('#history .job')).toHaveCount(405);
+  const mutations = await page.evaluate(async () => {
+    let count = 0;
+    new MutationObserver((m) => (count += m.length)).observe(document.querySelector('#history'), { subtree: true, childList: true, characterData: true, attributes: true });
+    await new Promise((r) => setTimeout(r, 4000)); // the sample downloads tick every second meanwhile
+    return count;
+  });
+  expect(mutations).toBeLessThan(400); // was over 14,000 when every row was redrawn
+  await page.locator('#history-search').fill('episode 39');
+  await expect(page.locator('#history .job')).toHaveCount(11); // 39 and 390–399
+});
