@@ -64,7 +64,7 @@
         <section class="view view-download" id="view-download" aria-labelledby="add-title">
           <header class="view-head hero">
             <h2 id="add-title">What do you want to download?</h2>
-            <p class="view-sub">Paste a YouTube link: a video, a playlist, or several videos at once. You can also drop a link anywhere on this page.</p>
+            <p class="view-sub">Paste a YouTube link (a video, a playlist, or several videos at once) or a link to an X post with a video. You can also drop a link anywhere on this page.</p>
           </header>
           <div class="setup-folder" id="setup-folder" role="region" aria-labelledby="setup-title" hidden>
             <strong id="setup-title">Choose where to save downloads</strong>
@@ -89,7 +89,7 @@
                 inputmode="url"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="Paste a YouTube link, or type to search"
+                placeholder="Paste a YouTube or X link, or type to search YouTube"
                 aria-describedby="url-hint url-error"
                 required
               />
@@ -472,17 +472,17 @@
             </div>
           </section>
           <section class="card settings-card">
-            <h3 class="card-title">YouTube</h3>
-            <p class="card-desc">Only if YouTube keeps blocking downloads.</p>
+            <h3 class="card-title">Signing in</h3>
+            <p class="card-desc">Only if YouTube keeps blocking downloads, or for X posts that need an account.</p>
             <div class="signin" id="signin" hidden>
               <div class="pref-row">
-                <label for="signin-browser">YouTube sign-in</label>
+                <label for="signin-browser">Browser sign-in</label>
                 <select id="signin-browser"></select>
               </div>
               <p class="hint pref-hint">
-                Leave off unless YouTube keeps blocking downloads. yt-dlp then uses your browser's
-                YouTube sign-in, which YTGrab never stores. Firefox works best on Windows; a secondary
-                account is safer, since heavy use can get an account flagged.
+                Leave off unless YouTube keeps blocking downloads or an X post needs an account. yt-dlp
+                then uses your browser's sign-in to those sites, which YTGrab never stores. Firefox works
+                best on Windows; a secondary account is safer, since heavy use can get an account flagged.
               </p>
             </div>
           </section>

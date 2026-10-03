@@ -59,3 +59,17 @@ test('turns clip fields into a section', () => {
   assert.match(readSection('1:00', '1:00', 300).error, /at least 1 second/);
   assert.match(readSection('1:75', '', 300).error, /minutes:seconds/);
 });
+
+test('labels portrait and X videos by their shorter side', () => {
+  const { video } = groupFormats({
+    site: 'x',
+    video: [
+      { format_id: 'http-2176', ext: 'mp4', width: 720, height: 1280, filesize_approx: 7_000_000 },
+      { format_id: 'http-10368', ext: 'mp4', width: 1080, height: 1920, filesize_approx: 30_000_000 },
+    ],
+    audio: [],
+  });
+  assert.deepEqual(video.map((v) => v.label), ['1080p · portrait', '720p · portrait']);
+  assert.match(video[1].detail, /≈ 7.0 MB$/); // no audio added: X files already contain it
+  assert.equal(matchPreset('video-720', { video, audio: [] }).id, 'http-2176');
+});

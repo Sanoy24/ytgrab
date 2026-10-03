@@ -180,7 +180,7 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 		return Result{}, ctx.Err()
 	}
 	if waitErr != nil {
-		return Result{}, classifyFailure(stderrTail)
+		return Result{}, classifyFor(job.Site, stderrTail)
 	}
 	if result.OutputPath == "" {
 		return Result{}, &Error{Code: "download_failed", Message: "yt-dlp finished without reporting an output file."}
@@ -207,7 +207,11 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"-o", outputTemplate(job, cfg.FileNames),
 	}
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
-	args = append(args, sponsorBlockArgs(cfg.SponsorBlock)...)
+	if job.Site == domain.SiteX {
+		args = append(args, xTitleCleanup...)
+	} else {
+		args = append(args, sponsorBlockArgs(cfg.SponsorBlock)...) // SponsorBlock only knows YouTube
+	}
 	if cfg.NormalizeAudio && convertsAudio(job) {
 		// EBU R128 loudness normalization while the audio is converted anyway, at the level
 		// streaming services use; M4A and Opus stay untouched copies.
@@ -222,10 +226,10 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	if embedsCoverArt(job) {
 		args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
 	}
-	if isVideo(job) {
+	if isVideo(job) && job.Site != domain.SiteX {
 		args = append(args, subtitleArgs(cfg.SubtitlesMode, cfg.SubtitlesLang)...)
 	}
-	if job.SplitChapters && job.Section == nil {
+	if job.SplitChapters && job.Section == nil && job.Site != domain.SiteX {
 		// The full file is kept; the chapters go into a folder named like it.
 		folder := strings.TrimSuffix(outputTemplate(job, cfg.FileNames), ".%(ext)s")
 		args = append(args, "--split-chapters", "-o", "chapter:"+folder+"/%(section_number)02d %(section_title).100B.%(ext)s")
@@ -234,6 +238,9 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		// Exact cuts re-encode just the start and end; without them the clip would begin at
 		// the nearest keyframe, often seconds early.
 		args = append(args, "--download-sections", "*"+seconds(job.Section.Start)+"-"+seconds(job.Section.End), "--force-keyframes-at-cuts")
+	}
+	if job.Site == domain.SiteX {
+		return append(append(args, xFormatArgs(job)...), "--", job.URL)
 	}
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
@@ -266,6 +273,49 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "-f", "ba", "-x", "--audio-format", "wav")
 	}
 	return append(args, "--", job.URL)
+}
+
+// xTitleCleanup decodes the HTML entities X leaves in post text, so file names and tags
+// read "R&D" rather than "R&amp;D".
+var xTitleCleanup = []string{
+	"--replace-in-metadata", "title", "&amp;", "&",
+	"--replace-in-metadata", "title", "&lt;", "<",
+	"--replace-in-metadata", "title", "&gt;", ">",
+	"--replace-in-metadata", "title", "&quot;", `"`,
+	"--replace-in-metadata", "title", "&#39;", "'",
+}
+
+// xFormatArgs picks X formats. X offers MP4 files that already contain sound ("b"), so
+// no merging is needed; quality limits use the shorter side ("res"), since many X videos
+// are portrait (1080x1920 is "1080p"). Audio is taken out of the best file.
+func xFormatArgs(job domain.Job) []string {
+	if job.Format != nil {
+		if job.Format.Kind == "video" {
+			return []string{"-f", job.Format.ID}
+		}
+		return []string{"-f", "ba/b", "-x", "--audio-format", "m4a"}
+	}
+	if job.Preset == nil {
+		return []string{"-f", "b"}
+	}
+	switch *job.Preset {
+	case domain.Video1080:
+		return []string{"-f", "b", "-S", "res:1080"}
+	case domain.Video720:
+		return []string{"-f", "b", "-S", "res:720"}
+	case domain.AudioM4A:
+		return []string{"-f", "ba/b", "-x", "--audio-format", "m4a"}
+	case domain.AudioMP3:
+		return []string{"-f", "ba/b", "-x", "--audio-format", "mp3", "--audio-quality", "0"}
+	case domain.AudioOpus:
+		return []string{"-f", "ba/b", "-x", "--audio-format", "opus"}
+	case domain.AudioFLAC:
+		return []string{"-f", "ba/b", "-x", "--audio-format", "flac"}
+	case domain.AudioWAV:
+		return []string{"-f", "ba/b", "-x", "--audio-format", "wav"}
+	default:
+		return []string{"-f", "b"}
+	}
 }
 
 // convertsAudio reports presets whose audio FFmpeg re-encodes (MP3, FLAC, WAV).
@@ -400,6 +450,15 @@ func nameStart(style string) string {
 }
 
 func baseTemplate(job domain.Job) string {
+	if job.Site == domain.SiteX {
+		// display_id is the post's ID (id is the video's); width x height reads right for
+		// portrait videos.
+		const post = "%(title).150B [%(display_id)s]"
+		if isVideo(job) || (job.Preset == nil && job.Format == nil) {
+			return post + " %(width)sx%(height)s.%(ext)s"
+		}
+		return post + ".%(ext)s"
+	}
 	const base = "%(title).150B [%(id)s]"
 	switch {
 	case job.Format != nil && job.Format.Kind == "video":
@@ -528,6 +587,33 @@ func confirmOutput(directory string, reportedPath string) (string, error) {
 	return path, nil
 }
 
+// classifyFor explains a failure in terms of the site it happened on. X's limits are its
+// own, so they never pause YouTube downloads ("blocked" is reserved for YouTube).
+func classifyFor(site, stderr string) error {
+	if site != domain.SiteX {
+		return classifyFailure(stderr)
+	}
+	lower := strings.ToLower(stderr)
+	switch {
+	case strings.Contains(lower, "no video could be found"), strings.Contains(lower, "no video formats found"):
+		return &Error{Code: "video_unavailable", Message: "This post has no video."}
+	case strings.Contains(lower, "requires authentication"), strings.Contains(lower, "nsfw"), strings.Contains(lower, "log in"), strings.Contains(lower, "login required"):
+		return &Error{Code: "signin_required", Message: "X shows this post only to signed-in users. Turn on Browser sign-in in Settings, choosing a browser where you're signed in to X, then retry."}
+	case strings.Contains(lower, "suspended"), strings.Contains(lower, "protected"), strings.Contains(lower, "unavailable"), strings.Contains(lower, "http error 404"), strings.Contains(lower, "does not exist"):
+		return &Error{Code: "video_unavailable", Message: "This post is unavailable: it may be deleted, protected, or from a suspended account."}
+	}
+	err := classifyFailure(stderr)
+	if toolError, ok := err.(*Error); ok {
+		switch toolError.Code {
+		case "blocked":
+			return &Error{Code: "x_limited", Message: "X is limiting requests from this network. Wait a few minutes, then retry."}
+		case "download_failed":
+			return &Error{Code: "download_failed", Message: "yt-dlp could not download this post's video. Check that yt-dlp is up to date and retry."}
+		}
+	}
+	return err
+}
+
 func classifyFailure(stderr string) error {
 	lower := strings.ToLower(stderr)
 	switch {
@@ -535,7 +621,7 @@ func classifyFailure(stderr string) error {
 		return &Error{Code: "disk_full", Message: "The drive with your download folder is full. Free up space or choose another folder, then Retry."}
 	// Checked first and by specific phrases: YouTube's bot check also mentions cookies.
 	case strings.Contains(lower, "cookie database"), strings.Contains(lower, "cookies database"), strings.Contains(lower, "failed to decrypt"), strings.Contains(lower, "failed to load cookies"), strings.Contains(lower, "unsupported browser"):
-		return &Error{Code: "cookies_failed", Message: "YTGrab couldn't use your browser's YouTube sign-in. Close that browser and retry, or choose another browser in the settings (on Windows, Firefox works best)."}
+		return &Error{Code: "cookies_failed", Message: "YTGrab couldn't use your browser's sign-in. Close that browser and retry, or choose another browser in the settings (on Windows, Firefox works best)."}
 	case strings.Contains(lower, "http error 429"), strings.Contains(lower, "sign in to confirm you're not a bot"), strings.Contains(lower, "sign in to confirm you’re not a bot"), strings.Contains(lower, "too many requests"):
 		return &Error{Code: "blocked", Message: "YouTube is limiting requests from this network. Wait a while, then retry."}
 	case strings.Contains(lower, "private video"), strings.Contains(lower, "video unavailable"), strings.Contains(lower, "not available"), strings.Contains(lower, "does not exist"):

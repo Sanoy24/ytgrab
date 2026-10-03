@@ -25,6 +25,9 @@ type titleSource interface {
 }
 
 func applyCachedTitle(source any, job *domain.Job) {
+	if thumbs, ok := source.(interface{ CachedThumbnail(string) string }); ok && job.Site == domain.SiteX {
+		job.Thumbnail = domain.SafeThumbnail(thumbs.CachedThumbnail(job.VideoID))
+	}
 	titles, ok := source.(titleSource)
 	if !ok || job.Title != nil {
 		return

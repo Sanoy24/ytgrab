@@ -380,3 +380,13 @@ test('evens out loudness of converted audio', async ({ page }) => {
   await toggle.check();
   await expect(page.locator('#toast')).toContainText('evened out in loudness');
 });
+
+test('accepts an X post link', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.locator('#url').fill('https://x.com/OpenAIDevs/status/2105708732323909827?s=20');
+  await expect(page.locator('#url-error')).toBeHidden();
+  await expect(page.locator('#search-hint')).toBeHidden();
+  await expect(page.locator('#inspect')).toContainText('full walkthrough'); // the sample inspection
+  await page.locator('#submit').click();
+  await expect(page.locator('#queue .job')).toHaveCount(1);
+});

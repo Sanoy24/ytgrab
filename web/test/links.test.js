@@ -65,3 +65,15 @@ test('tells search words from links', () => {
     assert.equal(looksLikeSearch(link), false, link);
   }
 });
+
+test('accepts X post links and rewrites them to one form', () => {
+  for (const link of [
+    'https://x.com/OpenAIDevs/status/2105708732323909827?s=20',
+    'twitter.com/OpenAIDevs/status/2105708732323909827',
+    'https://mobile.twitter.com/a/status/2105708732323909827/video/1',
+  ]) {
+    assert.deepEqual(validateUrl(link), { url: 'https://x.com/i/status/2105708732323909827', site: 'x' }, link);
+  }
+  assert.match(validateUrl('https://x.com/OpenAIDevs').error, /doesn't point to a post/);
+  assert.equal(looksLikeSearch('x.com/OpenAIDevs/status/2105708732323909827'), false);
+});

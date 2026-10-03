@@ -47,28 +47,31 @@ export function groupFormats(info) {
     .sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0));
   const m4a = bestAudio.find((a) => a.ext === 'm4a');
   // Estimated audio added to each video row; yt-dlp picks the best audio when merging.
-  const audioBytes = size(m4a || bestAudio[0] || {}) ?? 0;
+  // X's video files already contain sound.
+  const audioBytes = info.site === 'x' ? 0 : size(m4a || bestAudio[0] || {}) ?? 0;
 
   const byRes = new Map();
   for (const f of info.video || []) {
     if (!f.height) continue;
+    // Quality is the shorter side, so a portrait 1080x1920 video is "1080p".
+    const res = f.width ? Math.min(f.width, f.height) : f.height;
     const fps = f.fps && f.fps > 30 ? Math.round(f.fps) : 0;
-    const key = `${f.height}p${fps || ''}`;
+    const key = `${res}p${fps || ''}`;
     const cur = byRes.get(key);
     const better =
       !cur || compat(f) > compat(cur) || (compat(f) === compat(cur) && (size(f) ?? 0) > (size(cur) ?? 0));
-    if (better) byRes.set(key, { ...f, key, fps });
+    if (better) byRes.set(key, { ...f, key, fps, res });
   }
 
   const video = [...byRes.values()]
-    .sort((a, b) => b.height - a.height || b.fps - a.fps)
+    .sort((a, b) => b.res - a.res || b.fps - a.fps)
     .map((f) => {
       const total = size(f) != null ? size(f) + audioBytes : null;
       return {
         kind: 'video',
         id: f.format_id,
-        height: f.height,
-        label: `${f.height}p${f.fps ? ` ${f.fps}fps` : ''}`,
+        height: f.res,
+        label: `${f.res}p${f.fps ? ` ${f.fps}fps` : ''}${f.width && f.width < f.height ? ' · portrait' : ''}`,
         detail: [codecName(f.vcodec), total != null ? `≈ ${formatSize(total)}` : '']
           .filter(Boolean)
           .join(' · '),

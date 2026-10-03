@@ -1,6 +1,9 @@
 // Client-side checks for pasted links. They give fast feedback only; the server validates
 // every link again before using it.
 
+// X (Twitter) posts with a video: x.com/<user>/status/<id>.
+const X_HOSTS = new Set(['x.com', 'www.x.com', 'mobile.x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com']);
+
 const YT_HOSTS = new Set([
   'youtube.com',
   'www.youtube.com',
@@ -24,10 +27,15 @@ export function validateUrl(raw) {
   }
   if (u.protocol !== 'https:' && u.protocol !== 'http:')
     return { error: 'Only http and https links are supported.' };
-  if (!YT_HOSTS.has(u.hostname.toLowerCase()))
-    return { error: 'Only YouTube links are supported right now.' };
-
   const host = u.hostname.toLowerCase();
+  if (X_HOSTS.has(host)) {
+    const id = (u.pathname.match(/\/status\/(\d{5,20})(?:\/|$)/) || [])[1];
+    if (!id) return { error: "This X link doesn't point to a post. Open the post and copy its link." };
+    return { url: `https://x.com/i/status/${id}`, site: 'x' };
+  }
+  if (!YT_HOSTS.has(host))
+    return { error: 'Only YouTube and X links are supported.' };
+
   const hasVideo =
     (host === 'youtu.be' && u.pathname.length > 1) ||
     u.searchParams.has('v') ||

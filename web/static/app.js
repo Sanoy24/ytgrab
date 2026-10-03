@@ -78,7 +78,7 @@ function renderJob(job) {
   const title = el.querySelector('.job-title');
   title.textContent = jobTitle(job);
   title.title = job.title || job.url;
-  setThumbnail(el.querySelector('.job-thumb img'), job.video_id);
+  setThumbnail(el.querySelector('.job-thumb img'), job.site === 'x' ? job.thumbnail : job.video_id);
 
   const badge = el.querySelector('.badge');
   badge.dataset.state = job.state;
@@ -86,6 +86,7 @@ function renderJob(job) {
 
   const format = PRESET_LABELS[job.preset] || job.format?.label || job.preset || 'Custom format';
   const meta = [format, formatWhen(job.updated_at)];
+  if (job.site === 'x') meta.unshift('X');
   if (job.section) meta.splice(1, 0, `${formatDuration(job.section.start)}–${formatDuration(job.section.end)}`);
   if (job.split_chapters) meta.splice(1, 0, 'split into chapters');
   if (job.attempt > 1) meta.push(`attempt ${job.attempt}`);
@@ -1085,7 +1086,14 @@ async function inspect(url) {
   setInspectStatus(el('span', { className: 'spinner' }), 'Checking available formats…');
   try {
     const info = await client.inspect(url, { signal: ctl.signal });
-    const grouped = { ...groupFormats(info), title: info.title, duration: info.duration_seconds, chapters: info.chapters || 0 };
+    const grouped = {
+      ...groupFormats(info),
+      title: info.title,
+      duration: info.duration_seconds,
+      chapters: info.chapters || 0,
+      site: info.site || '',
+      thumbnail: info.thumbnail || '',
+    };
     inspections.set(url, { grouped, at: Date.now() });
     if (ctl.signal.aborted) return null;
     showFormats(grouped, selectedChoice());
@@ -1132,6 +1140,8 @@ function formatRow(choice, checked) {
   return el('label', { className: 'preset' }, input, text);
 }
 
+const X_AUDIO = { kind: 'preset', id: 'audio-m4a', label: 'M4A', detail: "The post's audio, no re-encoding" };
+
 // Conversions offered next to the video's own audio formats.
 const AUDIO_CONVERSIONS = [
   { kind: 'preset', id: 'audio-mp3', label: 'MP3', detail: 'Converted, plays anywhere' },
@@ -1147,7 +1157,9 @@ function showFormats(grouped, previous) {
     return;
   }
   // Carry a choice made before the list loaded over to the closest real format.
-  const all = [...video, ...audio, ...AUDIO_CONVERSIONS].map((c) => `${c.kind}:${c.id}`);
+  // X lists no separate audio streams: offer M4A taken out of the video, like the presets.
+  const conversions = grouped.site === 'x' ? [X_AUDIO, ...AUDIO_CONVERSIONS] : AUDIO_CONVERSIONS;
+  const all = [...video, ...audio, ...conversions].map((c) => `${c.kind}:${c.id}`);
   const [kind, value] = previous.split(':');
   const match = kind === 'preset' ? matchPreset(value, grouped) : null;
   let checked = match ? `${match.kind}:${match.id}` : previous;
@@ -1159,7 +1171,7 @@ function showFormats(grouped, previous) {
       : [el('p', { className: 'hint', textContent: 'No video formats available.' })]),
   );
   $('#audio-formats').replaceChildren(
-    ...[...audio, ...AUDIO_CONVERSIONS].map((c) => formatRow(c, `${c.kind}:${c.id}` === checked)),
+    ...[...audio, ...conversions].map((c) => formatRow(c, `${c.kind}:${c.id}` === checked)),
   );
 
   for (const r of $('#preset-choices').querySelectorAll('input')) r.disabled = true;
@@ -1171,7 +1183,7 @@ function showFormats(grouped, previous) {
   const meta = [
     formatDuration(grouped.duration),
     grouped.chapters ? `${grouped.chapters} chapters` : '',
-    `${video.length} video · ${audio.length} audio options`,
+    grouped.site === 'x' ? `From X · ${video.length} video options` : `${video.length} video · ${audio.length} audio options`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -1186,7 +1198,7 @@ function showFormats(grouped, previous) {
     parts.push(el('br'), whole);
   }
   const thumb = el('img', { className: 'inspect-thumb', alt: '', referrerPolicy: 'no-referrer' });
-  setThumbnail(thumb, url ? videoIdOf(url) : '');
+  setThumbnail(thumb, grouped.site === 'x' ? grouped.thumbnail : url ? videoIdOf(url) : '');
   setInspectStatus(thumb, el('div', { className: 'inspect-text' }, ...parts));
 }
 
@@ -1717,7 +1729,7 @@ async function onSignInChange(e) {
   select.disabled = true;
   try {
     applySettings(await client.setCookiesBrowser(select.value));
-    toast(select.value ? `Downloads will use your ${BROWSER_NAMES[select.value] || select.value} YouTube sign-in.` : 'YouTube sign-in turned off.');
+    toast(select.value ? `Downloads will use your ${BROWSER_NAMES[select.value] || select.value} sign-in.` : 'Browser sign-in turned off.');
   } catch (err) {
     select.value = previous;
     toast(err.message, true);

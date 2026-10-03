@@ -38,7 +38,16 @@ const (
 	AudioWAV  Preset = "audio-wav"
 )
 
-var ErrInvalidURL = errors.New("enter a valid single YouTube video URL")
+var ErrInvalidURL = errors.New("enter a valid link to a single YouTube video or X post")
+
+// Sites YTGrab downloads from. A job's Site is empty for YouTube, which came first.
+const (
+	SiteYouTube = ""
+	SiteX       = "x"
+)
+
+// postIDPattern matches X post IDs, which are numbers.
+var postIDPattern = regexp.MustCompile(`^[0-9]{5,20}$`)
 var ErrInvalidPreset = errors.New("choose a supported download preset")
 var ErrInvalidFormat = errors.New("Choose a format from a recent inspection.")
 var videoIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
@@ -81,6 +90,11 @@ type Job struct {
 	Attempt    int              `json:"attempt"`
 	Progress   *Progress        `json:"progress"`
 	OutputPath *string          `json:"output_path"`
+	// Site is SiteYouTube ("") or SiteX. For X, VideoID is the post's ID.
+	Site string `json:"site,omitempty"`
+	// Thumbnail is an X post's preview image (pbs.twimg.com only); YouTube's are derived
+	// from the video ID.
+	Thumbnail string `json:"thumbnail,omitempty"`
 	// Folder is an optional subfolder of the download folder (see SafeFolderName).
 	Folder string `json:"folder,omitempty"`
 	// Priority orders the queue: higher starts first, then older. "Move to top" raises it.
@@ -131,6 +145,7 @@ func newBaseJob(rawURL string) (Job, error) {
 	return Job{
 		ID:        "job_" + hex.EncodeToString(bytes),
 		URL:       url,
+		Site:      SiteOf(url),
 		VideoID:   videoID,
 		State:     Queued,
 		Attempt:   1,
@@ -160,6 +175,16 @@ func ParseVideoURL(raw string) (string, string, error) {
 	host := strings.ToLower(parsed.Hostname())
 	var videoID string
 	switch host {
+	case "x.com", "www.x.com", "mobile.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com":
+		// https://x.com/<user>/status/<id>, also /i/status/<id> and /i/web/status/<id>,
+		// optionally followed by /video/1 or /photo/1.
+		parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+		for i := 0; i+1 < len(parts); i++ {
+			if parts[i] == "status" && postIDPattern.MatchString(parts[i+1]) {
+				return "https://x.com/i/status/" + parts[i+1], parts[i+1], nil
+			}
+		}
+		return "", "", ErrInvalidURL
 	case "youtu.be":
 		videoID = strings.Trim(parsed.Path, "/")
 	case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com":
@@ -176,6 +201,23 @@ func ParseVideoURL(raw string) (string, string, error) {
 		return "", "", ErrInvalidURL
 	}
 	return parsed.String(), videoID, nil
+}
+
+// SiteOf tells which site a link from ParseVideoURL belongs to.
+func SiteOf(url string) string {
+	if strings.HasPrefix(url, "https://x.com/") {
+		return SiteX
+	}
+	return SiteYouTube
+}
+
+// SafeThumbnail keeps an X preview image only when it comes from X's image server, the one
+// other image host the page may load.
+func SafeThumbnail(url string) string {
+	if strings.HasPrefix(url, "https://pbs.twimg.com/") && len(url) < 512 && !strings.ContainsAny(url, "\"<> ") {
+		return url
+	}
+	return ""
 }
 
 // Playlists are listed PlaylistPageSize entries at a time, and one confirmation creates
