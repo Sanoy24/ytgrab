@@ -55,6 +55,8 @@ npx playwright test               # drives the page in Chromium using its sample
 
 The end-to-end tests use the page's `?fixture=` modes, so they need no server, tools, or network. CI runs both on every push.
 
+`e2e/a11y.spec.js` runs [axe-core](https://github.com/dequelabs/axe-core) against every view in light and dark mode and fails on any WCAG 2.1 A or AA violation; it also checks the skip link and the navigation buttons' spoken names. The `?fixture=big-library` mode adds 400 finished downloads, and a test checks that the Library isn't redrawn on every progress update.
+
 ## Previewing the UI without the server
 
 Serve `web/static` with any static server and add a `fixture` parameter to use sample data:
@@ -72,6 +74,7 @@ python -m http.server 8765 --bind 127.0.0.1 --directory web/static
 | `/?fixture=degraded` | Missing tools |
 | `/?fixture=error` | Server unreachable |
 | `/?fixture=loading` | Loading states that never finish |
+| `/?fixture=big-library` | The default jobs plus 400 finished downloads, for checking speed |
 | `/?fixture=blocked` | YouTube rate limiting during format checks |
 | `/?fixture=expired` | An expired inspection that is re-checked automatically |
 | `/?fixture=outdated` | A yt-dlp update available, with the Update button |

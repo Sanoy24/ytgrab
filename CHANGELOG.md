@@ -2,6 +2,13 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Accessibility.** Small grey text now meets WCAG contrast in both themes, a "Skip to the link field" link helps keyboard users, navigation buttons read naturally to screen readers ("Library, 5 downloads"), and screen readers announce finished and failed downloads instead of every progress update.
+- **Faster with a long history.** Unchanged downloads are no longer redrawn every second while something downloads.
+
 ## [1.9.0] - 2026-10-03
 
 ### Changed
@@ -100,6 +107,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[Unreleased]: https://github.com/Sanoy24/ytgrab/compare/v1.9.0...HEAD
 [1.9.0]: https://github.com/Sanoy24/ytgrab/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/Sanoy24/ytgrab/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/Sanoy24/ytgrab/compare/v1.6.0...v1.7.0
