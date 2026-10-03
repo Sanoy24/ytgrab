@@ -164,3 +164,58 @@ func TestClearHistoryWithFiles(t *testing.T) {
 		t.Fatalf("remaining = %+v", jobs)
 	}
 }
+
+func TestDeletingASplitDownloadRemovesItsChapters(t *testing.T) {
+	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	dir := t.TempDir()
+	file := filepath.Join(dir, "Talk [dQw4w9WgXcQ].m4a")
+	folder := filepath.Join(dir, "Talk [dQw4w9WgXcQ]")
+	if err := os.MkdirAll(folder, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{file, filepath.Join(folder, "01 Intro.m4a"), filepath.Join(folder, "02 Docs.m4a")} {
+		if err := os.WriteFile(name, []byte("audio"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	job := finishedJob(t, store, "https://youtu.be/dQw4w9WgXcQ", domain.Completed, file)
+	job.SplitChapters = true
+	if err := store.Update(context.Background(), job, domain.Completed); err != nil {
+		t.Fatal(err)
+	}
+
+	// A file of the user's own in the folder is kept, and so is the folder.
+	notes := filepath.Join(folder, "my notes.txt")
+	if err := os.WriteFile(notes, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodDelete, "/api/jobs/"+job.ID+"?delete_file=true", nil))
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("delete = %d %s", response.Code, response.Body.String())
+	}
+	for _, gone := range []string{file, filepath.Join(folder, "01 Intro.m4a"), filepath.Join(folder, "02 Docs.m4a")} {
+		if _, err := os.Stat(gone); !os.IsNotExist(err) {
+			t.Errorf("%s was kept", gone)
+		}
+	}
+	if _, err := os.Stat(notes); err != nil {
+		t.Error("a file of the user's own was deleted")
+	}
+
+	// Without other files, the folder goes too.
+	if err := os.Remove(notes); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := removeOutput(job, file); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(folder); !os.IsNotExist(err) {
+		t.Error("the empty chapter folder was kept")
+	}
+}
