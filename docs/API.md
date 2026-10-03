@@ -32,6 +32,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
 | `PUT` | `/api/settings/preferences` | Set `max_downloads` (1–4) and/or `default_preset`; applies immediately |
 | `GET` | `/api/system/version` | `{ version, latest, update_available, update_command, release_url }`; `latest` is checked against GitHub at most once a day, and `update_command` is empty for copies unpacked from a zip |
+| `PUT` | `/api/settings/preferences` also accepts `file_names` | One of `file_name_styles` from `GET /api/settings` |
 | `PUT` | `/api/settings/preferences` also accepts `speed_limit_kbps` | One of `speed_limits` from `GET /api/settings` (kB/s, `0` for no limit) |
 | `PUT` | `/api/settings/subtitles` | `{ "mode": "off" \| "embed" \| "file", "lang": "en" }`; only codes in `subtitle_languages` (from `GET /api/settings`) are accepted |
 | `PUT` | `/api/settings/startup` | Windows only: start YTGrab in the tray at sign-in (`{ "enabled": true }`) or stop (`false`). `GET /api/settings` includes `start_at_login` only where this is supported |

@@ -294,3 +294,11 @@ test('offers to split a video with chapters', async ({ page }) => {
   await expect(page.locator('#queue .job-meta').first()).toContainText('split into chapters');
   await expect(page.locator('#split-row')).toBeHidden();
 });
+
+test('chooses how files are named', async ({ page }) => {
+  await page.goto('/?fixture=empty#settings');
+  await expect(page.locator('#pref-names-example')).toContainText('Me at the zoo [jNQXAC9IVRw] 720p.mp4');
+  await page.getByLabel('File names').selectOption('channel-folder');
+  await expect(page.locator('#toast')).toContainText('named by a folder per channel');
+  await expect(page.locator('#pref-names-example')).toContainText('jawed / Me at the zoo');
+});

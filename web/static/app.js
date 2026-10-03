@@ -1670,7 +1670,22 @@ function renderSpeed(next) {
   select.value = String(next.speed_limit_kbps);
 }
 
+const NAME_EXAMPLES = {
+  title: 'Me at the zoo [jNQXAC9IVRw] 720p.mp4',
+  'channel-title': 'jawed - Me at the zoo [jNQXAC9IVRw] 720p.mp4',
+  'date-title': '2005-04-24 Me at the zoo [jNQXAC9IVRw] 720p.mp4',
+  'channel-folder': 'jawed / Me at the zoo [jNQXAC9IVRw] 720p.mp4',
+};
+
+function renderFileNames(next) {
+  $('#pref-names-row').hidden = typeof next.file_names !== 'string';
+  if (typeof next.file_names !== 'string') return;
+  $('#pref-names').value = next.file_names;
+  $('#pref-names-example').textContent = `For example: ${NAME_EXAMPLES[next.file_names] || ''}`;
+}
+
 function renderPreferences(next) {
+  renderFileNames(next);
   $('#pref-autoupdate-row').hidden = typeof next.auto_update_ytdlp !== 'boolean';
   $('#pref-autoupdate').checked = Boolean(next.auto_update_ytdlp);
   renderSubtitles(next);
@@ -1889,6 +1904,10 @@ function init() {
       { speed_limit_kbps: kbps },
       kbps ? `New downloads will each use at most ${speedLabel(kbps)}.` : 'New downloads will run at full speed.',
     );
+  });
+  $('#pref-names').addEventListener('change', (e) => {
+    const label = e.currentTarget.selectedOptions[0].textContent;
+    savePreference(e.currentTarget, { file_names: e.currentTarget.value }, `New downloads will be named by ${label.toLowerCase()}.`);
   });
   $('#pref-autoupdate').addEventListener('change', (e) => {
     const on = e.currentTarget.checked;

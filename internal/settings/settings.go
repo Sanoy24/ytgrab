@@ -23,7 +23,12 @@ const (
 	subtitleLangKey  = "subtitles_lang"
 	speedLimitKey    = "speed_limit_kbps"
 	autoUpdateKey    = "auto_update_ytdlp"
+	fileNamesKey     = "file_names"
 )
+
+// FileNameStyles are the offered ways to name files. Every style keeps the video ID, which
+// keeps names unique and marks the files YTGrab may delete.
+var FileNameStyles = []string{"title", "channel-title", "date-title", "channel-folder"}
 
 // SpeedLimits are the offered per-download limits in kB/s; 0 means no limit.
 var SpeedLimits = []int{0, 500, 1000, 2000, 5000, 10000}
@@ -72,6 +77,7 @@ type Manager struct {
 	subtitleLang string
 	speedLimit   int
 	autoUpdate   bool
+	fileNames    string
 	defaultDir   string
 	configured   bool
 }
@@ -121,7 +127,31 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if saved, ok, err := store.GetSetting(ctx, autoUpdateKey); err == nil && ok {
 		autoUpdate = saved != "0"
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	fileNames := FileNameStyles[0]
+	if saved, ok, err := store.GetSetting(ctx, fileNamesKey); err == nil && ok && slices.Contains(FileNameStyles, saved) {
+		fileNames = saved
+	}
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// FileNames is how new downloads are named (one of FileNameStyles).
+func (manager *Manager) FileNames() string {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.fileNames
+}
+
+func (manager *Manager) SetFileNames(ctx context.Context, style string) error {
+	if !slices.Contains(FileNameStyles, style) {
+		return ErrInvalidPreference
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, fileNamesKey, style); err != nil {
+		return fmt.Errorf("save file names: %w", err)
+	}
+	manager.fileNames = style
+	return nil
 }
 
 // AutoUpdateYtdlp reports whether YTGrab keeps yt-dlp up to date by itself.

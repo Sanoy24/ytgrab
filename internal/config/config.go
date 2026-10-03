@@ -30,6 +30,8 @@ type Config struct {
 	SubtitlesLang string
 	// SpeedLimitKBps caps each download in kB/s (0: no limit); filled in per download.
 	SpeedLimitKBps int
+	// FileNames is the naming style (see settings.FileNameStyles); filled in per download.
+	FileNames string
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
 	OpenBrowser bool
