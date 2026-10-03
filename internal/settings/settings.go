@@ -26,6 +26,7 @@ const (
 	fileNamesKey     = "file_names"
 	sponsorBlockKey  = "sponsorblock"
 	windowKey        = "download_window"
+	normalizeKey     = "normalize_audio"
 )
 
 // SponsorBlockModes: leave sponsor segments alone, mark them as chapters, or cut them out.
@@ -86,6 +87,7 @@ type Manager struct {
 	sponsorBlock string
 	window       domain.Window
 	onWindow     func() // called after the download window changes
+	normalize    bool
 	defaultDir   string
 	configured   bool
 }
@@ -147,7 +149,32 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if saved, ok, err := store.GetSetting(ctx, windowKey); err == nil && ok {
 		window, _ = domain.ParseWindow(saved)
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, window: window, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	normalize := false
+	if saved, ok, err := store.GetSetting(ctx, normalizeKey); err == nil && ok {
+		normalize = saved == "1"
+	}
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, window: window, normalize: normalize, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// NormalizeAudio reports whether converted audio (MP3, FLAC, WAV) is evened out in loudness.
+func (manager *Manager) NormalizeAudio() bool {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return manager.normalize
+}
+
+func (manager *Manager) SetNormalizeAudio(ctx context.Context, on bool) error {
+	value := "0"
+	if on {
+		value = "1"
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, normalizeKey, value); err != nil {
+		return fmt.Errorf("save loudness setting: %w", err)
+	}
+	manager.normalize = on
+	return nil
 }
 
 // DownloadWindow is when downloads may start; its zero value means any time.

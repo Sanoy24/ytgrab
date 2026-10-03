@@ -323,6 +323,7 @@ class FixtureClient {
       file_names: this.fileNames ?? 'title',
       sponsorblock: this.sponsorBlock ?? 'off',
       download_window: this.downloadWindow ?? '',
+      normalize_audio: this.normalize ?? false,
       file_name_styles: ['title', 'channel-title', 'date-title', 'channel-folder'],
       speed_limit_kbps: this.speedLimit ?? 0,
       speed_limits: [0, 500, 1000, 2000, 5000, 10000],
@@ -333,8 +334,9 @@ class FixtureClient {
     };
   }
 
-  async setPreferences({ max_downloads, default_preset, speed_limit_kbps, auto_update_ytdlp, file_names, sponsorblock, download_window }) {
+  async setPreferences({ max_downloads, default_preset, speed_limit_kbps, auto_update_ytdlp, file_names, sponsorblock, download_window, normalize_audio }) {
     await delay(200);
+    if (normalize_audio !== undefined) this.normalize = normalize_audio;
     if (download_window !== undefined) {
       this.downloadWindow = download_window;
       // The sample queue behaves as if it were outside the window whenever one is set.

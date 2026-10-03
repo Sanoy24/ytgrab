@@ -42,6 +42,12 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// normalizeSettings is implemented by settings that can even out audio loudness.
+type normalizeSettings interface {
+	NormalizeAudio() bool
+	SetNormalizeAudio(context.Context, bool) error
+}
+
 // windowSettings is implemented by settings with a download window.
 type windowSettings interface {
 	DownloadWindow() domain.Window
@@ -124,6 +130,9 @@ func settingsBody(settings Settings) map[string]any {
 	if window, ok := settings.(windowSettings); ok {
 		body["download_window"] = window.DownloadWindow().String()
 	}
+	if normalize, ok := settings.(normalizeSettings); ok {
+		body["normalize_audio"] = normalize.NormalizeAudio()
+	}
 	if names, ok := settings.(fileNameSettings); ok {
 		body["file_names"] = names.FileNames()
 		body["file_name_styles"] = settingspkg.FileNameStyles
@@ -182,6 +191,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				FileNames     *string        `json:"file_names"`
 				SponsorBlock  *string        `json:"sponsorblock"`
 				Window        *string        `json:"download_window"`
+				Normalize     *bool          `json:"normalize_audio"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -236,6 +246,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				err = window.SetDownloadWindow(r.Context(), *input.Window)
+			}
+			if err == nil && input.Normalize != nil {
+				normalize, ok := settings.(normalizeSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server has no loudness setting.")
+					return
+				}
+				err = normalize.SetNormalizeAudio(r.Context(), *input.Normalize)
 			}
 			if errors.Is(err, settingspkg.ErrInvalidPreference) {
 				writeError(w, http.StatusBadRequest, "invalid_preference", err.Error())

@@ -54,6 +54,7 @@ type Downloader struct {
 	SpeedLimit     func() int // kB/s, 0 for none
 	FileNames      func() string
 	SponsorBlock   func() string
+	NormalizeAudio func() bool
 }
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
@@ -85,6 +86,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if downloader.SponsorBlock != nil {
 		cfg.SponsorBlock = downloader.SponsorBlock()
+	}
+	if downloader.NormalizeAudio != nil {
+		cfg.NormalizeAudio = downloader.NormalizeAudio()
 	}
 	if err := checkFreeSpace(cfg.DownloadsDir); err != nil {
 		return Result{}, err
@@ -204,6 +208,11 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	}
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
 	args = append(args, sponsorBlockArgs(cfg.SponsorBlock)...)
+	if cfg.NormalizeAudio && convertsAudio(job) {
+		// EBU R128 loudness normalization while the audio is converted anyway, at the level
+		// streaming services use; M4A and Opus stay untouched copies.
+		args = append(args, "--postprocessor-args", "ExtractAudio:-af loudnorm=I=-16:TP=-1.5:LRA=11")
+	}
 	if cfg.SpeedLimitKBps > 0 {
 		args = append(args, "--limit-rate", strconv.Itoa(cfg.SpeedLimitKBps)+"K")
 	}
@@ -257,6 +266,18 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "-f", "ba", "-x", "--audio-format", "wav")
 	}
 	return append(args, "--", job.URL)
+}
+
+// convertsAudio reports presets whose audio FFmpeg re-encodes (MP3, FLAC, WAV).
+func convertsAudio(job domain.Job) bool {
+	if job.Preset == nil || job.Format != nil {
+		return false
+	}
+	switch *job.Preset {
+	case domain.AudioMP3, domain.AudioFLAC, domain.AudioWAV:
+		return true
+	}
+	return false
 }
 
 func isVideo(job domain.Job) bool {

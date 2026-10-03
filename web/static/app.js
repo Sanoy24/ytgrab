@@ -1905,6 +1905,8 @@ function saveWindow(control) {
 
 function renderPreferences(next) {
   renderFileNames(next);
+  $('#pref-normalize-row').hidden = typeof next.normalize_audio !== 'boolean';
+  $('#pref-normalize').checked = Boolean(next.normalize_audio);
   renderWindow(next);
   $('#pref-sponsor-row').hidden = typeof next.sponsorblock !== 'string';
   if (typeof next.sponsorblock === 'string') $('#pref-sponsor').value = next.sponsorblock;
@@ -2135,6 +2137,10 @@ function init() {
     );
   });
   for (const id of ['#pref-window-start', '#pref-window-end']) $(id).addEventListener('change', (e) => saveWindow(e.currentTarget));
+  $('#pref-normalize').addEventListener('change', (e) => {
+    const on = e.currentTarget.checked;
+    savePreference(e.currentTarget, { normalize_audio: on }, on ? 'MP3, FLAC, and WAV downloads will be evened out in loudness.' : 'Audio loudness will be left as it is.');
+  });
   $('#pref-sponsor').addEventListener('change', (e) => {
     const mode = e.currentTarget.value;
     savePreference(
