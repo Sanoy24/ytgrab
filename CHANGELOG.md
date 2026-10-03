@@ -2,6 +2,12 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Playlists with deleted or private videos that YouTube lists without a title queued those videos, which then failed. They are now skipped with the other unavailable videos, and Watching skips them too.
+
 ## [1.13.0] - 2026-10-03
 
 YTGrab now downloads from Vimeo, Instagram, and Reddit too, and can update itself.
