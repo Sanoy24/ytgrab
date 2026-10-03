@@ -426,3 +426,27 @@ test('lists every video of an X post with several', async ({ page }) => {
   await expect(page.locator('#playlist')).toBeHidden();
   await expect(page.locator('#video-formats')).toContainText('720p');
 });
+
+test('shows file sizes, sorts the library, and exports it', async ({ page }) => {
+  await page.goto('/?fixture=default#library');
+  const summary = page.locator('#library-summary');
+  await expect(summary).toHaveText(/^\d+ files? · [\d.]+ [KMG]B on disk$/);
+  await expect(page.locator('#history .job').first().locator('.job-meta')).toContainText(/MB/);
+
+  await page.getByLabel('Sort the library').selectOption('title');
+  const titles = await page.locator('#history .job-title').allInnerTexts();
+  expect(titles).toEqual([...titles].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true })));
+
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export CSV' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^ytgrab-library-\d{4}-\d{2}-\d{2}\.csv$/);
+  const csv = (await (await import('node:fs/promises')).readFile(await file.path(), 'utf8')).replace(/^\uFEFF/, '');
+  const lines = csv.trim().split('\r\n');
+  expect(lines[0]).toBe('Title,Site,Link,Format,State,Size (bytes),Updated,File');
+  expect(lines).toHaveLength(titles.length + 1);
+
+  // The chosen order is remembered.
+  await page.reload();
+  await expect(page.getByLabel('Sort the library')).toHaveValue('title');
+});

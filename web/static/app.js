@@ -36,6 +36,10 @@ const ERROR_HINTS = {
 
 let jobs = [];
 let historyFilter = 'all';
+// Finished downloads' files, from the server: Map(jobId -> { bytes, missing }).
+let libraryFiles = new Map();
+let historySort = 'newest';
+const HISTORY_SORT_KEY = 'ytgrab.historySort';
 let historyQuery = ''; // library search, lower case
 const pending = new Set(); // job ids with an action in flight
 
@@ -60,6 +64,7 @@ function rowKey(job) {
     job.updated_at, job.state, job.title, job.attempt, job.output_path,
     JSON.stringify(job.progress), job.priority || 0,
     formatWhen(job.updated_at), pending.has(job.id), confirmingRemove.has(job.id),
+    JSON.stringify(libraryFiles.get(job.id) || null),
     // Move to top depends on the other waiting downloads.
     job.state === 'queued' || job.state === 'paused' ? firstWaiting(job) : '',
   ].join('|');
@@ -85,12 +90,22 @@ function renderJob(job) {
   badge.textContent = STATE_LABELS[job.state] || job.state;
 
   const format = PRESET_LABELS[job.preset] || job.format?.label || job.preset || 'Custom format';
-  const meta = [format, formatWhen(job.updated_at)];
+  const when = formatWhen(job.updated_at);
+  const meta = [format, when];
   if (SITE_NAMES[job.site]) meta.unshift(SITE_NAMES[job.site]);
   if (job.section) meta.splice(1, 0, `${formatDuration(job.section.start)}–${formatDuration(job.section.end)}`);
   if (job.split_chapters) meta.splice(1, 0, 'split into chapters');
   if (job.attempt > 1) meta.push(`attempt ${job.attempt}`);
-  el.querySelector('.job-meta').textContent = meta.join(' · ');
+  const file = job.state === 'completed' ? libraryFiles.get(job.id) : null;
+  if (file && !file.missing) meta.splice(meta.indexOf(when), 0, formatBytes(file.bytes)); // before the time
+  const metaEl = el.querySelector('.job-meta');
+  metaEl.textContent = meta.join(' · ');
+  if (file?.missing) {
+    const note = document.createElement('span'); // `el` is this row here, not the helper
+    note.className = 'job-missing';
+    note.textContent = 'file moved or deleted';
+    metaEl.append(' · ', note);
+  }
 
   renderProgress(el, job);
 
@@ -474,6 +489,8 @@ function render() {
   const history = jobs
     .filter((j) => !isActive(j.state))
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  refreshLibraryFilesSoon(history);
+  renderLibrarySummary(history);
   const shown = history.filter(
     (j) =>
       (historyFilter === 'all' ? true : historyFilter === 'completed' ? j.state === 'completed' : j.state !== 'completed') &&
@@ -525,11 +542,96 @@ function render() {
       'Completed files will appear here.',
     );
   else historyEmpty = stateBlock('empty', 'No problems', 'Nothing has failed or been cancelled.');
-  fillList($('#history'), shown, historyEmpty);
+  fillList($('#history'), sortHistory(shown), historyEmpty);
 
   // Drop cached nodes for jobs that no longer exist.
   const ids = new Set(jobs.map((j) => j.id));
   for (const id of nodes.keys()) if (!ids.has(id)) nodes.delete(id);
+}
+
+const bytesOf = (job) => libraryFiles.get(job.id)?.bytes || 0;
+const SORTS = {
+  newest: (a, b) => b.updated_at.localeCompare(a.updated_at),
+  oldest: (a, b) => a.updated_at.localeCompare(b.updated_at),
+  largest: (a, b) => bytesOf(b) - bytesOf(a) || b.updated_at.localeCompare(a.updated_at),
+  title: (a, b) => jobTitle(a).localeCompare(jobTitle(b), undefined, { sensitivity: 'base', numeric: true }),
+};
+
+function sortHistory(list) {
+  return historySort === 'newest' ? list : [...list].sort(SORTS[historySort] || SORTS.newest);
+}
+
+// "12 files · 3.4 GB on disk · 1 moved or deleted", once the sizes are known.
+function renderLibrarySummary(history) {
+  const summary = $('#library-summary');
+  const files = history.map((j) => (j.state === 'completed' ? libraryFiles.get(j.id) : null)).filter(Boolean);
+  const present = files.filter((f) => !f.missing);
+  const missing = files.length - present.length;
+  summary.hidden = !files.length;
+  if (!files.length) return;
+  const total = present.reduce((sum, f) => sum + f.bytes, 0);
+  const parts = [`${present.length} file${present.length === 1 ? '' : 's'}`, `${formatBytes(total)} on disk`];
+  if (missing) parts.push(`${missing} moved or deleted`);
+  summary.textContent = parts.join(' · ');
+}
+
+// The sizes are read again when the set of finished downloads changes.
+let libraryFilesKey = null;
+let libraryFilesTimer = 0;
+function refreshLibraryFilesSoon(history) {
+  const key = history.filter((j) => j.state === 'completed').map((j) => `${j.id}:${j.output_path}`).join('|');
+  if (key === libraryFilesKey) return;
+  libraryFilesKey = key;
+  clearTimeout(libraryFilesTimer);
+  libraryFilesTimer = setTimeout(refreshLibraryFiles, 400);
+}
+
+async function refreshLibraryFiles() {
+  try {
+    const { files } = await client.libraryFiles();
+    libraryFiles = new Map(Object.entries(files || {}));
+    render();
+  } catch {
+    // Sizes are extra: the Library works without them.
+  }
+}
+
+// Saves the list as shown (search, filter, and sort applied) as a CSV file.
+function exportHistory() {
+  const shown = [...document.querySelectorAll('#history .job')].map((row) => jobs.find((j) => j.id === row.dataset.id)).filter(Boolean);
+  if (!shown.length) {
+    toast('Nothing to export.');
+    return;
+  }
+  // A leading =, +, -, or @ would make a spreadsheet run the cell as a formula.
+  const cell = (value) => {
+    let text = String(value ?? '');
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  const rows = [['Title', 'Site', 'Link', 'Format', 'State', 'Size (bytes)', 'Updated', 'File']];
+  for (const job of shown) {
+    const file = libraryFiles.get(job.id);
+    rows.push([
+      jobTitle(job),
+      SITE_NAMES[job.site] || 'YouTube',
+      job.url,
+      PRESET_LABELS[job.preset] || job.format?.label || job.preset || '',
+      STATE_LABELS[job.state] || job.state,
+      file && !file.missing ? file.bytes : '',
+      job.updated_at,
+      job.state === 'completed' ? job.output_path || '' : '',
+    ]);
+  }
+  const csv = rows.map((r) => r.map(cell).join(',')).join('\r\n');
+  // The byte order mark makes Excel read the file as UTF-8.
+  const url = URL.createObjectURL(new Blob(['\ufeff', csv, '\r\n'], { type: 'text/csv;charset=utf-8' }));
+  const link = el('a', { href: url, download: `ytgrab-library-${new Date().toISOString().slice(0, 10)}.csv` });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(`Exported ${shown.length} download${shown.length === 1 ? '' : 's'}.`);
 }
 
 function setNavLabel(view, name, count, noun) {
@@ -1925,6 +2027,23 @@ function init() {
       formatTouched = true;
       setKind(tab.dataset.kind, { pickFirst: true });
     });
+  try {
+    historySort = localStorage.getItem(HISTORY_SORT_KEY) || 'newest';
+  } catch {
+    // Storage blocked: the default order is fine.
+  }
+  if (!SORTS[historySort]) historySort = 'newest';
+  $('#history-sort').value = historySort;
+  $('#history-sort').addEventListener('change', (e) => {
+    historySort = e.currentTarget.value;
+    try {
+      localStorage.setItem(HISTORY_SORT_KEY, historySort);
+    } catch {
+      // Remembering the order is only a convenience.
+    }
+    render();
+  });
+  $('#export-history').addEventListener('click', exportHistory);
   $('#history-search').addEventListener('input', (e) => {
     historyQuery = e.currentTarget.value.trim().toLowerCase();
     render();

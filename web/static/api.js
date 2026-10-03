@@ -149,6 +149,18 @@ class FixtureClient {
     this.emit();
   }
 
+  async libraryFiles() {
+    await delay(150);
+    const files = {};
+    for (const job of this.jobs) {
+      if (job.state !== 'completed' || !job.output_path) continue;
+      // Sample sizes that stay the same between calls; one sample file has gone missing.
+      const seed = [...job.id].reduce((n, c) => n * 31 + c.charCodeAt(0), 7) % 900;
+      files[job.id] = job.output_path.includes('Gone') ? { bytes: 0, missing: true } : { bytes: (seed + 20) * 1_048_576 };
+    }
+    return { files };
+  }
+
   async clearHistory(deleteFiles = false) {
     await delay(200);
     const before = this.jobs.length;
@@ -525,6 +537,10 @@ class HttpClient {
   // Opens the system file manager at a finished download.
   revealJob(id) {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/reveal`);
+  }
+  // Sizes of finished downloads' files: { files: { [jobId]: { bytes, missing } } }.
+  libraryFiles() {
+    return this.request('GET', '/api/library/files');
   }
   // Removes a finished job from the history; with deleteFile, also deletes its file.
   deleteJob(id, deleteFile = false) {
