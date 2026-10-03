@@ -52,6 +52,7 @@ type Downloader struct {
 	CookiesBrowser func() string
 	Subtitles      func() (mode, lang string)
 	SpeedLimit     func() int // kB/s, 0 for none
+	FileNames      func() string
 }
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
@@ -77,6 +78,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if downloader.SpeedLimit != nil {
 		cfg.SpeedLimitKBps = downloader.SpeedLimit()
+	}
+	if downloader.FileNames != nil {
+		cfg.FileNames = downloader.FileNames()
 	}
 	if err := checkFreeSpace(cfg.DownloadsDir); err != nil {
 		return Result{}, err
@@ -192,7 +196,7 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		// A short pause between YouTube requests makes a download look less like a burst.
 		"--sleep-requests", "0.5",
 		"-P", cfg.DownloadsDir,
-		"-o", outputTemplate(job),
+		"-o", outputTemplate(job, cfg.FileNames),
 	}
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
 	if cfg.SpeedLimitKBps > 0 {
@@ -209,7 +213,7 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	}
 	if job.SplitChapters && job.Section == nil {
 		// The full file is kept; the chapters go into a folder named like it.
-		folder := strings.TrimSuffix(outputTemplate(job), ".%(ext)s")
+		folder := strings.TrimSuffix(outputTemplate(job, cfg.FileNames), ".%(ext)s")
 		args = append(args, "--split-chapters", "-o", "chapter:"+folder+"/%(section_number)02d %(section_title).100B.%(ext)s")
 	}
 	if job.Section != nil && job.Section.Valid() {
@@ -322,8 +326,8 @@ func cookieArgs(browser string) []string {
 
 // outputTemplate names files by quality so different picks of one video never collide;
 // otherwise yt-dlp would report an earlier quality as "already downloaded".
-func outputTemplate(job domain.Job) string {
-	name := baseTemplate(job)
+func outputTemplate(job domain.Job, style string) string {
+	name := nameStart(style) + baseTemplate(job)
 	if job.Section != nil && job.Section.Valid() {
 		// A clip never takes the full video's name.
 		name = strings.TrimSuffix(name, ".%(ext)s") + " " + job.Section.Label() + ".%(ext)s"
@@ -334,6 +338,22 @@ func outputTemplate(job domain.Job) string {
 // seconds formats a time for --download-sections, which takes plain seconds.
 func seconds(s float64) string {
 	return strconv.FormatFloat(s, 'f', -1, 64)
+}
+
+// nameStart is what comes before the title for each file-name style. yt-dlp replaces
+// path separators inside field values, so only the folder style creates a folder.
+func nameStart(style string) string {
+	const channel = "%(channel,uploader|Unknown channel).60B"
+	switch style {
+	case "channel-title":
+		return channel + " - "
+	case "date-title":
+		return "%(upload_date>%Y-%m-%d|undated)s "
+	case "channel-folder":
+		return channel + "/"
+	default:
+		return ""
+	}
 }
 
 func baseTemplate(job domain.Job) string {
