@@ -84,6 +84,8 @@ The output folder is stored in SQLite. On first run no folder is set and the pag
 
 - The server binds to loopback only and rejects requests whose `Host` is not a loopback name, which blocks DNS-rebinding pages.
 - Cross-site writes are rejected using `Origin` and `Sec-Fetch-Site`.
+- Every response carries a Content-Security-Policy that allows only the page's own files and YouTube's thumbnail server (`i.ytimg.com`) and forbids framing (`frame-ancestors 'none'`, plus `X-Frame-Options: DENY`). A framed copy of the page would make same-site requests, so this is what stops another site from disguising YTGrab's buttons under its own (clickjacking). The page builds its content with text nodes, never HTML from YouTube data.
+- Search words, watch links, and the Send to YTGrab link are data only: search words are one argument after `--`, watch links are rebuilt from validated parts, and a handed-over link only fills the link field. Opening a file uses the same ownership check as deleting it.
 - Links are validated before use; user input never becomes a yt-dlp option. Format IDs are checked against a strict pattern and a recent inspection.
 - Output paths reported by yt-dlp must resolve inside the output folder.
 - Request bodies and retained process output are size-limited.
