@@ -515,5 +515,19 @@
         <div class="job-actions"></div>
       </article>
     </template>
+    <dialog class="dialog" id="clear-dialog" aria-labelledby="clear-title" aria-describedby="clear-text">
+      <form method="dialog">
+        <h2 class="dialog-title" id="clear-title">Clear the library?</h2>
+        <p class="dialog-text" id="clear-text"></p>
+        <label class="dialog-check" id="clear-files-row">
+          <input type="checkbox" id="clear-files" />
+          <span id="clear-files-label">Also delete the downloaded files</span>
+        </label>
+        <div class="dialog-actions">
+          <button type="submit" class="btn" value="cancel" autofocus>Cancel</button>
+          <button type="submit" class="btn btn-primary" value="clear" id="clear-confirm">Clear list</button>
+        </div>
+      </form>
+    </dialog>
   </body>
 </html>

@@ -149,12 +149,14 @@ class FixtureClient {
     this.emit();
   }
 
-  async clearHistory() {
+  async clearHistory(deleteFiles = false) {
     await delay(200);
     const before = this.jobs.length;
+    const files = this.jobs.filter((j) => j.state === 'completed' && j.output_path).length;
     this.jobs = this.jobs.filter((j) => isActive(j.state));
     this.emit();
-    return { removed: before - this.jobs.length };
+    const removed = before - this.jobs.length;
+    return deleteFiles ? { removed, files_deleted: files, kept: 0 } : { removed };
   }
 
   async updateYtdlp() {
@@ -525,9 +527,11 @@ class HttpClient {
     const query = deleteFile ? '?delete_file=true' : '';
     return this.request('DELETE', `/api/jobs/${encodeURIComponent(id)}${query}`).then(this.afterChange);
   }
-  // Removes every finished, failed, and cancelled job; files are kept.
-  clearHistory() {
-    return this.request('POST', '/api/history/clear').then((result) => this.afterChange(result));
+  // Removes every finished, failed, and cancelled job. Files are kept unless deleteFiles,
+  // which resolves with { removed, files_deleted, kept }.
+  clearHistory(deleteFiles = false) {
+    const query = deleteFiles ? '?delete_files=true' : '';
+    return this.request('POST', `/api/history/clear${query}`).then((result) => this.afterChange(result));
   }
   // Installs or updates yt-dlp on the server; resolves with { version, previous, updated }.
   updateYtdlp() {

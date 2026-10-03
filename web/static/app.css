@@ -726,3 +726,22 @@ input[aria-invalid="true"] { border-color: var(--err); }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   .job-progress progress:not([value]) { background: color-mix(in srgb, var(--accent) 35%, var(--surface-3)); }
 }
+
+/* Confirmation dialog */
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+.dialog::backdrop { background: rgb(16 24 40 / 0.45); }
+.dialog-title { margin: 0 0 8px; font-size: 1.1rem; }
+.dialog-text { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+.dialog-check { display: flex; gap: 8px; align-items: flex-start; margin-top: 16px; font-size: 0.9rem; cursor: pointer; }
+.dialog-check input { margin-top: 3px; accent-color: var(--err); }
+.dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.btn.btn-destructive { background: var(--err); border-color: var(--err); color: #fff; }
+.btn.btn-destructive:hover { background: color-mix(in srgb, var(--err) 88%, black); }

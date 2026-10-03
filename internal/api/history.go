@@ -116,6 +116,15 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("POST /api/history/clear", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("delete_files") == "true" {
+			result, err := clearWithFiles(r.Context(), store, deleter)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "storage", "Could not clear the history.")
+				return
+			}
+			writeJSON(w, http.StatusOK, result)
+			return
+		}
 		removed, err := deleter.DeleteFinished(r.Context())
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "storage", "Could not clear the history.")
@@ -123,4 +132,52 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		}
 		writeJSON(w, http.StatusOK, map[string]int{"removed": removed})
 	})
+}
+
+// clearResult reports a clear that also deleted files. Kept counts finished downloads
+// whose file couldn't be deleted (open in another program, say); they stay in the list
+// so nothing is lost track of.
+type clearResult struct {
+	Removed      int `json:"removed"`
+	FilesDeleted int `json:"files_deleted"`
+	Kept         int `json:"kept"`
+}
+
+// clearWithFiles removes every finished, failed, and cancelled job, deleting each finished
+// download's file first. Only files that pass the same check as deleting one download are
+// touched; an entry whose file was already gone is still removed.
+func clearWithFiles(ctx context.Context, store JobStore, deleter jobDeleter) (clearResult, error) {
+	var result clearResult
+	kept := map[string]bool{}
+	for {
+		jobs, err := store.List(ctx, 500) // the most the store returns at once
+		if err != nil {
+			return result, err
+		}
+		progressed := false
+		for _, job := range jobs {
+			if job.State.Active() || kept[job.ID] {
+				continue
+			}
+			if path, owned := ownedOutput(job); owned {
+				if err := os.Remove(path); err == nil {
+					result.FilesDeleted++
+				} else if !errors.Is(err, os.ErrNotExist) {
+					kept[job.ID] = true
+					result.Kept++
+					continue
+				}
+			}
+			if err := deleter.Delete(ctx, job.ID); err == nil {
+				result.Removed++
+				progressed = true
+			} else if !errors.Is(err, sqlitestore.ErrConflict) && !errors.Is(err, sqlitestore.ErrNotFound) {
+				return result, err
+			}
+		}
+		// Stop once a pass removes nothing; a full page means older jobs may remain.
+		if !progressed || len(jobs) < 500 {
+			return result, nil
+		}
+	}
 }

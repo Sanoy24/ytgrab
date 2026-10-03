@@ -390,3 +390,21 @@ test('accepts an X post link', async ({ page }) => {
   await page.locator('#submit').click();
   await expect(page.locator('#queue .job')).toHaveCount(1);
 });
+
+test('clears the library, optionally deleting the files', async ({ page }) => {
+  await page.goto('/?fixture=default#library');
+  await expect(page.locator('#history .job')).toHaveCount(5);
+  await page.locator('#clear-history').click();
+  const dialog = page.getByRole('dialog', { name: 'Clear the library?' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Clear list' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('#history .job')).toHaveCount(5);
+
+  await page.locator('#clear-history').click();
+  await dialog.getByLabel(/Also delete/).check();
+  await dialog.getByRole('button', { name: /^Clear and delete files?$/ }).click();
+  await expect(page.locator('#toast')).toContainText(/Removed 5 entries and deleted \d+ files?\./);
+  await expect(page.locator('#history .job')).toHaveCount(0);
+});
