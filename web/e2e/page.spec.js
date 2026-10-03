@@ -372,3 +372,11 @@ test('searches YouTube from the link field', async ({ page }) => {
   await input.press('Enter');
   await expect(page.locator('#search-results')).toContainText('Nothing found');
 });
+
+test('evens out loudness of converted audio', async ({ page }) => {
+  await page.goto('/?fixture=empty#settings');
+  const toggle = page.getByLabel('Even out loudness');
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  await expect(page.locator('#toast')).toContainText('evened out in loudness');
+});

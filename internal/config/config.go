@@ -34,6 +34,8 @@ type Config struct {
 	FileNames string
 	// SponsorBlock is "off", "mark", or "remove"; filled in per download.
 	SponsorBlock string
+	// NormalizeAudio evens out loudness of converted audio; filled in per download.
+	NormalizeAudio bool
 	// Version and OpenBrowser come from the command line, not the environment.
 	Version     string
 	OpenBrowser bool
