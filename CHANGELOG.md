@@ -6,6 +6,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Fixed
 
+- **Split into chapters.** For videos with chapters, also save each chapter as its own numbered file, in a folder next to the full download.
 - **Cover art for Opus and FLAC.** Like M4A and MP3, they now get the video's thumbnail as cover art.
 - **Accessibility.** Small grey text now meets WCAG contrast in both themes, a "Skip to the link field" link helps keyboard users, navigation buttons read naturally to screen readers ("Library, 5 downloads"), and screen readers announce finished and failed downloads instead of every progress update.
 - **Faster with a long history.** Unchanged downloads are no longer redrawn every second while something downloads.

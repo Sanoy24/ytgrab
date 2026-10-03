@@ -131,6 +131,7 @@ function renderJob(job) {
   const format = PRESET_LABELS[job.preset] || job.format?.label || job.preset || 'Custom format';
   const meta = [format, formatWhen(job.updated_at)];
   if (job.section) meta.splice(1, 0, `${formatDuration(job.section.start)}–${formatDuration(job.section.end)}`);
+  if (job.split_chapters) meta.splice(1, 0, 'split into chapters');
   if (job.attempt > 1) meta.push(`attempt ${job.attempt}`);
   el.querySelector('.job-meta').textContent = meta.join(' · ');
 
@@ -976,7 +977,15 @@ function setClipError(message) {
   $('#clip-error').hidden = !message;
 }
 
+// Offered only for an inspected video that has chapters.
+function renderSplitOption(chapters) {
+  $('#split-row').hidden = !chapters;
+  $('#split-label').textContent = `Also save each of the ${chapters} chapters as its own file`;
+  if (!chapters) $('#split-chapters').checked = false;
+}
+
 function resetClip() {
+  renderSplitOption(0);
   $('#clip-start').value = '';
   $('#clip-end').value = '';
   $('#clip').open = false;
@@ -1024,7 +1033,12 @@ async function onSubmit(e) {
   if (section === false) return;
   const [kind, value] = String(new FormData(e.target).get('choice')).split(':');
   const body = kind === 'preset' ? { preset: value } : { format: { kind, id: value } };
+  if (section && $('#split-chapters').checked) {
+    setClipError('Choose part of the video or splitting it into chapters, not both.');
+    return;
+  }
   if (section) body.section = section;
+  else if ($('#split-chapters').checked) body.split_chapters = true;
   const button = $('#submit');
   button.disabled = true;
   button.textContent = 'Adding…';
@@ -1150,7 +1164,7 @@ async function inspect(url) {
   setInspectStatus(el('span', { className: 'spinner' }), 'Checking available formats…');
   try {
     const info = await client.inspect(url, { signal: ctl.signal });
-    const grouped = { ...groupFormats(info), title: info.title, duration: info.duration_seconds };
+    const grouped = { ...groupFormats(info), title: info.title, duration: info.duration_seconds, chapters: info.chapters || 0 };
     inspections.set(url, { grouped, at: Date.now() });
     if (ctl.signal.aborted) return null;
     showFormats(grouped, selectedChoice());
@@ -1232,8 +1246,10 @@ function showFormats(grouped, previous) {
   $('#format-choices').hidden = false;
   syncKind();
 
+  renderSplitOption(grouped.chapters);
   const meta = [
     formatDuration(grouped.duration),
+    grouped.chapters ? `${grouped.chapters} chapters` : '',
     `${video.length} video · ${audio.length} audio options`,
   ]
     .filter(Boolean)

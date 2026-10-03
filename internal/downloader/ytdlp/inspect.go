@@ -37,6 +37,7 @@ type Inspection struct {
 	VideoID         string   `json:"video_id"`
 	Title           string   `json:"title"`
 	DurationSeconds *float64 `json:"duration_seconds"`
+	Chapters        int      `json:"chapters"` // how many chapters the creator marked
 	Video           []Format `json:"video"`
 	Audio           []Format `json:"audio"`
 }
@@ -244,10 +245,11 @@ func (inspector *Inspector) runJSON(ctx context.Context, path string, args []str
 
 func parseInspection(data []byte, expectedID string) (Inspection, error) {
 	var raw struct {
-		ID       string   `json:"id"`
-		Title    string   `json:"title"`
-		Duration *float64 `json:"duration"`
-		Formats  []Format `json:"formats"`
+		ID       string     `json:"id"`
+		Title    string     `json:"title"`
+		Duration *float64   `json:"duration"`
+		Chapters []struct{} `json:"chapters"`
+		Formats  []Format   `json:"formats"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return Inspection{}, &Error{Code: "download_failed", Message: "yt-dlp returned invalid format information."}
@@ -255,7 +257,7 @@ func parseInspection(data []byte, expectedID string) (Inspection, error) {
 	if raw.ID != expectedID {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected video did not match the requested link."}
 	}
-	result := Inspection{VideoID: raw.ID, Title: raw.Title, DurationSeconds: raw.Duration, Video: []Format{}, Audio: []Format{}}
+	result := Inspection{VideoID: raw.ID, Title: raw.Title, DurationSeconds: raw.Duration, Chapters: len(raw.Chapters), Video: []Format{}, Audio: []Format{}}
 	for _, format := range raw.Formats {
 		if !(domain.FormatSelection{Kind: "video", ID: format.ID}).Valid() {
 			continue

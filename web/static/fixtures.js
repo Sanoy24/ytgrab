@@ -171,6 +171,7 @@ const a = (format_id, ext, acodec, abr, mb, language = 'en') => ({
 });
 
 export const inspection = {
+  chapters: 12,
   video_id: 'dQw4w9WgXcQ',
   title: 'Building a local-first download manager in Go — full walkthrough',
   duration_seconds: 1325,

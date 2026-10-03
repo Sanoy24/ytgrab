@@ -207,6 +207,11 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	if isVideo(job) {
 		args = append(args, subtitleArgs(cfg.SubtitlesMode, cfg.SubtitlesLang)...)
 	}
+	if job.SplitChapters && job.Section == nil {
+		// The full file is kept; the chapters go into a folder named like it.
+		folder := strings.TrimSuffix(outputTemplate(job), ".%(ext)s")
+		args = append(args, "--split-chapters", "-o", "chapter:"+folder+"/%(section_number)02d %(section_title).100B.%(ext)s")
+	}
 	if job.Section != nil && job.Section.Valid() {
 		// Exact cuts re-encode just the start and end; without them the clip would begin at
 		// the nearest keyframe, often seconds early.
