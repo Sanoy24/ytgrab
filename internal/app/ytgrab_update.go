@@ -46,6 +46,8 @@ func updateCommand(exe, goos string) string {
 	switch {
 	case strings.Contains(path, "/scoop/apps/ytgrab/"):
 		return "scoop update ytgrab"
+	case strings.Contains(path, "/winget/packages/sanoy24.ytgrab_"):
+		return "winget upgrade Sanoy24.YTGrab"
 	case strings.Contains(path, "/cellar/ytgrab/"):
 		return "brew upgrade ytgrab"
 	case strings.Contains(path, "/.local/share/ytgrab/") && goos != "windows":

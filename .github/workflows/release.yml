@@ -141,3 +141,24 @@ jobs:
           }
           publish homebrew-tap Formula/ytgrab.rb
           publish scoop-bucket bucket/ytgrab.json
+
+  # Sends each stable release to winget (microsoft/winget-pkgs) as a pull request, which
+  # Microsoft's pipeline checks and merges. Works once YTGrab is in winget. Needs a
+  # WINGET_TOKEN secret: a classic token with the public_repo scope, used by wingetcreate to
+  # fork winget-pkgs and open the pull request. Without it the job is skipped.
+  winget:
+    needs: release
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: windows-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Send the new version to winget
+        if: env.WINGET_TOKEN != ''
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $zip = "https://github.com/${{ github.repository }}/releases/download/v$version/ytgrab-$version-windows-amd64.zip"
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          ./wingetcreate.exe update Sanoy24.YTGrab --version $version --urls $zip --submit --token $env:WINGET_TOKEN
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
