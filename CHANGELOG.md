@@ -2,7 +2,9 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.13.0] - 2026-10-03
+
+YTGrab now downloads from Vimeo, Instagram, and Reddit too, and can update itself.
 
 ### Added
 
@@ -16,7 +18,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 ### Changed
 
 - Deleting a download's file also deletes its chapter files from **Split into chapters**, and their folder when nothing else is in it.
-- The **Send to YTGrab** bookmark says it works on X posts too.
+- The **Send to YTGrab** bookmark works on Vimeo, X, Reddit, and Instagram pages too.
 
 ### Fixed
 
@@ -162,6 +164,7 @@ YTGrab now downloads from X (Twitter) too.
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.13.0]: https://github.com/Sanoy24/ytgrab/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/Sanoy24/ytgrab/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/Sanoy24/ytgrab/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/Sanoy24/ytgrab/compare/v1.9.0...v1.10.0
