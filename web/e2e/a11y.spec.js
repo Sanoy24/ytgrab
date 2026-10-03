@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 
 // Automated accessibility checks (WCAG 2.1 A and AA) for every view, in both themes.
 for (const scheme of ['light', 'dark']) {
-  for (const view of ['download', 'library', 'settings']) {
+  for (const view of ['download', 'library', 'watching', 'settings']) {
     test(`${view} view has no accessibility violations (${scheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto(`/?fixture=default#${view}`);

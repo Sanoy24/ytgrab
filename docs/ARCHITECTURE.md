@@ -48,6 +48,7 @@ internal/setup/              "ytgrab setup": tool installation
 internal/store/sqlite/       persistence and migrations
 internal/tray/               tray / menu-bar icon, menu, notifications
 internal/trayhost/           whether this desktop can show a tray icon
+internal/watch/              watched channels and playlists, and their checks
 web/static/                  the browser UI
 ```
 
@@ -105,6 +106,10 @@ Started from a shortcut on Windows (detected by owning its console), YTGrab star
 Start at login writes a per-user entry that runs YTGrab without `--open`, so it waits in the tray: the `Run` registry key on Windows, `~/.config/autostart/ytgrab.desktop` on Linux, and a Login Agent plist on macOS. Each start re-points an existing entry at the running program, so moving it or a package-manager update doesn't break it.
 
 The page can also be reached through the **Send to YTGrab** bookmark, which opens `/?url=<the YouTube page>`. The page only puts that link in the field; nothing is queued until the user presses Add, so another site can't queue downloads this way.
+
+## Watched channels and playlists
+
+`internal/watch` follows channels (their uploads tab) and playlists. A watch stores its canonical URL, format, and folder choice; `watch_seen` records every video ID it has seen. Adding a watch lists the source once and marks everything listed as seen, so only videos that appear later are downloaded (plus an optional backfill of the newest 0–10). A background loop wakes every 15 minutes and checks, one at a time, the unpaused watches last checked 6 or more hours ago: it lists the newest 30 uploads (or up to 500 playlist entries) with `--flat-playlist`, through the inspector's throttle and the YouTube pause, and queues unseen videos oldest first, at most 25 per check. A check that YouTube blocks stops the round and isn't recorded against the watch; other failures are shown on it. Jobs are created like playlist jobs (server-built URLs, `SafeFolderName` folders), so the rest of the pipeline is unchanged.
 
 ## Processes, cancellation, and shutdown
 

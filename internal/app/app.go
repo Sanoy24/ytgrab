@@ -22,6 +22,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/queue"
 	"github.com/Sanoy24/ytgrab/internal/settings"
 	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/watch"
 )
 
 // Run serves the local API until ctx is cancelled, then drains active requests.
@@ -94,6 +95,15 @@ type serverSettings struct {
 	*ytdlpUpdater
 	*ytgrabUpdates
 	loginStart
+	watches *watch.Service
+}
+
+// Watches offers the watched channels and playlists to the API (nil until serve starts it).
+func (s serverSettings) Watches() api.Watcher {
+	if s.watches == nil {
+		return nil
+	}
+	return s.watches
 }
 
 // loginStart offers the Windows sign-in entry to the settings page.
@@ -113,6 +123,19 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 	}
 	if shared, ok := controller.(interface{ Cooldown() *cooldown.Gate }); ok {
 		inspector.Cooldown = shared.Cooldown()
+	}
+	// Watched channels share the inspector, so all YouTube listings go through one throttle
+	// and the same pause when YouTube limits the network.
+	if full, ok := store.(watch.Store); ok && len(settings) != 0 {
+		if app, ok := settings[0].(serverSettings); ok {
+			wake := func() {}
+			if controller != nil {
+				wake = controller.Wake
+			}
+			app.watches = watch.New(full, inspector, wake, output)
+			settings[0] = app
+			go app.watches.Run(ctx)
+		}
 	}
 	latest := func() string { return "" }
 	if len(settings) != 0 {

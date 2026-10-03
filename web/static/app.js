@@ -578,7 +578,7 @@ function setNavLabel(view, name, count, noun) {
 
 // ---------- views ----------
 
-const VIEWS = ['download', 'library', 'settings'];
+const VIEWS = ['download', 'library', 'watching', 'settings'];
 let currentView = 'download';
 
 function showView(name, { focus = false } = {}) {
@@ -593,6 +593,7 @@ function showView(name, { focus = false } = {}) {
   if (location.hash !== hash) history.replaceState(null, '', hash || location.pathname + location.search);
   $('#main').scrollTop = 0;
   if (focus) $(`#view-${name} h2`)?.focus?.();
+  if (name === 'watching') loadWatches();
   renderNow(jobs.filter((j) => isActive(j.state)));
 }
 
@@ -617,6 +618,132 @@ function renderNow(queue) {
     .filter(Boolean)
     .join(' · ');
   $('#now-fill').style.width = `${pct ?? (first.state === 'processing' ? 100 : 0)}%`;
+}
+
+// ---------- watching ----------
+
+let watchInfo = null; // { watches, interval_hours, ... }
+const watchBusy = new Set();
+
+async function loadWatches() {
+  try {
+    watchInfo = await client.listWatches();
+  } catch (err) {
+    if (err.code === 'not_available') return; // older server
+    $('#watch-list').replaceChildren(stateBlock('error', "Couldn't load watched channels", err.message));
+    return;
+  }
+  renderWatches();
+}
+
+function renderWatches() {
+  const list = $('#watch-list');
+  list.setAttribute('aria-busy', 'false');
+  const watches = watchInfo?.watches || [];
+  const active = watches.filter((w) => !w.paused).length;
+  $('#watching-nav-count').textContent = active || '';
+  setNavLabel('watching', 'Watching', active, active === 1 ? 'channel or playlist' : 'channels and playlists');
+  if (watchInfo?.interval_hours) {
+    $('#watching-sub').textContent = `YTGrab checks these every ${watchInfo.interval_hours} hours while it's running and downloads new videos as they appear.`;
+  }
+  if (!watches.length) {
+    list.replaceChildren(stateBlock('empty', 'Not watching anything yet', 'Add a channel or playlist above, and its new videos will download by themselves.'));
+    return;
+  }
+  list.replaceChildren(
+    ...watches.map((w) => {
+      const meta = [
+        w.kind === 'channel' ? 'Channel' : 'Playlist',
+        PRESET_LABELS[w.preset] || w.preset,
+        w.paused ? 'paused' : w.last_checked ? `checked ${formatWhen(w.last_checked)}` : 'not checked yet',
+        w.downloaded ? `${w.downloaded} downloaded` : '',
+      ].filter(Boolean);
+      const busy = watchBusy.has(w.id);
+      const button = (action, label) => {
+        const b = el('button', { type: 'button', className: 'act', title: label, disabled: busy });
+        b.dataset.watchAction = action;
+        b.setAttribute('aria-label', `${label}: ${w.title}`);
+        b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[action === 'check' ? 'retry' : action === 'unpause' ? 'resume' : action === 'pause' ? 'pause' : 'remove']}</svg>`;
+        return b;
+      };
+      const card = el(
+        'article',
+        { className: 'watch' },
+        el('div', { className: 'watch-avatar', textContent: (w.title || '?').trim().charAt(0).toUpperCase() }),
+        el(
+          'div',
+          { className: 'watch-main' },
+          el('h3', { className: 'watch-title' }, el('span', { textContent: w.title, title: w.url })),
+          el('p', { className: 'watch-meta', textContent: meta.join(' · ') }),
+          ...(w.last_error ? [el('p', { className: 'watch-error', textContent: w.last_error })] : []),
+        ),
+        el('div', { className: 'watch-actions-row' }, button('check', 'Check now'), button(w.paused ? 'unpause' : 'pause', w.paused ? 'Resume watching' : 'Pause watching'), button('remove', 'Stop watching')),
+      );
+      card.dataset.id = w.id;
+      if (w.paused) card.dataset.paused = 'true';
+      return card;
+    }),
+  );
+}
+
+async function onWatchAction(id, action) {
+  const watch = watchInfo?.watches.find((w) => w.id === id);
+  if (!watch) return;
+  if (action === 'remove' && !confirm(`Stop watching ${watch.title}? Videos it already downloaded are kept.`)) return;
+  watchBusy.add(id);
+  renderWatches();
+  try {
+    if (action === 'check') {
+      const checked = await client.checkWatch(id);
+      toast(checked.last_new ? `Found ${checked.last_new} new video${checked.last_new === 1 ? '' : 's'} and added ${checked.last_new === 1 ? 'it' : 'them'} to the queue.` : `No new videos from ${watch.title}.`);
+    } else if (action === 'remove') {
+      await client.deleteWatch(id);
+      toast(`Stopped watching ${watch.title}.`);
+    } else {
+      const paused = action === 'pause';
+      await client.updateWatch(id, { paused });
+      toast(paused ? `Paused watching ${watch.title}.` : `Watching ${watch.title} again.`);
+    }
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    watchBusy.delete(id);
+    await loadWatches();
+  }
+}
+
+async function onWatchSubmit(e) {
+  e.preventDefault();
+  const url = $('#watch-url').value.trim();
+  const error = $('#watch-error');
+  if (!url) {
+    error.textContent = 'Paste a link to a YouTube channel or playlist first.';
+    error.hidden = false;
+    return;
+  }
+  const button = $('#watch-add');
+  button.disabled = true;
+  button.textContent = 'Reading the channel…';
+  error.hidden = true;
+  try {
+    const watch = await client.addWatch({
+      url,
+      preset: $('#watch-preset').value,
+      folder: $('#watch-folder').checked,
+      backfill: Number($('#watch-backfill').value),
+    });
+    $('#watch-url').value = '';
+    toast(watch.last_new ? `Watching ${watch.title}. Added ${watch.last_new} video${watch.last_new === 1 ? '' : 's'} to the queue.` : `Watching ${watch.title}. New videos will download as they appear.`);
+    if (!client.isFixture) jobs = await client.listJobs();
+    render();
+    await loadWatches();
+  } catch (err) {
+    error.textContent = err.message;
+    error.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Start watching';
+  }
 }
 
 // ---------- video / audio switch ----------
@@ -1894,6 +2021,13 @@ function init() {
     render();
   });
   setupPasteAndDrop();
+  $('#watch-form').addEventListener('submit', onWatchSubmit);
+  $('#watch-url').addEventListener('input', () => ($('#watch-error').hidden = true));
+  $('#watch-list').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-watch-action]');
+    if (b) onWatchAction(b.closest('.watch').dataset.id, b.dataset.watchAction);
+  });
+  setInterval(() => currentView === 'watching' && loadWatches(), 60_000);
   setupSendBookmark();
   $('#signin-browser').addEventListener('change', onSignInChange);
   $('#pref-login').addEventListener('change', onStartAtLoginChange);
@@ -1998,6 +2132,7 @@ function init() {
   loadSettings();
   loadJobs();
   loadVersion();
+  loadWatches(); // for the sidebar count
   takeLinkFromAddress();
   setInterval(loadVersion, 6 * 60 * 60 * 1000); // the server checks GitHub at most daily
 }

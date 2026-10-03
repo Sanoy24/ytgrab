@@ -72,6 +72,49 @@ class FixtureClient {
     this.pausedUntil = null;
   }
 
+  async listWatches() {
+    await delay(150);
+    this.watches ??= this.scenario === 'empty' ? [] : structuredClone(fx.watches);
+    return { watches: structuredClone(this.watches), interval_hours: 6, max_backfill: 10, max_per_check: 25 };
+  }
+
+  async addWatch({ url, preset, folder, backfill }) {
+    await delay(700);
+    this.watches ??= [];
+    const m = /youtube\.com\/(@[\w.-]{3,30})/.exec(url) || /[?&]list=([\w-]{10,64})/.exec(url);
+    if (!m) throw new ApiError('invalid_url', 'Paste a link to a YouTube channel (like youtube.com/@name) or a playlist.');
+    const kind = m[1].startsWith('@') ? 'channel' : 'playlist';
+    const canonical = kind === 'channel' ? `https://www.youtube.com/${m[1]}/videos` : `https://www.youtube.com/playlist?list=${m[1]}`;
+    if (this.watches.some((w) => w.url === canonical)) throw new ApiError('watch_exists', 'YTGrab is already watching this channel or playlist.');
+    const at = new Date().toISOString();
+    const watch = {
+      id: `watch_${this.nextId++}`, kind, url: canonical, title: kind === 'channel' ? m[1].slice(1) : 'Saved playlist',
+      preset, folder, paused: false, created_at: at, last_checked: at, last_new: backfill, downloaded: backfill,
+    };
+    this.watches.push(watch);
+    return structuredClone(watch);
+  }
+
+  async checkWatch(id) {
+    await delay(500);
+    const watch = this.watches.find((w) => w.id === id);
+    if (!watch) throw new ApiError('not_found', "That channel or playlist isn't being watched.");
+    Object.assign(watch, { last_checked: new Date().toISOString(), last_new: 0, last_error: undefined });
+    return structuredClone(watch);
+  }
+
+  async updateWatch(id, body) {
+    await delay(150);
+    const watch = this.watches.find((w) => w.id === id);
+    Object.assign(watch, body);
+    return structuredClone(watch);
+  }
+
+  async deleteWatch(id) {
+    await delay(150);
+    this.watches = this.watches.filter((w) => w.id !== id);
+  }
+
   async openJob(id) {
     await delay(200);
     const job = this.jobs.find((j) => j.id === id);
@@ -422,6 +465,24 @@ class HttpClient {
       this.pausedUntil = r.paused_until ?? null;
       return r.jobs ?? r;
     });
+  }
+  // Watched channels and playlists: { watches, interval_hours, max_backfill, max_per_check }.
+  listWatches() {
+    return this.request('GET', '/api/watches');
+  }
+  // { url, preset, folder, backfill }: lists the channel now, so it can take a few seconds.
+  addWatch(body) {
+    return this.request('POST', '/api/watches', body);
+  }
+  checkWatch(id) {
+    return this.request('POST', `/api/watches/${encodeURIComponent(id)}/check`).then(this.afterChange);
+  }
+  // Any of { preset, folder, paused }.
+  updateWatch(id, body) {
+    return this.request('PUT', `/api/watches/${encodeURIComponent(id)}`, body);
+  }
+  deleteWatch(id) {
+    return this.request('DELETE', `/api/watches/${encodeURIComponent(id)}`);
   }
   // Opens a finished download with its default app.
   openJob(id) {

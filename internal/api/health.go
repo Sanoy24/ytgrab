@@ -53,6 +53,11 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 		if reporter, ok := settings[0].(VersionReporter); ok {
 			addVersionRoute(mux, reporter)
 		}
+		if provider, ok := settings[0].(watchProvider); ok {
+			if watches := provider.Watches(); watches != nil {
+				addWatchRoutes(mux, watches)
+			}
+		}
 	}
 	return protectLocalAPI(mux)
 }
