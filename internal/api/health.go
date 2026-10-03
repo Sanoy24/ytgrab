@@ -62,5 +62,5 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 			}
 		}
 	}
-	return protectLocalAPI(mux)
+	return secureHeaders(protectLocalAPI(mux))
 }

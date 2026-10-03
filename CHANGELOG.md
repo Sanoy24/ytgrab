@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Security
+
+- The page can no longer be shown inside another website's frame, which a site could otherwise use to trick you into clicking YTGrab's buttons. A Content-Security-Policy also limits the page to its own files and YouTube's thumbnails.
+
 ### Added
 
 - **Even out loudness.** MP3, FLAC, and WAV downloads can be brought to a similar volume.
