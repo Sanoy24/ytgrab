@@ -2,7 +2,9 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.14.0] - 2026-10-04
+
+A browser extension, Vimeo watching, and backups.
 
 ### Added
 
@@ -183,6 +185,7 @@ YTGrab now downloads from X (Twitter) too.
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.14.0]: https://github.com/Sanoy24/ytgrab/compare/v1.13.1...v1.14.0
 [1.13.1]: https://github.com/Sanoy24/ytgrab/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/Sanoy24/ytgrab/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/Sanoy24/ytgrab/compare/v1.11.0...v1.12.0
