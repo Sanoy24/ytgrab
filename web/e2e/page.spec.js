@@ -470,3 +470,14 @@ test('installs a YTGrab update when this copy can update itself', async ({ page 
   await expect(page.locator('#toast')).toContainText('YTGrab 1.8.0 is installed.');
   await expect(banner).toBeHidden();
 });
+
+test('restores a backup file and refuses other files', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  await expect(page.getByText('Save a backup')).toBeVisible();
+  const file = page.locator('#backup-file');
+  await file.setInputFiles({ name: 'notes.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') });
+  await expect(page.locator('#backup-result')).toHaveText("This isn't a YTGrab backup file.");
+  const backup = { format: 'ytgrab-backup', version: 1, settings: {}, watches: [{ watch: { url: 'https://vimeo.com/channels/staffpicks' } }], jobs: [{}, {}] };
+  await file.setInputFiles({ name: 'ytgrab-backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+  await expect(page.locator('#backup-result')).toHaveText('Added 1 watch and 2 Library entries.');
+});

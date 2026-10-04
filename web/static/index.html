@@ -499,6 +499,16 @@
               </p>
             </div>
           </section>
+          <section class="card settings-card">
+            <h3 class="card-title">Back up and restore</h3>
+            <p class="card-desc">Save your settings, watched channels, and Library to a file, then restore it after reinstalling or on another computer. Restoring adds to what's here; nothing is removed.</p>
+            <div class="backup-row">
+              <a class="btn btn-small" id="backup-save" href="/api/backup" download>Save a backup</a>
+              <label class="btn btn-small backup-pick" for="backup-file">Restore from a file…</label>
+              <input type="file" id="backup-file" accept=".json,application/json" class="visually-hidden" />
+            </div>
+            <p class="hint pref-hint" id="backup-result" role="status"></p>
+          </section>
           </div>
         </section>
       </main>

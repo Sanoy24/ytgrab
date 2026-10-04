@@ -30,6 +30,8 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `POST` | `/api/jobs/{id}/open` | Open a finished download's own file with its default app (`204`; `file_missing` if it was moved) |
 | `POST` | `/api/jobs/{id}/reveal` | Show a finished file in the system file manager (`204`; `file_missing` if it was moved) |
 | `DELETE` | `/api/jobs/{id}` | Remove a finished, failed, or cancelled job from the history; `?delete_file=true` also deletes a finished job's file |
+| `GET` | `/api/backup` | A backup file (`format: "ytgrab-backup"`, `version: 1`): `settings`, `watches: [{ watch, seen }]`, and the finished, failed, and cancelled `jobs` |
+| `POST` | `/api/backup/restore` | Merge a backup: `{ watches_added, watches_existing, jobs_added, jobs_existing, jobs_invalid, settings_skipped }`; `invalid_backup` for other files or a newer format |
 | `GET` | `/api/library/files` | `{ files: { [job id]: { bytes, missing } } }` for finished downloads: each file's size now, or `missing: true` when it was moved or deleted |
 | `POST` | `/api/history/clear` | Remove all finished, failed, and cancelled jobs, `{ "removed": 3 }`; files are kept. `?delete_files=true` also deletes each finished job's file (same check as `delete_file`) and returns `{ "removed", "files_deleted", "kept" }`; `kept` jobs stay because their file couldn't be deleted |
 | `GET` | `/api/inspect?url=…` | A video's formats, grouped into video and audio |

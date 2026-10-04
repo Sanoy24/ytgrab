@@ -146,3 +146,21 @@ func markSeen(ctx context.Context, db execer, watchID string, videoIDs []string)
 	}
 	return nil
 }
+
+// SeenIDs returns every video ID the watch has seen, for a backup.
+func (store *Store) SeenIDs(ctx context.Context, watchID string) ([]string, error) {
+	rows, err := store.db.QueryContext(ctx, "SELECT video_id FROM watch_seen WHERE watch_id=? ORDER BY video_id", watchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
