@@ -481,3 +481,9 @@ test('restores a backup file and refuses other files', async ({ page }) => {
   await file.setInputFiles({ name: 'ytgrab-backup.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
   await expect(page.locator('#backup-result')).toHaveText('Added 1 watch and 2 Library entries.');
 });
+
+test('says at once when a handed-over link is not a video', async ({ page }) => {
+  await page.goto(`/?fixture=empty&url=${encodeURIComponent('https://x.com/home')}`);
+  await expect(page.locator('#url')).toHaveValue('https://x.com/home');
+  await expect(page.locator('#url-error')).toContainText("doesn't point to a post");
+});

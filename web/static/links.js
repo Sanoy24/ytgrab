@@ -83,7 +83,7 @@ export function validateUrl(raw) {
   const host = u.hostname.toLowerCase();
   if (X_HOSTS.has(host)) {
     const match = u.pathname.match(/\/status\/(\d{5,20})(?:\/video\/(\d+))?(?:\/|$)/);
-    if (!match) return { error: "This X link doesn't point to a post. Open the post and copy its link." };
+    if (!match) return { error: "This X link doesn't point to a post. Open the post, or right-click its date and send or copy that link." };
     // /video/N picks one video of a post with several; the first is the post itself.
     const n = Number(match[2]);
     const index = n >= 2 && n <= 4 ? n : 1;

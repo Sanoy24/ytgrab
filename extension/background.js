@@ -32,9 +32,23 @@ async function clearProblem() {
   await api.action.setTitle({ title: 'Download with YTGrab' });
 }
 
+// X's timeline and profiles hold many posts, so their address isn't any one post's.
+function notAPost(address) {
+  try {
+    const { hostname, pathname } = new URL(address);
+    return /(^|\.)(x|twitter)\.com$/i.test(hostname) && !/\/status\/\d+/.test(pathname);
+  } catch {
+    return false;
+  }
+}
+
 async function send(address) {
   if (!/^https?:\/\//i.test(address || '')) {
     await showProblem('Open a video page first, then click Download with YTGrab.');
+    return;
+  }
+  if (notAPost(address)) {
+    await showProblem("This is X's timeline, not a post. Right-click the post's date (like \"Oct 2\") and choose Download link with YTGrab, or open the post first.");
     return;
   }
   const root = await base();

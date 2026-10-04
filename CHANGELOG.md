@@ -2,6 +2,12 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Sending X's timeline (`x.com/home`) with the extension opened YTGrab with a link it can't download and no explanation. The extension now says to right-click the post's date instead, and YTGrab explains a handed-over link it can't use straight away.
+
 ## [1.14.0] - 2026-10-04
 
 A browser extension, Vimeo watching, and backups.
