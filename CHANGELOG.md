@@ -2,6 +2,12 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Scrolling past the end of Settings could slide the whole window up, leaving a black band at the bottom. A hidden file picker stretched the page; it now stays in its row.
+
 ## [1.16.0] - 2026-10-04
 
 ### Changed

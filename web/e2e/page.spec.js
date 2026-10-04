@@ -502,3 +502,14 @@ test('shows versions in About and checks for updates', async ({ page }) => {
   await about.getByRole('button', { name: 'Check for updates' }).click();
   await expect(page.locator('#toast')).toContainText('YTGrab 1.8.0 is available.');
 });
+
+test('only the content scrolls: the page never grows past the window', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 800 });
+  for (const view of ['download', 'library', 'watching', 'settings']) {
+    await page.goto(`/?fixture=default#${view}`);
+    await expect(page.locator(`#view-${view}`)).toBeVisible();
+    await page.waitForTimeout(300);
+    const extra = await page.evaluate(() => document.scrollingElement.scrollHeight - window.innerHeight);
+    expect(extra, `${view} view`).toBeLessThanOrEqual(0);
+  }
+});
