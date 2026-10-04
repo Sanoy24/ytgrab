@@ -6,7 +6,7 @@ A local YouTube, Vimeo, X (Twitter), Reddit, and Instagram video downloader with
 [![Go](https://img.shields.io/github/go-mod/go-version/Sanoy24/ytgrab)](go.mod)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-![YTGrab's Download page: a pasted YouTube link with its thumbnail, quality choices, and the queue below](docs/images/screenshot.png)
+![YTGrab's Download page: a pasted link with its thumbnail, the video's real qualities and sizes, and the queue below](docs/images/screenshot.png)
 
 ## Features
 
