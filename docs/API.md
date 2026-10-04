@@ -10,7 +10,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | --- | --- | --- |
 | `GET` | `/api/system/health` | Tool status |
 | `POST` | `/api/system/update-ytdlp` | Install or update yt-dlp in YTGrab's tools folder |
-| `GET` | `/api/system/version` | `{ version, latest, update_available, update_command, can_update, release_url }`; `?refresh=1` looks for a new release right away (at most every 30 seconds) |
+| `GET` | `/api/system/version` | `{ version, latest, update_available, update_command, can_update, release_url }`; `latest` is checked against GitHub every 6 hours, and again when the page asks and the last check is over an hour old; `?refresh=1` checks right away (at most every 30 seconds). `update_command` is empty for copies unpacked from a zip |
 | `POST` | `/api/system/update-ytgrab` | Install the latest YTGrab over this copy when `GET /api/system/version` says `can_update`; answers `{ version, restarting: true }`, then YTGrab restarts. Errors: `no_update`, `downloads_running`, `update_busy`, `update_failed` |
 | `POST` | `/api/system/resume` | End a pause after YouTube limited this network (`204`) |
 | `GET` | `/api/jobs` | Recent jobs, `{ "jobs": [Job] }` |
@@ -42,7 +42,6 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | `PUT` | `/api/settings` | Set the output folder to a typed path |
 | `POST` | `/api/settings/pick-folder` | Open the folder window on this computer |
 | `PUT` | `/api/settings/preferences` | Set `max_downloads` (1–4) and/or `default_preset`; applies immediately |
-| `GET` | `/api/system/version` | `{ version, latest, update_available, update_command, release_url }`; `latest` is checked against GitHub at most once a day, and `update_command` is empty for copies unpacked from a zip |
 | `PUT` | `/api/settings/preferences` also accepts `normalize_audio` | `true` evens out the loudness of MP3, FLAC, and WAV downloads |
 | `PUT` | `/api/settings/preferences` also accepts `download_window` | `""` (any time) or `"start-end"` in whole hours, like `"1-7"` or `"22-6"`; outside it, `GET /api/jobs` includes `window_opens` |
 | `PUT` | `/api/settings/preferences` also accepts `sponsorblock` | `"off"`, `"mark"`, or `"remove"` (sponsor, self-promotion, and interaction segments) |
