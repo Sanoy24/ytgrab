@@ -418,8 +418,14 @@ function clearMessage({ removed, files_deleted: deleted = 0, kept = 0 }, deleteF
 }
 
 // Queues every failed and cancelled download again; each resumes from its partial file.
+// Failures a retry can't fix: the video is gone, private, or copy-protected. Each row
+// still offers its own Retry, in case the video comes back.
+const LASTING_FAILURES = new Set(['video_unavailable', 'drm_protected']);
+const retryable = (j) => (j.state === 'failed' && !LASTING_FAILURES.has(j.error?.code)) || j.state === 'cancelled';
+const lasting = (j) => j.state === 'failed' && LASTING_FAILURES.has(j.error?.code);
+
 async function retryFailed(button) {
-  const failed = jobs.filter((j) => j.state === 'failed' || j.state === 'cancelled');
+  const failed = jobs.filter(retryable);
   if (!failed.length) return;
   button.disabled = true;
   let queued = 0;
@@ -435,6 +441,27 @@ async function retryFailed(button) {
   button.disabled = false;
   render();
   toast(queued === 1 ? 'Queued 1 download again.' : `Queued ${queued} downloads again.`);
+}
+
+// Removes the downloads that failed for good (deleted, private, or copy-protected videos)
+// from the list. They saved no file, so there is nothing to delete.
+async function removeUnavailable(button) {
+  const gone = jobs.filter(lasting);
+  if (!gone.length) return;
+  button.disabled = true;
+  let removed = 0;
+  for (const job of gone) {
+    try {
+      await client.deleteJob(job.id);
+      removed++;
+    } catch {
+      // Already removed elsewhere: skip it.
+    }
+  }
+  jobs = client.isFixture ? jobs.filter((j) => !gone.includes(j)) : await client.listJobs();
+  button.disabled = false;
+  render();
+  toast(removed === 1 ? 'Removed 1 unavailable video from the list.' : `Removed ${removed} unavailable videos from the list.`);
 }
 
 // ---------- YouTube pause ----------
@@ -496,9 +523,12 @@ function render() {
       (historyFilter === 'all' ? true : historyFilter === 'completed' ? j.state === 'completed' : j.state !== 'completed') &&
       (!historyQuery || jobTitle(j).toLowerCase().includes(historyQuery)),
   );
-  const failed = history.filter((j) => j.state === 'failed' || j.state === 'cancelled');
+  const failed = history.filter(retryable);
   $('#retry-failed').hidden = !failed.length;
   $('#retry-failed').textContent = `Retry failed (${failed.length})`;
+  const gone = history.filter(lasting);
+  $('#remove-unavailable').hidden = !gone.length;
+  $('#remove-unavailable').textContent = `Remove unavailable (${gone.length})`;
   $('#queue-nav-count').textContent = queue.length || '';
   $('#library-nav-count').textContent = history.length || '';
   // The counts are drawn as badges; give the buttons names that read naturally.
@@ -2067,6 +2097,7 @@ function init() {
   $('#pause-resume').addEventListener('click', (e) => resumeNow(e.currentTarget));
   $('#clear-history').addEventListener('click', clearHistory);
   $('#retry-failed').addEventListener('click', (e) => retryFailed(e.currentTarget));
+  $('#remove-unavailable').addEventListener('click', (e) => removeUnavailable(e.currentTarget));
   loadNotifyPreference();
   renderNotifyToggle();
   $('#notify-toggle').addEventListener('click', toggleNotifications);
