@@ -10,6 +10,7 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 | --- | --- | --- |
 | `GET` | `/api/system/health` | Tool status |
 | `POST` | `/api/system/update-ytdlp` | Install or update yt-dlp in YTGrab's tools folder |
+| `GET` | `/api/system/version` | `{ version, latest, update_available, update_command, can_update, release_url }`; `?refresh=1` looks for a new release right away (at most every 30 seconds) |
 | `POST` | `/api/system/update-ytgrab` | Install the latest YTGrab over this copy when `GET /api/system/version` says `can_update`; answers `{ version, restarting: true }`, then YTGrab restarts. Errors: `no_update`, `downloads_running`, `update_busy`, `update_failed` |
 | `POST` | `/api/system/resume` | End a pause after YouTube limited this network (`204`) |
 | `GET` | `/api/jobs` | Recent jobs, `{ "jobs": [Job] }` |

@@ -487,3 +487,18 @@ test('says at once when a handed-over link is not a video', async ({ page }) => 
   await expect(page.locator('#url')).toHaveValue('https://x.com/home');
   await expect(page.locator('#url-error')).toContainText("doesn't point to a post");
 });
+
+test('shows versions in About and checks for updates', async ({ page }) => {
+  await page.goto('/?fixture=default');
+  await expect(page.locator('#app-version')).toHaveText('YTGrab 1.7.0 · update available');
+  await page.locator('#app-version').click();
+  const about = page.locator('#about');
+  await expect(about).toBeInViewport();
+  await expect(page.locator('#about-version')).toHaveText('1.7.0');
+  await expect(page.locator('#about-status')).toHaveText('1.8.0 is available');
+  await expect(page.locator('#about-ytdlp')).toHaveText(/^\d{4}\.\d{2}\.\d{2}/);
+  await expect(page.locator('#about-ffmpeg')).toHaveText('8.0.1');
+  await expect(page.locator('#about-js')).toHaveText('Node.js 24.4.1');
+  await about.getByRole('button', { name: 'Check for updates' }).click();
+  await expect(page.locator('#toast')).toContainText('YTGrab 1.8.0 is available.');
+});

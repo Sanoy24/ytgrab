@@ -30,6 +30,7 @@
           </button>
           <button type="button" class="foot-btn notify-toggle" id="notify-toggle" aria-pressed="false" title="Notify me when downloads finish while this tab is in the background" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span id="notify-label">Notify me</span></button>
           <button type="button" class="foot-btn health" id="health" aria-controls="health-detail" aria-expanded="false" hidden><span class="dot" aria-hidden="true"></span><span id="health-label">Checking tools…</span></button>
+          <button type="button" class="app-version" id="app-version" title="About YTGrab" hidden></button>
         </div>
       </aside>
 
@@ -508,6 +509,22 @@
               <input type="file" id="backup-file" accept=".json,application/json" class="visually-hidden" />
             </div>
             <p class="hint pref-hint" id="backup-result" role="status"></p>
+          </section>
+          <section class="card settings-card about-card" id="about" aria-labelledby="about-title">
+            <h3 class="card-title" id="about-title">About YTGrab</h3>
+            <dl class="about-list">
+              <div><dt>YTGrab</dt><dd><span id="about-version">…</span> <span class="about-status" id="about-status"></span></dd></div>
+              <div><dt>yt-dlp</dt><dd id="about-ytdlp">…</dd></div>
+              <div><dt>FFmpeg</dt><dd id="about-ffmpeg">…</dd></div>
+              <div><dt>JavaScript runtime</dt><dd id="about-js">…</dd></div>
+            </dl>
+            <div class="backup-row">
+              <button type="button" class="btn btn-small" id="about-check">Check for updates</button>
+              <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">What's new</a>
+              <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener noreferrer">User guide</a>
+              <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/issues/new" target="_blank" rel="noopener noreferrer">Report a problem</a>
+            </div>
+            <p class="hint pref-hint">Free and open source under the MIT license. YTGrab runs only on this computer and sends nothing about you anywhere.</p>
           </section>
           </div>
         </section>

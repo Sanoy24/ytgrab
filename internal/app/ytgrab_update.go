@@ -89,15 +89,25 @@ func (u *ytgrabUpdates) UpdateYTGrab(ctx context.Context) (api.YTGrabUpdate, err
 }
 
 func (u *ytgrabUpdates) YTGrabVersion() api.VersionInfo {
+	return u.versionInfo(time.Hour)
+}
+
+// CheckYTGrabVersion is YTGrabVersion after a fresh look, unless one ran in the last 30
+// seconds, so pressing "Check for updates" again doesn't hammer GitHub.
+func (u *ytgrabUpdates) CheckYTGrabVersion() api.VersionInfo {
+	return u.versionInfo(30 * time.Second)
+}
+
+func (u *ytgrabUpdates) versionInfo(maxAge time.Duration) api.VersionInfo {
 	info := api.VersionInfo{Version: u.version, ReleaseURL: setup.YTGrabReleasesURL + "/latest"}
 	if u.version == "" || u.version == "dev" {
 		return info // development builds don't look for updates
 	}
 	// The page asks when it opens: look again if the last look is over an hour old, waiting
 	// briefly so a release out since then shows right away.
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	info.Latest = u.latest.Fresh(ctx, time.Hour)
+	info.Latest = u.latest.Fresh(ctx, maxAge)
 	if newer(info.Latest, u.version) {
 		info.UpdateAvailable = true
 		info.UpdateCommand = u.command
