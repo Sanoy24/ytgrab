@@ -6,6 +6,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Changed
 
+- **Retry failed** skips downloads that can never work (deleted, private, or copy-protected videos), and a new **Remove unavailable** button clears them from the Library in one click.
 - New YTGrab versions show up sooner: YTGrab looks every 6 hours instead of once a day, and again when you open the page if its last look is over an hour old.
 
 ## [1.13.1] - 2026-10-03
