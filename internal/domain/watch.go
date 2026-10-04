@@ -10,13 +10,19 @@ import (
 	"time"
 )
 
-var ErrInvalidWatchURL = errors.New("Paste a link to a YouTube channel (like youtube.com/@name) or a playlist.")
+var ErrInvalidWatchURL = errors.New("Paste a link to a YouTube channel (like youtube.com/@name) or playlist, or a Vimeo channel, group, or showcase.")
+
+// ErrVimeoPeople explains why a person's Vimeo page can't be watched.
+var ErrVimeoPeople = errors.New("Vimeo no longer lists a person's videos to apps. Watch one of their channels or showcases instead.")
 
 // A watch follows a channel's uploads or a playlist and downloads videos added to it.
 type Watch struct {
-	ID     string `json:"id"`
-	Kind   string `json:"kind"` // "channel" or "playlist"
-	URL    string `json:"url"`  // canonical; what is listed
+	ID   string `json:"id"`
+	Kind string `json:"kind"` // "channel" or "playlist"
+	URL  string `json:"url"`  // canonical; what is listed
+	// Site is SiteYouTube ("") or SiteVimeo, whose channels and groups list as a channel
+	// (newest first) and showcases as a playlist.
+	Site   string `json:"site,omitempty"`
 	Title  string `json:"title"`
 	Preset Preset `json:"preset"`
 	// Folder saves its downloads into a folder named after the channel or playlist.
@@ -56,7 +62,54 @@ func NewWatch(raw string, preset Preset) (Watch, error) {
 	if _, err := rand.Read(bytes); err != nil {
 		return Watch{}, err
 	}
-	return Watch{ID: "watch_" + hex.EncodeToString(bytes), Kind: kind, URL: canonical, Preset: preset, CreatedAt: time.Now().UTC()}, nil
+	return Watch{ID: "watch_" + hex.EncodeToString(bytes), Kind: kind, URL: canonical, Site: watchSite(canonical), Preset: preset, CreatedAt: time.Now().UTC()}, nil
+}
+
+func watchSite(canonical string) string {
+	if strings.HasPrefix(canonical, "https://vimeo.com/") {
+		return SiteVimeo
+	}
+	return SiteYouTube
+}
+
+// WatchVideoURL links to a video a watch found, by its ID on the watch's site.
+func WatchVideoURL(site, id string) string {
+	if site == SiteVimeo {
+		return "https://player.vimeo.com/video/" + id
+	}
+	return VideoURL(id)
+}
+
+// ValidWatchVideoID checks a listed video's ID for the watch's site.
+func ValidWatchVideoID(site, id string) bool {
+	if site == SiteVimeo {
+		return vimeoIDPattern.MatchString(id)
+	}
+	return ValidVideoID(id)
+}
+
+// vimeoWatchName matches Vimeo channel and group names.
+var vimeoWatchName = regexp.MustCompile(`^[A-Za-z0-9_-]{2,80}$`)
+
+// vimeoSections are Vimeo's own pages, never a person's name.
+var vimeoSections = map[string]bool{"channels": true, "groups": true, "showcase": true, "album": true, "watch": true, "categories": true, "ondemand": true, "user": true}
+
+// parseVimeoWatch accepts vimeo.com/channels/<name>, /groups/<name>, and /showcase/<id>
+// (or the older /album/<id>), each with anything after it.
+func parseVimeoWatch(parts []string) (kind, canonical string, err error) {
+	const base = "https://vimeo.com/"
+	switch {
+	case len(parts) >= 2 && parts[0] == "channels" && vimeoWatchName.MatchString(parts[1]):
+		return "channel", base + "channels/" + parts[1], nil
+	case len(parts) >= 2 && parts[0] == "groups" && vimeoWatchName.MatchString(parts[1]):
+		return "channel", base + "groups/" + parts[1] + "/videos", nil
+	case len(parts) >= 2 && (parts[0] == "showcase" || parts[0] == "album") && vimeoIDPattern.MatchString(parts[1]):
+		return "playlist", base + "showcase/" + parts[1], nil
+	case (len(parts) == 1 || (len(parts) == 2 && parts[1] == "videos")) && vimeoWatchName.MatchString(parts[0]) &&
+		!vimeoIDPattern.MatchString(parts[0]) && !vimeoSections[parts[0]]:
+		return "", "", ErrVimeoPeople // vimeo.com/<name>: a person's page
+	}
+	return "", "", ErrInvalidWatchURL
 }
 
 func parseWatchURL(raw string) (kind, canonical string, err error) {
@@ -70,6 +123,8 @@ func parseWatchURL(raw string) (kind, canonical string, err error) {
 	}
 	switch strings.ToLower(parsed.Hostname()) {
 	case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com":
+	case "vimeo.com", "www.vimeo.com":
+		return parseVimeoWatch(strings.Split(strings.Trim(parsed.Path, "/"), "/"))
 	default:
 		return "", "", ErrInvalidWatchURL
 	}

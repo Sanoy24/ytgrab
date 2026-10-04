@@ -31,6 +31,8 @@ func writeWatchError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, domain.ErrInvalidWatchURL), errors.Is(err, domain.ErrInvalidPlaylistURL):
 		writeError(w, http.StatusBadRequest, "invalid_url", domain.ErrInvalidWatchURL.Error())
+	case errors.Is(err, domain.ErrVimeoPeople):
+		writeError(w, http.StatusBadRequest, "invalid_url", err.Error())
 	case errors.Is(err, domain.ErrMixPlaylist):
 		writeError(w, http.StatusBadRequest, "mix_playlist", err.Error())
 	case errors.Is(err, domain.ErrInvalidPreset):
