@@ -816,6 +816,11 @@ function takeLinks(text) {
   setUrlError('');
   input.dispatchEvent(new InputEvent('input', { inputType: 'insertFromPaste' }));
   input.focus();
+  // A handed-over link YTGrab can't use says why at once, rather than waiting for Add.
+  if (!looksLikeSearch(input.value) && !parseLinks(input.value)) {
+    const { error } = validateUrl(input.value);
+    if (error) setUrlError(error);
+  }
 }
 
 function setupPasteAndDrop() {

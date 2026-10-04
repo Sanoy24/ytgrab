@@ -150,7 +150,7 @@ You can also press Ctrl+V anywhere on the YTGrab page, or drag a link from anoth
 
 ## Browser extension
 
-The **Download with YTGrab** extension adds a button to your browser's toolbar: on a video page, click it and YTGrab opens (or comes to the front) with that video's link ready to add. Right-click a link or a page for **Download with YTGrab** too. Nothing is downloaded until you press **Add to queue**, and the extension reads nothing from the pages you visit: it only passes the address you clicked to YTGrab on your own computer.
+The **Download with YTGrab** extension adds a button to your browser's toolbar: on a video page, click it and YTGrab opens (or comes to the front) with that video's link ready to add. Right-click a link or a page for **Download with YTGrab** too. On X's timeline, the page is the whole feed, not one post: right-click the post's date (like "Oct 2"), which links to the post, and choose **Download link with YTGrab**, or open the post first. Nothing is downloaded until you press **Add to queue**, and the extension reads nothing from the pages you visit: it only passes the address you clicked to YTGrab on your own computer.
 
 Install it from the release page: download `ytgrab-extension-<version>.zip` from [Releases](https://github.com/Sanoy24/ytgrab/releases) and extract it into a folder you keep.
 
