@@ -14,6 +14,7 @@ A local YouTube, Vimeo, X (Twitter), Reddit, and Instagram video downloader with
 - **Playlists, with a review step.** Browse any length of playlist 50 at a time, untick what you don't want, and confirm before anything is queued (up to 200 at once), optionally into a folder named after the playlist. Or paste a whole list of video links at once.
 - **Just the part you need.** Download a section of a video by start and end time, add subtitles in your language, and cap the download speed.
 - **Vimeo, X (Twitter), Reddit, and Instagram too.** Paste a Vimeo video, or a link to an X, Reddit, or Instagram post with a video to save it in any of its qualities, or just its audio.
+- **One click from your browser.** The Download with YTGrab extension (Chrome, Edge, Firefox) sends the video you're watching to YTGrab, or drag the Send to YTGrab bookmark to your bookmarks bar.
 - **Live progress.** Speed, size, and time left for every download, updated as it happens.
 - **Resume instead of restart.** Cancel, retry, or close the app mid-download — a retry continues from the partial file.
 - **Sensible files.** Names include the quality (`Title [id] 1080p.mp4`); H.264 picks are saved as MP4.

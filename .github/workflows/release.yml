@@ -83,6 +83,16 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Package the browser extension
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          staging="$(mktemp -d)"
+          cp -r extension/. "$staging"
+          # Manifest versions are numbers only, so a pre-release carries its base number.
+          jq --arg v "${version%%-*}" '.version = $v' extension/manifest.json > "$staging/manifest.json"
+          (cd "$staging" && zip -qr "$GITHUB_WORKSPACE/dist/ytgrab-extension-$version.zip" .)
+          (cd dist && sha256sum "ytgrab-extension-$version.zip" > "ytgrab-extension-$version.zip.sha256")
+
       - name: Write release notes from CHANGELOG.md
         shell: pwsh
         run: |
@@ -94,7 +104,7 @@ jobs:
           } else {
             $notes = "See the [changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)."
           }
-          $notes += "`n`n**Install:** on macOS and Linux run ``curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | sh``, or ``brew install sanoy24/tap/ytgrab``. On Windows, ``scoop install sanoy24/ytgrab`` (after ``scoop bucket add sanoy24 https://github.com/Sanoy24/scoop-bucket``), or download the zip below, extract it, and double-click **Start YTGrab.cmd**. Each file has a matching ``.sha256`` checksum."
+          $notes += "`n`n**Install:** on macOS and Linux run ``curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | sh``, or ``brew install sanoy24/tap/ytgrab``. On Windows, ``scoop install sanoy24/ytgrab`` (after ``scoop bucket add sanoy24 https://github.com/Sanoy24/scoop-bucket``), or download the zip below, extract it, and double-click **Start YTGrab.cmd**. The browser extension is ``ytgrab-extension-*.zip``; the user guide explains how to add it. Each file has a matching ``.sha256`` checksum."
           Set-Content -Path release-notes.md -Value $notes.Trim() -Encoding utf8
 
       - name: Publish the release
