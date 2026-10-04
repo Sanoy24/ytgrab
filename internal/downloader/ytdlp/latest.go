@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"strings"
 	"time"
 
@@ -23,8 +24,14 @@ type Listing struct {
 // inspector's request throttle and the pause when YouTube limits the network. The URL must
 // come from domain.NewWatch.
 func (inspector *Inspector) ListLatest(ctx context.Context, kind, url string, limit int) (Listing, error) {
-	if err := inspector.cooldownError(); err != nil {
-		return Listing{}, err
+	site := domain.SiteYouTube
+	if strings.HasPrefix(url, "https://vimeo.com/") {
+		site = domain.SiteVimeo
+	}
+	if site == domain.SiteYouTube {
+		if err := inspector.cooldownError(); err != nil { // a YouTube pause doesn't stop Vimeo
+			return Listing{}, err
+		}
 	}
 	path, err := deps.Find(inspector.Config, "yt-dlp")
 	if err != nil {
@@ -40,7 +47,9 @@ func (inspector *Inspector) ListLatest(ctx context.Context, kind, url string, li
 		"--playlist-items", fmt.Sprintf("1:%d", limit), "--", url,
 	}
 	output, err := inspector.runJSON(ctx, path, args, 90*time.Second)
-	inspector.noteResult(err)
+	if site == domain.SiteYouTube {
+		inspector.noteResult(err)
+	}
 	var toolError *Error
 	if errors.As(err, &toolError) && toolError.Code == "video_unavailable" {
 		return Listing{}, &Error{Code: "video_unavailable", Message: "This channel or playlist is unavailable or private."}
@@ -48,14 +57,14 @@ func (inspector *Inspector) ListLatest(ctx context.Context, kind, url string, li
 	if err != nil {
 		return Listing{}, err
 	}
-	listing, err := parseListing(output, kind)
+	listing, err := parseListing(output, kind, site)
 	if err == nil {
 		inspector.rememberTitles(Playlist{Entries: listing.Entries})
 	}
 	return listing, err
 }
 
-func parseListing(data []byte, kind string) (Listing, error) {
+func parseListing(data []byte, kind, site string) (Listing, error) {
 	var raw struct {
 		Title   string `json:"title"`
 		Channel string `json:"channel"`
@@ -69,8 +78,8 @@ func parseListing(data []byte, kind string) (Listing, error) {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return Listing{}, &Error{Code: "download_failed", Message: "yt-dlp returned invalid channel information."}
 	}
-	listing := Listing{Title: raw.Title, Entries: []PlaylistEntry{}}
-	if kind == "channel" {
+	listing := Listing{Title: html.UnescapeString(raw.Title), Entries: []PlaylistEntry{}}
+	if kind == "channel" && site == domain.SiteYouTube {
 		// A channel's uploads are titled "Name - Videos"; the channel's name reads better.
 		listing.Title = raw.Channel
 		if listing.Title == "" {
@@ -78,10 +87,15 @@ func parseListing(data []byte, kind string) (Listing, error) {
 		}
 	}
 	for _, entry := range raw.Entries {
-		if !domain.ValidVideoID(entry.ID) || unavailableTitles[entry.Title] {
+		if !domain.ValidWatchVideoID(site, entry.ID) {
 			continue
 		}
-		listing.Entries = append(listing.Entries, PlaylistEntry{VideoID: entry.ID, Title: entry.Title, DurationSeconds: entry.Duration, LiveStatus: entry.LiveStatus})
+		// YouTube lists deleted videos without a title; Vimeo showcases list every video
+		// without one, and Vimeo titles carry HTML entities ("&mdash;").
+		if site == domain.SiteYouTube && unavailableTitles[entry.Title] {
+			continue
+		}
+		listing.Entries = append(listing.Entries, PlaylistEntry{VideoID: entry.ID, Title: html.UnescapeString(entry.Title), DurationSeconds: entry.Duration, LiveStatus: entry.LiveStatus})
 	}
 	return listing, nil
 }

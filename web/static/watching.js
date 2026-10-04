@@ -107,7 +107,7 @@ export async function onWatchSubmit(e) {
   const url = $('#watch-url').value.trim();
   const error = $('#watch-error');
   if (!url) {
-    error.textContent = 'Paste a link to a YouTube channel or playlist first.';
+    error.textContent = 'Paste a link to a YouTube channel or playlist, or a Vimeo channel, group, or showcase first.';
     error.hidden = false;
     return;
   }

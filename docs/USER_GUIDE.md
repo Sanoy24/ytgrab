@@ -108,6 +108,7 @@ Open **Watching**, paste a channel link (`youtube.com/@name`, `/channel/…`, `/
 - A channel check looks at its 30 newest uploads; a playlist check looks at the whole playlist (up to 500 videos). One check adds at most 25 videos; any more wait for the next check.
 - **Check now** checks straight away, **Pause** stops checking until you resume, and **Stop watching** removes the watch but keeps what it downloaded.
 - Checks use one request to YouTube each and go through the same pause as everything else when YouTube is limiting your network, so watching a few channels doesn't make blocks more likely. Watching hundreds might.
+- **Vimeo**: watch a channel (`vimeo.com/channels/name`), a group (`vimeo.com/groups/name`), or a public showcase (`vimeo.com/showcase/123`); channels and groups check their newest videos like a YouTube channel, showcases their whole list. Vimeo no longer lets apps list a person's own videos (`vimeo.com/name`), so watch one of their channels or showcases instead. Vimeo doesn't list video lengths, so **Minimum length** lets every Vimeo video through.
 
 ## Split a video into chapters
 

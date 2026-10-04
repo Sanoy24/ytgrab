@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **Watch Vimeo.** Follow a Vimeo channel, group, or public showcase, and new videos download by themselves like a watched YouTube channel.
+
 ### Changed
 
 - **Retry failed** skips downloads that can never work (deleted, private, or copy-protected videos), and a new **Remove unavailable** button clears them from the Library in one click.

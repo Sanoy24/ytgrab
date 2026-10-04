@@ -72,3 +72,36 @@ func TestWatchFilters(t *testing.T) {
 		t.Error("ValidWatchOptions")
 	}
 }
+
+func TestVimeoWatchLinks(t *testing.T) {
+	for link, want := range map[string][2]string{
+		"https://vimeo.com/channels/staffpicks":          {"channel", "https://vimeo.com/channels/staffpicks"},
+		"vimeo.com/channels/staffpicks/1231817291":       {"channel", "https://vimeo.com/channels/staffpicks"},
+		"https://vimeo.com/groups/motion":                {"channel", "https://vimeo.com/groups/motion/videos"},
+		"https://www.vimeo.com/groups/motion/videos?x=1": {"channel", "https://vimeo.com/groups/motion/videos"},
+		"https://vimeo.com/showcase/7064593":             {"playlist", "https://vimeo.com/showcase/7064593"},
+		"https://vimeo.com/album/2632481":                {"playlist", "https://vimeo.com/showcase/2632481"},
+	} {
+		watch, err := NewWatch(link, AudioM4A)
+		if err != nil || watch.Kind != want[0] || watch.URL != want[1] || watch.Site != SiteVimeo {
+			t.Errorf("%s: %+v %v", link, watch, err)
+		}
+	}
+	if _, err := NewWatch("https://vimeo.com/someone", AudioM4A); !errors.Is(err, ErrVimeoPeople) {
+		t.Errorf("person's page = %v", err)
+	}
+	for _, bad := range []string{"https://vimeo.com/76979871", "https://vimeo.com/channels/", "https://vimeo.com/showcase/abc"} {
+		if _, err := NewWatch(bad, AudioM4A); !errors.Is(err, ErrInvalidWatchURL) {
+			t.Errorf("%q = %v", bad, err)
+		}
+	}
+	if yt, _ := NewWatch("https://www.youtube.com/@GoogleDevelopers", AudioM4A); yt.Site != SiteYouTube {
+		t.Error("YouTube watches keep an empty site")
+	}
+	if WatchVideoURL(SiteVimeo, "1231817291") != "https://player.vimeo.com/video/1231817291" || WatchVideoURL("", "jNQXAC9IVRw") != "https://www.youtube.com/watch?v=jNQXAC9IVRw" {
+		t.Error("WatchVideoURL")
+	}
+	if !ValidWatchVideoID(SiteVimeo, "1231817291") || ValidWatchVideoID(SiteVimeo, "jNQXAC9IVRw") || !ValidWatchVideoID("", "jNQXAC9IVRw") {
+		t.Error("ValidWatchVideoID")
+	}
+}

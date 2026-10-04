@@ -271,7 +271,7 @@ func (s *Service) due(watch domain.Watch) bool {
 func (s *Service) queue(ctx context.Context, watch domain.Watch, ids []string, titles map[string]string) (int, error) {
 	queued := 0
 	for _, id := range ids {
-		job, err := domain.NewJob(domain.VideoURL(id), watch.Preset)
+		job, err := domain.NewJob(domain.WatchVideoURL(watch.Site, id), watch.Preset)
 		if err != nil {
 			return queued, err
 		}
