@@ -320,62 +320,73 @@
             <h2 id="settings-title">Settings</h2>
             <p class="view-sub">Changes are saved right away.</p>
           </header>
-          <div class="settings-grid">
-          <section class="card settings-card">
-            <h3 class="card-title">Downloads</h3>
-            <p class="card-desc">How YTGrab downloads and names your files.</p>
-            <div class="pref-row" id="pref-parallel-row" hidden>
-              <label for="pref-parallel">Parallel downloads</label>
-              <select id="pref-parallel"></select>
-            </div>
-            <div class="pref-row" id="pref-preset-row" hidden>
-              <label for="pref-preset">Default format</label>
-              <select id="pref-preset">
-                <option value="video-best">Video · best quality</option>
-                <option value="video-1080">Video · up to 1080p</option>
-                <option value="video-720">Video · up to 720p</option>
-                <option value="audio-m4a">Audio · M4A</option>
-                <option value="audio-mp3">Audio · MP3</option>
-                <option value="audio-opus">Audio · Opus</option>
-                <option value="audio-flac">Audio · FLAC</option>
-                <option value="audio-wav">Audio · WAV</option>
-              </select>
-            </div>
-            <div id="pref-names-row" hidden>
-              <div class="pref-row">
-                <label for="pref-names">File names</label>
-                <select id="pref-names">
-                  <option value="title">Title</option>
-                  <option value="channel-title">Channel – Title</option>
-                  <option value="date-title">Date + Title</option>
-                  <option value="channel-folder">A folder per channel</option>
-                </select>
-              </div>
-              <p class="hint pref-hint" id="pref-names-example"></p>
-            </div>
-            <div id="pref-normalize-row" hidden>
-              <div class="pref-row">
-                <label for="pref-normalize">Even out loudness</label>
-                <input type="checkbox" class="pref-check" id="pref-normalize" />
-              </div>
-              <p class="hint pref-hint">For MP3, FLAC, and WAV downloads, so tracks play at a similar volume. M4A and Opus stay exact copies of YouTube's audio.</p>
-            </div>
-            <div id="pref-sponsor-row" hidden>
-              <div class="pref-row">
-                <label for="pref-sponsor">Sponsor segments</label>
-                <select id="pref-sponsor">
-                  <option value="off">Leave as they are</option>
-                  <option value="mark">Mark as chapters</option>
-                  <option value="remove">Cut them out</option>
-                </select>
-              </div>
-              <p class="hint pref-hint">Uses <a href="https://sponsor.ajay.app/" target="_blank" rel="noopener noreferrer">SponsorBlock</a>, a community list of sponsor, self-promotion, and "like and subscribe" segments. Each download then also asks SponsorBlock about that video.</p>
-            </div>
-            <div id="pref-window-row" hidden>
-              <div class="pref-row">
-                <label for="pref-window-start">Download only between</label>
-                <span class="window-pickers">
-                  <select id="pref-window-start" aria-label="Downloads may start from">
+          <div class="settings-layout">
+            <nav class="settings-nav" aria-label="Settings sections">
+              <button type="button" class="settings-link" data-section="set-downloads"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Downloads</span></button>
+              <button type="button" class="settings-link" data-section="set-media"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg><span>Audio &amp; video</span></button>
+              <button type="button" class="settings-link" data-section="set-browser"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></svg><span>Browser</span></button>
+              <button type="button" class="settings-link" data-section="set-computer"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>This computer</span></button>
+              <button type="button" class="settings-link" data-section="set-backup"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Z"/><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span>Backup</span></button>
+              <button type="button" class="settings-link" data-section="about"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>About</span></button>
+            </nav>
+            <div class="settings-sections">
+              <section class="set-group" id="set-downloads" aria-labelledby="set-downloads-title">
+                <h3 class="set-title" id="set-downloads-title">Downloads</h3>
+                <p class="set-desc">How YTGrab downloads and names your files.</p>
+                <div class="set-card">
+                  <div class="set-row" id="pref-parallel-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-parallel">Parallel downloads</label>
+                      <p class="set-hint">How many download at the same time. More rarely helps, since YouTube limits speed per network.</p>
+                    </div>
+                    <div class="set-control"><select id="pref-parallel"></select></div>
+                  </div>
+                  <div class="set-row" id="pref-preset-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-preset">Default format</label>
+                      <p class="set-hint">What a new link starts with on the Download page.</p>
+                    </div>
+                    <div class="set-control">
+                      <select id="pref-preset">
+                        <option value="video-best">Video · best quality</option>
+                        <option value="video-1080">Video · up to 1080p</option>
+                        <option value="video-720">Video · up to 720p</option>
+                        <option value="audio-m4a">Audio · M4A</option>
+                        <option value="audio-mp3">Audio · MP3</option>
+                        <option value="audio-opus">Audio · Opus</option>
+                        <option value="audio-flac">Audio · FLAC</option>
+                        <option value="audio-wav">Audio · WAV</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="set-row" id="pref-names-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-names">File names</label>
+                      <p class="set-hint set-example" id="pref-names-example"></p>
+                    </div>
+                    <div class="set-control">
+                      <select id="pref-names">
+                        <option value="title">Title</option>
+                        <option value="channel-title">Channel – Title</option>
+                        <option value="date-title">Date + Title</option>
+                        <option value="channel-folder">A folder per channel</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="set-row" id="pref-speed-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-speed">Speed limit (per download)</label>
+                      <p class="set-hint">Leaves room for the rest of your connection.</p>
+                    </div>
+                    <div class="set-control"><select id="pref-speed"></select></div>
+                  </div>
+                  <div class="set-row set-row-wide" id="pref-window-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-window-start">Download only between</label>
+                      <p class="set-hint">Downloads wait in the queue outside these hours, for example to keep your connection free during the day. Downloads already running finish.</p>
+                    </div>
+                    <div class="set-control window-pickers">
+                      <select id="pref-window-start" aria-label="Downloads may start from">
                   <option value="">Any time</option>
                   <option value="0">00:00</option>
                   <option value="1">01:00</option>
@@ -402,8 +413,8 @@
                   <option value="22">22:00</option>
                   <option value="23">23:00</option>
                   </select>
-                  <span id="pref-window-and">and</span>
-                  <select id="pref-window-end" aria-label="Downloads may start until">
+                      <span id="pref-window-and">and</span>
+                      <select id="pref-window-end" aria-label="Downloads may start until">
                   <option value="0">00:00</option>
                   <option value="1">01:00</option>
                   <option value="2">02:00</option>
@@ -429,103 +440,151 @@
                   <option value="22">22:00</option>
                   <option value="23">23:00</option>
                   </select>
-                </span>
-              </div>
-              <p class="hint pref-hint">Downloads wait in the queue outside these hours, for example to keep your connection free during the day. Downloads already running finish.</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group" id="set-media" aria-labelledby="set-media-title">
+                <h3 class="set-title" id="set-media-title">Audio &amp; video</h3>
+                <p class="set-desc">What goes into each file.</p>
+                <div class="set-card">
+                  <div class="set-row" id="pref-subs-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-subs">Subtitles</label>
+                      <p class="set-hint">Added to video downloads, never to audio.</p>
+                    </div>
+                    <div class="set-control">
+                      <select id="pref-subs">
+                        <option value="off">Off</option>
+                        <option value="embed">Add to the video</option>
+                        <option value="file">Save as .srt file</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="set-row" id="pref-subs-lang-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-subs-lang">Subtitle language</label>
+                      <p class="set-hint">Uses the creator's subtitles, or YouTube's automatic ones when there are none.</p>
+                    </div>
+                    <div class="set-control"><select id="pref-subs-lang"></select></div>
+                  </div>
+                  <div class="set-row" id="pref-sponsor-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-sponsor">Sponsor segments</label>
+                      <p class="set-hint">Uses <a href="https://sponsor.ajay.app/" target="_blank" rel="noopener noreferrer">SponsorBlock</a>'s community list of sponsors, self-promotion, and "like and subscribe" reminders.</p>
+                    </div>
+                    <div class="set-control">
+                      <select id="pref-sponsor">
+                        <option value="off">Leave as they are</option>
+                        <option value="mark">Mark as chapters</option>
+                        <option value="remove">Cut them out</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="set-row" id="pref-normalize-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-normalize">Even out loudness</label>
+                      <p class="set-hint">For MP3, FLAC, and WAV, so tracks play at a similar volume. M4A and Opus stay exact copies.</p>
+                    </div>
+                    <div class="set-control"><input type="checkbox" class="pref-check" id="pref-normalize" /></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group" id="set-browser" aria-labelledby="set-browser-title">
+                <h3 class="set-title" id="set-browser-title">Browser</h3>
+                <p class="set-desc">Send videos to YTGrab from your browser, and sign in for posts that need it.</p>
+                <div class="set-card">
+                  <div class="set-row" id="send-row">
+                    <div class="set-text">
+                      <span class="set-label">Send to YTGrab bookmark</span>
+                      <p class="set-hint">Drag the button to your bookmarks bar, then click it on a video page. Bar hidden? Press Ctrl+Shift+B (Cmd+Shift+B on a Mac).</p>
+                    </div>
+                    <div class="set-control">
+                      <a class="send-bookmark" id="send-bookmark" href="#" draggable="true" title="Drag me to your bookmarks bar">
+                        <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Send to YTGrab
+                      </a>
+                    </div>
+                  </div>
+                  <div class="set-row">
+                    <div class="set-text">
+                      <span class="set-label">Browser extension</span>
+                      <p class="set-hint">A toolbar button and right-click item for Chrome, Edge, and Firefox that does the same.</p>
+                    </div>
+                    <div class="set-control">
+                      <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/releases/latest" target="_blank" rel="noopener noreferrer">Get the extension</a>
+                    </div>
+                  </div>
+                  <div class="set-row" id="signin" hidden>
+                    <div class="set-text">
+                      <label for="signin-browser">Browser sign-in</label>
+                      <p class="set-hint">Leave off unless YouTube keeps blocking downloads or a post needs an account. yt-dlp then uses your browser's sign-in, which YTGrab never stores. Firefox works best on Windows, and a secondary account is safer.</p>
+                    </div>
+                    <div class="set-control"><select id="signin-browser"></select></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group" id="set-computer" aria-labelledby="set-computer-title">
+                <h3 class="set-title" id="set-computer-title">This computer</h3>
+                <p class="set-desc">How YTGrab starts and stays working.</p>
+                <div class="set-card">
+                  <div class="set-row" id="pref-login-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-login" id="pref-login-label">Start with Windows</label>
+                      <p class="set-hint">Waits in the tray, ready for links and watched channels.</p>
+                    </div>
+                    <div class="set-control"><input type="checkbox" class="pref-check" id="pref-login" /></div>
+                  </div>
+                  <div class="set-row" id="pref-autoupdate-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-autoupdate">Keep yt-dlp up to date</label>
+                      <p class="set-hint">Sites change often, and an old yt-dlp is the usual reason downloads stop working. New versions install between downloads.</p>
+                    </div>
+                    <div class="set-control"><input type="checkbox" class="pref-check" id="pref-autoupdate" /></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group" id="set-backup" aria-labelledby="set-backup-title">
+                <h3 class="set-title" id="set-backup-title">Backup</h3>
+                <p class="set-desc">Your settings, watched channels, and Library in one file, for reinstalling or another computer.</p>
+                <div class="set-card">
+                  <div class="set-row">
+                    <div class="set-text">
+                      <span class="set-label">Back up and restore</span>
+                      <p class="set-hint">Restoring adds to what's here; nothing is removed.</p>
+                      <p class="set-hint set-result" id="backup-result" role="status"></p>
+                    </div>
+                    <div class="set-control set-buttons">
+                      <a class="btn btn-small" id="backup-save" href="/api/backup" download>Save a backup</a>
+                      <label class="btn btn-small backup-pick" for="backup-file">Restore from a file…</label>
+                      <input type="file" id="backup-file" accept=".json,application/json" class="visually-hidden" />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group" id="about" aria-labelledby="about-title">
+                <h3 class="set-title" id="about-title">About YTGrab</h3>
+                <p class="set-desc">Free and open source under the MIT license. YTGrab runs only on this computer and sends nothing about you anywhere.</p>
+                <div class="set-card">
+                  <dl class="about-list">
+                    <div class="set-row"><dt>YTGrab</dt><dd><span id="about-version">…</span> <span class="about-status" id="about-status"></span></dd></div>
+                    <div class="set-row"><dt>yt-dlp</dt><dd id="about-ytdlp">…</dd></div>
+                    <div class="set-row"><dt>FFmpeg</dt><dd id="about-ffmpeg">…</dd></div>
+                    <div class="set-row"><dt>JavaScript runtime</dt><dd id="about-js">…</dd></div>
+                  </dl>
+                  <div class="set-row set-buttons about-actions">
+                    <button type="button" class="btn btn-small" id="about-check">Check for updates</button>
+                    <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">What's new</a>
+                    <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener noreferrer">User guide</a>
+                    <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/issues/new" target="_blank" rel="noopener noreferrer">Report a problem</a>
+                  </div>
+                </div>
+              </section>
             </div>
-            <div class="pref-row" id="pref-speed-row" hidden>
-              <label for="pref-speed">Speed limit (per download)</label>
-              <select id="pref-speed"></select>
-            </div>
-          </section>
-          <section class="card settings-card">
-            <h3 class="card-title">Subtitles</h3>
-            <p class="card-desc">Added to video downloads, never to audio.</p>
-            <div class="pref-row" id="pref-subs-row" hidden>
-              <label for="pref-subs">Subtitles</label>
-              <select id="pref-subs">
-                <option value="off">Off</option>
-                <option value="embed">Add to the video</option>
-                <option value="file">Save as .srt file</option>
-              </select>
-            </div>
-            <div id="pref-subs-lang-row" hidden>
-              <div class="pref-row">
-                <label for="pref-subs-lang">Subtitle language</label>
-                <select id="pref-subs-lang"></select>
-              </div>
-              <p class="hint pref-hint">
-                For video downloads. Uses the creator's subtitles, or YouTube's automatic ones when
-                there are none; videos without either download without subtitles.
-              </p>
-            </div>
-          </section>
-          <section class="card settings-card">
-            <h3 class="card-title">This computer</h3>
-            <p class="card-desc">How YTGrab starts and stays working.</p>
-            <div class="pref-row" id="pref-login-row" hidden>
-              <label for="pref-login" id="pref-login-label">Start with Windows</label>
-              <input type="checkbox" class="pref-check" id="pref-login" />
-            </div>
-            <div class="pref-row-block" id="pref-autoupdate-row" hidden>
-              <div class="pref-row">
-                <label for="pref-autoupdate">Keep yt-dlp up to date</label>
-                <input type="checkbox" class="pref-check" id="pref-autoupdate" />
-              </div>
-              <p class="hint pref-hint">YouTube changes often, and an old yt-dlp is the usual reason downloads stop working. YTGrab installs new versions between downloads.</p>
-            </div>
-          </section>
-          <section class="card settings-card send-card">
-            <h3 class="card-title">Send to YTGrab</h3>
-            <p class="card-desc">Download in one click: drag this button to your browser's bookmarks bar. On a YouTube or Vimeo video, or an X, Reddit, or Instagram post, click the bookmark and YTGrab opens with it ready to add. Prefer a toolbar button? Install the Download with YTGrab browser extension from the release page.</p>
-            <div id="send-row">
-              <a class="send-bookmark" id="send-bookmark" href="#" draggable="true" title="Drag me to your bookmarks bar">
-                <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Send to YTGrab
-              </a>
-              <p class="pref-hint">Bookmarks bar hidden? Press Ctrl+Shift+B (Cmd+Shift+B on a Mac) to show it.</p>
-            </div>
-          </section>
-          <section class="card settings-card">
-            <h3 class="card-title">Signing in</h3>
-            <p class="card-desc">Only if YouTube keeps blocking downloads, or for posts that need an account.</p>
-            <div class="signin" id="signin" hidden>
-              <div class="pref-row">
-                <label for="signin-browser">Browser sign-in</label>
-                <select id="signin-browser"></select>
-              </div>
-              <p class="hint pref-hint">
-                Leave off unless YouTube keeps blocking downloads or an X, Reddit, or Instagram post needs an account. yt-dlp
-                then uses your browser's sign-in to those sites, which YTGrab never stores. Firefox works
-                best on Windows; a secondary account is safer, since heavy use can get an account flagged.
-              </p>
-            </div>
-          </section>
-          <section class="card settings-card">
-            <h3 class="card-title">Back up and restore</h3>
-            <p class="card-desc">Save your settings, watched channels, and Library to a file, then restore it after reinstalling or on another computer. Restoring adds to what's here; nothing is removed.</p>
-            <div class="backup-row">
-              <a class="btn btn-small" id="backup-save" href="/api/backup" download>Save a backup</a>
-              <label class="btn btn-small backup-pick" for="backup-file">Restore from a file…</label>
-              <input type="file" id="backup-file" accept=".json,application/json" class="visually-hidden" />
-            </div>
-            <p class="hint pref-hint" id="backup-result" role="status"></p>
-          </section>
-          <section class="card settings-card about-card" id="about" aria-labelledby="about-title">
-            <h3 class="card-title" id="about-title">About YTGrab</h3>
-            <dl class="about-list">
-              <div><dt>YTGrab</dt><dd><span id="about-version">…</span> <span class="about-status" id="about-status"></span></dd></div>
-              <div><dt>yt-dlp</dt><dd id="about-ytdlp">…</dd></div>
-              <div><dt>FFmpeg</dt><dd id="about-ffmpeg">…</dd></div>
-              <div><dt>JavaScript runtime</dt><dd id="about-js">…</dd></div>
-            </dl>
-            <div class="backup-row">
-              <button type="button" class="btn btn-small" id="about-check">Check for updates</button>
-              <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">What's new</a>
-              <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener noreferrer">User guide</a>
-              <a class="btn btn-small" href="https://github.com/Sanoy24/ytgrab/issues/new" target="_blank" rel="noopener noreferrer">Report a problem</a>
-            </div>
-            <p class="hint pref-hint">Free and open source under the MIT license. YTGrab runs only on this computer and sends nothing about you anywhere.</p>
-          </section>
           </div>
         </section>
       </main>

@@ -357,12 +357,12 @@ test('sets a download window and says when queued downloads will start', async (
   await page.goto('/?fixture=default#settings');
   await page.locator('#pref-window-start').selectOption('1');
   await expect(page.locator('#toast')).toContainText('only between 01:00 and 07:00');
-  await page.getByRole('button', { name: /^Download/ }).click();
+  await page.getByRole('button', { name: /^Download(,|$)/ }).click();
   await expect(page.locator('#window-note')).toContainText('Outside your download window');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.locator('#pref-window-start').selectOption('');
   await expect(page.locator('#toast')).toContainText('any time');
-  await page.getByRole('button', { name: /^Download/ }).click();
+  await page.getByRole('button', { name: /^Download(,|$)/ }).click();
   await expect(page.locator('#window-note')).toBeHidden();
 });
 

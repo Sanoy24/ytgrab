@@ -2,6 +2,12 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- **A clearer Settings page.** Settings are grouped into Downloads, Audio & video, Browser, This computer, Backup, and About, with a menu to jump between them. Each setting is one row with a short explanation beside its control, in larger, easier-to-read text.
+
 ## [1.15.0] - 2026-10-04
 
 ### Added
