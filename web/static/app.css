@@ -689,7 +689,9 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .set-example { font-family: var(--mono); font-size: 0.78rem; overflow-wrap: anywhere; }
 .set-result:empty { display: none; }
 .set-result { color: var(--text); }
-.set-control { flex: none; display: flex; align-items: center; gap: 8px; }
+/* position: relative keeps the hidden file picker inside its row; otherwise it sits at the
+   document's edge and stretches the page, letting the whole app scroll away. */
+.set-control { position: relative; flex: none; display: flex; align-items: center; gap: 8px; }
 .set-control select {
   font: inherit; font-size: 0.875rem; color: var(--text);
   width: 15rem; max-width: 100%; padding: 8px 32px 8px 12px;
