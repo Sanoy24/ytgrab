@@ -157,6 +157,18 @@ class FixtureClient {
     this.emit();
   }
 
+  async restoreBackup(text) {
+    await delay(300);
+    let backup;
+    try {
+      backup = JSON.parse(text);
+    } catch {
+      backup = null;
+    }
+    if (backup?.format !== 'ytgrab-backup') throw new ApiError('invalid_backup', "This isn't a YTGrab backup file.");
+    return { watches_added: backup.watches?.length || 0, watches_existing: 0, jobs_added: backup.jobs?.length || 0, jobs_existing: 0, jobs_invalid: 0, settings_skipped: [] };
+  }
+
   async libraryFiles() {
     await delay(150);
     const files = {};
@@ -545,6 +557,15 @@ class HttpClient {
   // Opens the system file manager at a finished download.
   revealJob(id) {
     return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/reveal`);
+  }
+  // Merges a backup file's settings, watches, and Library into this copy; resolves with
+  // { watches_added, watches_existing, jobs_added, jobs_existing, jobs_invalid, settings_skipped }.
+  restoreBackup(text) {
+    return fetch('/api/backup/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text }).then(async (response) => {
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new ApiError(body.error?.code || 'restore_failed', body.error?.message || 'The backup could not be restored.');
+      return body;
+    });
   }
   // Sizes of finished downloads' files: { files: { [jobId]: { bytes, missing } } }.
   libraryFiles() {

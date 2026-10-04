@@ -219,6 +219,10 @@ Optional environment variables, set before starting:
 
 Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and `ytgrab setup` are described under Install; `ytgrab --version` prints the version.
 
+### Back up and restore
+
+In **Settings → Back up and restore**, **Save a backup** saves a `ytgrab-backup-<date>.json` file with your settings, your watched channels and playlists (with the videos each has already seen, so a restored watch doesn't download them again), and your Library (up to the 500 most recent entries; the queue isn't included). **Restore from a file…** adds a backup to this copy: watches and Library entries already here are kept, and settings are applied through their usual checks. A setting that doesn't fit this computer, like a download folder that doesn't exist here, keeps its current value, and the page says which. **Start with Windows** belongs to each computer and isn't saved.
+
 ## Troubleshooting
 
 | What you see | What to do |

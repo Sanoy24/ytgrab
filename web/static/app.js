@@ -626,6 +626,42 @@ async function refreshLibraryFiles() {
   }
 }
 
+// ---------- back up and restore ----------
+
+function plural(n, one, many) {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+// Restores a backup file the user picked, then reloads what it may have changed.
+async function restoreBackup(input) {
+  const file = input.files?.[0];
+  input.value = ''; // picking the same file again still restores
+  if (!file) return;
+  const result = $('#backup-result');
+  result.textContent = 'Restoring…';
+  try {
+    const r = await client.restoreBackup(await file.text());
+    const parts = [
+      `Added ${plural(r.watches_added, 'watch', 'watches')} and ${plural(r.jobs_added, 'Library entry', 'Library entries')}.`,
+    ];
+    const kept = r.watches_existing + r.jobs_existing;
+    if (kept) parts.push(`${plural(kept, 'item was', 'items were')} already here.`);
+    if (r.jobs_invalid) parts.push(`${plural(r.jobs_invalid, 'entry', 'entries')} couldn't be read.`);
+    if (r.settings_skipped?.length) parts.push(`Kept this computer's ${r.settings_skipped.join(', ')}.`);
+    result.textContent = parts.join(' ');
+    toast('Backup restored.');
+    if (!client.isFixture) {
+      jobs = await client.listJobs();
+      render();
+      loadSettings();
+      loadWatches();
+    }
+  } catch (err) {
+    result.textContent = err.message;
+    toast(err.message, true);
+  }
+}
+
 // Saves the list as shown (search, filter, and sort applied) as a CSV file.
 function exportHistory() {
   const shown = [...document.querySelectorAll('#history .job')].map((row) => jobs.find((j) => j.id === row.dataset.id)).filter(Boolean);
@@ -2127,6 +2163,8 @@ function init() {
     render();
   });
   $('#export-history').addEventListener('click', exportHistory);
+  $('#backup-file').addEventListener('change', (e) => restoreBackup(e.currentTarget));
+  if (client.isFixture) $('#backup-save').removeAttribute('href'); // no server to save from
   $('#history-search').addEventListener('input', (e) => {
     historyQuery = e.currentTarget.value.trim().toLowerCase();
     render();

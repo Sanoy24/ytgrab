@@ -59,6 +59,15 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 		if updater, ok := settings[0].(YTGrabUpdater); ok {
 			addYTGrabUpdateRoute(mux, updater)
 		}
+		if prefs, ok := settings[0].(backupSettings); ok {
+			if store, ok := jobs.(backupStore); ok {
+				version := ""
+				if reporter, ok := settings[0].(VersionReporter); ok {
+					version = reporter.YTGrabVersion().Version
+				}
+				addBackupRoutes(mux, store, prefs, version)
+			}
+		}
 		if provider, ok := settings[0].(watchProvider); ok {
 			if watches := provider.Watches(); watches != nil {
 				addWatchRoutes(mux, watches)
