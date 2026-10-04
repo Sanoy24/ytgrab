@@ -33,8 +33,8 @@ class FixtureClient {
     this.timer = null;
   }
 
-  async version() {
-    await delay(150);
+  async version({ refresh = false } = {}) {
+    await delay(refresh ? 600 : 150);
     const self = this.scenario === 'self-update';
     const update = (this.scenario === 'default' || self) && !this.selfUpdated;
     return {
@@ -515,8 +515,8 @@ class HttpClient {
   isFixture = false;
 
   // { version, latest, update_available, update_command, release_url }
-  version() {
-    return this.request('GET', '/api/system/version');
+  version({ refresh = false } = {}) {
+    return this.request('GET', `/api/system/version${refresh ? '?refresh=1' : ''}`);
   }
   health() {
     return this.request('GET', '/api/system/health');

@@ -93,8 +93,17 @@ type VersionReporter interface {
 	YTGrabVersion() VersionInfo
 }
 
+// VersionChecker looks for a new release right away, for "Check for updates".
+type VersionChecker interface {
+	CheckYTGrabVersion() VersionInfo
+}
+
 func addVersionRoute(mux *http.ServeMux, reporter VersionReporter) {
-	mux.HandleFunc("GET /api/system/version", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /api/system/version", func(w http.ResponseWriter, r *http.Request) {
+		if checker, ok := reporter.(VersionChecker); ok && r.URL.Query().Get("refresh") == "1" {
+			writeJSON(w, http.StatusOK, checker.CheckYTGrabVersion())
+			return
+		}
 		writeJSON(w, http.StatusOK, reporter.YTGrabVersion())
 	})
 }

@@ -933,6 +933,8 @@ async function updateYtdlp(button) {
   }
 }
 
+let healthReport = null;
+
 async function loadHealth() {
   const pill = $('#health');
   const label = $('#health-label');
@@ -940,6 +942,8 @@ async function loadHealth() {
   pill.hidden = false;
   try {
     const h = await client.health();
+    healthReport = h;
+    renderAbout();
     const missingRequired = h.dependencies.filter((d) => d.required && !d.available);
     const ready = h.status === 'ready' && !missingRequired.length;
     const outdated = h.dependencies.some((d) => d.outdated);
@@ -2012,7 +2016,54 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && Date.now() - versionCheckedAt > 60 * 60 * 1000) loadVersion();
 });
 
+// ---------- about ----------
+
+function renderAbout() {
+  const info = versionInfo;
+  if (info) {
+    $('#about-version').textContent = info.version || 'development build';
+    const status = $('#about-status');
+    status.classList.toggle('is-new', Boolean(info.update_available));
+    status.textContent = info.update_available
+      ? `${info.latest} is available`
+      : info.latest
+        ? 'up to date'
+        : '';
+    $('#app-version').hidden = !info.version;
+    $('#app-version').textContent = `YTGrab ${info.version}${info.update_available ? ' · update available' : ''}`;
+  }
+  const tool = (name) => healthReport?.dependencies.find((d) => d.name === name);
+  const describe = (d) => {
+    if (!healthReport) return '…';
+    if (!d || !d.available) return 'Not found';
+    return `${shortVersion(d.version)}${d.outdated ? ' · update available' : ''}`;
+  };
+  $('#about-ytdlp').textContent = describe(tool('yt-dlp'));
+  $('#about-ffmpeg').textContent = describe(tool('ffmpeg'));
+  // yt-dlp can use Deno or Node; name the one found.
+  const js = tool('js-runtime');
+  const jsName = /node(\.exe)?$/i.test(js?.path || '') ? 'Node.js ' : /deno(\.exe)?$/i.test(js?.path || '') ? 'Deno ' : '';
+  $('#about-js').textContent = js?.available ? jsName + describe(js) : describe(js);
+}
+
+async function checkForUpdates(button) {
+  button.disabled = true;
+  button.textContent = 'Checking…';
+  try {
+    versionInfo = await client.version({ refresh: true });
+    versionCheckedAt = Date.now();
+    renderUpdate();
+    toast(versionInfo.update_available ? `YTGrab ${versionInfo.latest} is available.` : versionInfo.latest ? 'YTGrab is up to date.' : "Couldn't reach GitHub to check. Try again later.", !versionInfo.latest);
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Check for updates';
+  }
+}
+
 function renderUpdate() {
+  renderAbout();
   const info = versionInfo;
   let dismissed = '';
   try {
@@ -2168,6 +2219,11 @@ function init() {
     render();
   });
   $('#export-history').addEventListener('click', exportHistory);
+  $('#about-check').addEventListener('click', (e) => checkForUpdates(e.currentTarget));
+  $('#app-version').addEventListener('click', () => {
+    showView('settings');
+    $('#about').scrollIntoView({ block: 'start' });
+  });
   $('#backup-file').addEventListener('change', (e) => restoreBackup(e.currentTarget));
   if (client.isFixture) $('#backup-save').removeAttribute('href'); // no server to save from
   $('#history-search').addEventListener('input', (e) => {

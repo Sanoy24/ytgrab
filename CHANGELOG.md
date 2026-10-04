@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **About YTGrab.** Settings shows which YTGrab, yt-dlp, FFmpeg, and JavaScript runtime you have, with **Check for updates** and links to what's new, the user guide, and reporting a problem. The sidebar shows the version too; click it to open About.
+
 ### Fixed
 
 - Sending X's timeline (`x.com/home`) with the extension opened YTGrab with a link it can't download and no explanation. The extension now says to right-click the post's date instead, and YTGrab explains a handed-over link it can't use straight away.
