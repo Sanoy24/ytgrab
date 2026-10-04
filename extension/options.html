@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Download with YTGrab: options</title>
+  <style>
+    :root { color-scheme: light dark; font: 14px/1.5 system-ui, "Segoe UI", sans-serif; }
+    body { margin: 0; padding: 16px; min-width: 300px; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; }
+    input { width: 8em; padding: 6px 8px; font: inherit; }
+    button { margin-left: 8px; padding: 6px 14px; font: inherit; cursor: pointer; }
+    p { margin: 8px 0 0; color: GrayText; }
+    #status { color: inherit; min-height: 1.5em; }
+  </style>
+</head>
+<body>
+  <form id="form">
+    <label for="port">YTGrab's port</label>
+    <input id="port" type="number" min="1" max="65535" required>
+    <button type="submit">Save</button>
+    <p>8787 unless you changed YTGRAB_LISTEN_ADDR. YTGrab's address is shown in its window or tray menu, like http://127.0.0.1:8787/.</p>
+    <p id="status" role="status"></p>
+  </form>
+  <script src="options.js"></script>
+</body>
+</html>

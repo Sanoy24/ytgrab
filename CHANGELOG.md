@@ -6,6 +6,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Browser extension.** Download with YTGrab (Chrome, Edge, Firefox) adds a toolbar button and a right-click item that send the video you're watching to YTGrab, reusing its tab. It reads nothing from your pages and needs no account. Get it from the release page.
 - **Watch Vimeo.** Follow a Vimeo channel, group, or public showcase, and new videos download by themselves like a watched YouTube channel.
 
 ### Changed

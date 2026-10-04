@@ -140,6 +140,10 @@ YTGrab's own releases are checked the same way (GitHub's `releases/latest` redir
 
 `internal/selfupdate` replaces a copy unpacked from a release archive or installed by `install.sh` (Windows x64 and Linux; not Scoop, Homebrew, `go install`, or macOS, which is untested). It downloads `ytgrab-<version>-<os>-<arch>` from the GitHub release with its `.sha256` file and refuses any mismatch, takes only the program from the top of the archive, and runs it with `--version`, which must print the expected version. The program then takes the old one's place: on Windows the running `ytgrab.exe` can only be renamed, so it becomes `ytgrab.exe.old`, which the next start deletes. The handler answers, then ends `app.Run` with `ErrRestart`; by then the port and data folder are free, and `main` starts the new program in the background like a shortcut start. Updates are refused while downloads run.
 
+## Browser extension
+
+`extension/` is a Manifest V3 extension for Chrome, Edge, and Firefox. Its toolbar button and context menu open `http://127.0.0.1:<port>/?url=<address>`, the same entry point as the Send to YTGrab bookmark, reusing an open YTGrab tab. It first checks `GET /api/system/version` for the `X-YTGrab-Version` header, so it never sends links to another program on the port; it makes no other requests, and YTGrab's origin check would refuse any change it tried to make. Its permissions are `activeTab` (the clicked tab's address), `contextMenus`, `storage` (the port), and host access to `127.0.0.1`. The release job stamps the version into the manifest and publishes `ytgrab-extension-<version>.zip`.
+
 ## Defaults
 
 | Setting | Value |

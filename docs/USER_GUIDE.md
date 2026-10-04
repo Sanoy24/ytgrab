@@ -148,6 +148,17 @@ In **Settings**, drag the **Send to YTGrab** button to your browser's bookmarks 
 
 You can also press Ctrl+V anywhere on the YTGrab page, or drag a link from another window onto it.
 
+## Browser extension
+
+The **Download with YTGrab** extension adds a button to your browser's toolbar: on a video page, click it and YTGrab opens (or comes to the front) with that video's link ready to add. Right-click a link or a page for **Download with YTGrab** too. Nothing is downloaded until you press **Add to queue**, and the extension reads nothing from the pages you visit: it only passes the address you clicked to YTGrab on your own computer.
+
+Install it from the release page: download `ytgrab-extension-<version>.zip` from [Releases](https://github.com/Sanoy24/ytgrab/releases) and extract it into a folder you keep.
+
+- **Chrome, Edge, Brave:** open `chrome://extensions` (Edge: `edge://extensions`), turn on **Developer mode**, choose **Load unpacked**, and pick the extracted folder. Pin it from the puzzle-piece menu so the button stays visible.
+- **Firefox:** open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and pick `manifest.json` in the extracted folder. Firefox removes temporary add-ons when it closes, until the extension is published on Firefox's add-on site.
+
+If YTGrab isn't running, the button shows a red **!**; point at it to see why. If you changed YTGrab's port (`YTGRAB_LISTEN_ADDR`), set the same port in the extension's options.
+
 ## Download part of a video
 
 For a single video, open **Only part of the video** below the formats and enter a **Start** and **End** time, like `1:05` and `2:30` (or `1:02:30` for longer videos). Leave Start empty to begin at the start, or End empty to go to the end. The clip is cut exactly at those times, which takes a little extra processing, and its file name includes the range (`Title [id] 720p 1m05s-2m30s.mp4`), so it never replaces a full download. A video can be in the queue once at a time, so add the full video and a clip of it one after the other.
