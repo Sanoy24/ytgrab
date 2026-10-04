@@ -2,6 +2,12 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- New YTGrab versions show up sooner: YTGrab looks every 6 hours instead of once a day, and again when you open the page if its last look is over an hour old.
+
 ## [1.13.1] - 2026-10-03
 
 ### Fixed

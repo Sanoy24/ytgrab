@@ -13,12 +13,14 @@ import (
 )
 
 // latestRelease remembers the newest release of a program, refreshed in the background
-// at most once a day so requests never wait on the network.
+// once it is older than maxAge (a day when unset), so most requests never wait.
 type latestRelease struct {
 	mu       sync.Mutex
 	version  string
 	checked  time.Time
 	fetching bool
+	done     chan struct{} // closed when the running refresh ends
+	maxAge   time.Duration
 	lookup   func(context.Context) (string, error)
 }
 
@@ -28,22 +30,55 @@ func newLatestYtdlp() *latestRelease {
 	}}
 }
 
+// YTGrab runs for days in the tray, so new releases are looked for every few hours.
 func newLatestYTGrab() *latestRelease {
-	return &latestRelease{lookup: func(ctx context.Context) (string, error) {
+	return &latestRelease{maxAge: 6 * time.Hour, lookup: func(ctx context.Context) (string, error) {
 		return setup.LatestYTGrabVersion(ctx, http.DefaultClient, "")
 	}}
 }
 
 // Get returns the last known latest version ("" if unknown) and starts a refresh when
-// the value is more than a day old.
+// the value is older than maxAge.
 func (latest *latestRelease) Get() string {
+	maxAge := latest.maxAge
+	if maxAge == 0 {
+		maxAge = 24 * time.Hour
+	}
 	latest.mu.Lock()
 	defer latest.mu.Unlock()
-	if !latest.fetching && time.Since(latest.checked) > 24*time.Hour {
+	latest.startRefresh(maxAge)
+	return latest.version
+}
+
+// Fresh is Get for a value at most maxAge old: when it is older, Fresh waits for a new
+// lookup until ctx ends, then returns what is known.
+func (latest *latestRelease) Fresh(ctx context.Context, maxAge time.Duration) string {
+	latest.mu.Lock()
+	done := latest.startRefresh(maxAge)
+	latest.mu.Unlock()
+	if done != nil {
+		select {
+		case <-done:
+		case <-ctx.Done():
+		}
+	}
+	latest.mu.Lock()
+	defer latest.mu.Unlock()
+	return latest.version
+}
+
+// startRefresh starts a lookup when the value is older than maxAge, and returns a channel
+// that closes when the running lookup ends (nil when none runs). Call with mu held.
+func (latest *latestRelease) startRefresh(maxAge time.Duration) <-chan struct{} {
+	if !latest.fetching && time.Since(latest.checked) > maxAge {
 		latest.fetching = true
+		latest.done = make(chan struct{})
 		go latest.refresh()
 	}
-	return latest.version
+	if !latest.fetching {
+		return nil
+	}
+	return latest.done
 }
 
 func (latest *latestRelease) refresh() {
@@ -56,6 +91,10 @@ func (latest *latestRelease) refresh() {
 	latest.checked = time.Now() // also after a failure, so an offline machine isn't retried constantly
 	if err == nil {
 		latest.version = version
+	}
+	if latest.done != nil {
+		close(latest.done)
+		latest.done = nil
 	}
 }
 

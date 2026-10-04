@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/api"
 	"github.com/Sanoy24/ytgrab/internal/config"
@@ -32,5 +33,34 @@ func TestLatestVersionIsCachedForADay(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("lookup ran %d times; want once per day", calls)
+	}
+}
+
+func TestFreshWaitsForANewLookup(t *testing.T) {
+	release := make(chan struct{})
+	latest := &latestRelease{version: "1.13.0", checked: time.Now().Add(-2 * time.Hour), lookup: func(context.Context) (string, error) {
+		<-release
+		return "1.13.1", nil
+	}}
+	// Recent enough: answered from memory without a lookup.
+	if got := latest.Fresh(context.Background(), 3*time.Hour); got != "1.13.0" {
+		t.Fatalf("recent = %q", got)
+	}
+	go func() { time.Sleep(50 * time.Millisecond); close(release) }()
+	if got := latest.Fresh(context.Background(), time.Hour); got != "1.13.1" {
+		t.Fatalf("after waiting = %q", got)
+	}
+	// A slow lookup doesn't hold the page past its deadline.
+	stuck := &latestRelease{version: "1.13.0", lookup: func(ctx context.Context) (string, error) {
+		<-ctx.Done()
+		return "", ctx.Err()
+	}}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if got := stuck.Fresh(ctx, time.Hour); got != "1.13.0" {
+		t.Fatalf("timed out = %q", got)
+	}
+	if newLatestYTGrab().maxAge != 6*time.Hour {
+		t.Error("YTGrab releases are looked for every 6 hours")
 	}
 }

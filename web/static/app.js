@@ -1923,8 +1923,10 @@ function requireFolder() {
 // ---------- YTGrab updates ----------
 
 let versionInfo = null;
+let versionCheckedAt = 0;
 
 async function loadVersion() {
+  versionCheckedAt = Date.now();
   try {
     versionInfo = await client.version();
   } catch {
@@ -1932,6 +1934,12 @@ async function loadVersion() {
   }
   renderUpdate();
 }
+
+// A tab left open for days asks again when it comes back into view, at most hourly; the
+// server then looks for a new release if its last look is over an hour old.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Date.now() - versionCheckedAt > 60 * 60 * 1000) loadVersion();
+});
 
 function renderUpdate() {
   const info = versionInfo;

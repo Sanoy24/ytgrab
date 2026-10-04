@@ -93,7 +93,11 @@ func (u *ytgrabUpdates) YTGrabVersion() api.VersionInfo {
 	if u.version == "" || u.version == "dev" {
 		return info // development builds don't look for updates
 	}
-	info.Latest = u.latest.Get()
+	// The page asks when it opens: look again if the last look is over an hour old, waiting
+	// briefly so a release out since then shows right away.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	info.Latest = u.latest.Fresh(ctx, time.Hour)
 	if newer(info.Latest, u.version) {
 		info.UpdateAvailable = true
 		info.UpdateCommand = u.command
