@@ -2016,6 +2016,52 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && Date.now() - versionCheckedAt > 60 * 60 * 1000) loadVersion();
 });
 
+// ---------- settings sections ----------
+
+// Scrolls only the page's own scrolling area to a section: scrollIntoView would also move
+// the outer page, pushing the sidebar out of view.
+function scrollToSection(section) {
+  const main = $('#main');
+  const scroller = main.scrollHeight > main.clientHeight && getComputedStyle(main).overflowY !== 'visible' ? main : document.scrollingElement;
+  const top = scroller === main ? main.getBoundingClientRect().top : 0;
+  // On narrow screens the sidebar and the section chips stay at the top; clear them.
+  const sticky = scroller === main ? 16 : ($('.sidebar').offsetHeight || 0) + ($('.settings-nav').offsetHeight || 0) + 12;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  scroller.scrollTo({ top: section.getBoundingClientRect().top - top + scroller.scrollTop - sticky, behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+
+// The section menu scrolls to a section and marks the one being read. It uses buttons,
+// not #links, because the address's #part already picks the view.
+function setupSettingsNav() {
+  const links = [...document.querySelectorAll('.settings-link')];
+  const mark = (id) => links.forEach((l) => l.setAttribute('aria-current', String(l.dataset.section === id)));
+  for (const link of links) {
+    link.addEventListener('click', () => {
+      mark(link.dataset.section);
+      const section = document.getElementById(link.dataset.section);
+      if (section) scrollToSection(section);
+    });
+  }
+  mark(links[0]?.dataset.section);
+  if (!('IntersectionObserver' in window)) return;
+  const visible = new Map();
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
+    // The first section with any part on screen is the one being read, except at the very
+    // bottom, where the last section can't scroll any higher.
+    const main = $('#main');
+    const scroller = main.scrollHeight > main.clientHeight && getComputedStyle(main).overflowY !== 'visible' ? main : document.scrollingElement;
+    const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4;
+    const ids = links.map((l) => l.dataset.section);
+    const current = atBottom ? ids.at(-1) : ids.find((id) => visible.get(id) > 0);
+    if (current) mark(current);
+  }, { rootMargin: '-10% 0px -55% 0px', threshold: [0, 0.01, 1] });
+  for (const link of links) {
+    const section = document.getElementById(link.dataset.section);
+    if (section) observer.observe(section);
+  }
+}
+
 // ---------- about ----------
 
 function renderAbout() {
@@ -2220,9 +2266,10 @@ function init() {
   });
   $('#export-history').addEventListener('click', exportHistory);
   $('#about-check').addEventListener('click', (e) => checkForUpdates(e.currentTarget));
+  setupSettingsNav();
   $('#app-version').addEventListener('click', () => {
     showView('settings');
-    $('#about').scrollIntoView({ block: 'start' });
+    scrollToSection($('#about'));
   });
   $('#backup-file').addEventListener('change', (e) => restoreBackup(e.currentTarget));
   if (client.isFixture) $('#backup-save').removeAttribute('href'); // no server to save from
