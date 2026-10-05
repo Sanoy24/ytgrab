@@ -513,3 +513,21 @@ test('only the content scrolls: the page never grows past the window', async ({ 
     expect(extra, `${view} view`).toBeLessThanOrEqual(0);
   }
 });
+
+test('copies a diagnostic report for a failed download', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/?fixture=default#library');
+  const failed = page.locator('#history .job', { has: page.locator('.badge[data-state="failed"]') }).first();
+  await failed.getByRole('button', { name: /^Copy report/ }).click();
+  await expect(page.locator('#toast')).toContainText('Report copied.');
+  const report = await page.evaluate(() => navigator.clipboard.readText());
+  expect(report).toContain('YTGrab diagnostic report');
+  expect(report).toMatch(/yt-dlp: \d{4}\.\d{2}\.\d{2}/);
+  expect(report).toMatch(/Link: https:\/\//);
+  expect(report).toMatch(/Error: \w+/);
+
+  await page.goto('/?fixture=default#settings');
+  await page.getByRole('button', { name: 'Copy diagnostic report' }).click();
+  await expect(page.locator('#toast')).toContainText('Diagnostic report copied.');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).not.toContain('Link:');
+});

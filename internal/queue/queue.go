@@ -329,7 +329,7 @@ func (queue *Queue) runJob(job domain.Job) {
 		failure := &domain.JobError{Code: "download_failed", Message: "The download failed. Retry after checking the URL and tools."}
 		var downloadError *ytdlp.Error
 		if errors.As(downloadErr, &downloadError) {
-			failure = &domain.JobError{Code: downloadError.Code, Message: downloadError.Message}
+			failure = &domain.JobError{Code: downloadError.Code, Message: downloadError.Message, Detail: downloadError.Detail}
 		}
 		if failure.Code == "blocked" && queue.cooldown != nil {
 			// Pause first so no worker picks the job up early. Until the attempts run out,
