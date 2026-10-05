@@ -548,6 +548,18 @@
                     </div>
                     <div class="set-control"><input type="checkbox" class="pref-check" id="pref-autoupdate" /></div>
                   </div>
+                  <div class="set-row" id="pref-channel-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-channel">yt-dlp builds</label>
+                      <p class="set-hint">When YouTube changes something, fixes reach Nightly builds a day or two before a stable release. Switch back to Stable once the fix is out.</p>
+                    </div>
+                    <div class="set-control">
+                      <select id="pref-channel">
+                        <option value="stable">Stable (recommended)</option>
+                        <option value="nightly">Nightly</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </section>
 

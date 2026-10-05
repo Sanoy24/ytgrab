@@ -548,3 +548,13 @@ test('signs in with a cookies.txt file and refuses other files', async ({ page }
   await expect(page.locator('#toast')).toContainText('sign in with your cookies.txt file');
   await expect(select).toHaveValue('file');
 });
+
+test('switches yt-dlp between stable and nightly builds', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  const channel = page.getByLabel('yt-dlp builds');
+  await expect(channel).toHaveValue('stable');
+  await channel.selectOption('nightly');
+  await expect(page.locator('#toast')).toContainText('Switching to Nightly');
+  await page.reload();
+  await expect(page.getByLabel('yt-dlp builds')).toHaveValue('stable'); // sample data starts fresh
+});

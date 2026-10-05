@@ -81,9 +81,9 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 		list := func(ctx context.Context) ([]domain.Job, error) { return store.List(ctx, 200) }
 		go activity.Watch(ctx, 2*time.Second, list, api.PageOpen, cfg.Activity)
 	}
-	latest := newLatestYtdlp()
+	latest := newLatestYtdlp(appSettings.YtdlpChannel)
 	latest.Get() // look up the newest yt-dlp now, so the first page load can show it
-	updater := &ytdlpUpdater{cfg: cfg, running: jobQueue.Running, latest: latest}
+	updater := &ytdlpUpdater{cfg: cfg, running: jobQueue.Running, latest: latest, channel: appSettings.YtdlpChannel}
 	go ytdlpAutoUpdate{
 		enabled:  appSettings.AutoUpdateYtdlp,
 		running:  jobQueue.Running,
@@ -114,6 +114,24 @@ type serverSettings struct {
 	*ytgrabUpdates
 	loginStart
 	watches *watch.Service
+}
+
+// SetYtdlpChannel saves the channel, then installs that channel's latest yt-dlp in the
+// background: switching back to stable replaces a newer nightly with the stable build.
+// While downloads run the install is refused; automatic updates pick it up later.
+func (s serverSettings) SetYtdlpChannel(ctx context.Context, channel string) error {
+	if err := s.Manager.SetYtdlpChannel(ctx, channel); err != nil {
+		return err
+	}
+	if s.ytdlpUpdater != nil {
+		s.ytdlpUpdater.latest.forget()
+		go func() {
+			installCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+			_, _ = s.ytdlpUpdater.UpdateYtdlp(installCtx)
+		}()
+	}
+	return nil
 }
 
 // Watches offers the watched channels and playlists to the API (nil until serve starts it).

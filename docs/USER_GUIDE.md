@@ -220,6 +220,10 @@ Optional environment variables, set before starting:
 
 Command-line: `ytgrab --open` starts and opens the browser; `ytgrab doctor` and `ytgrab setup` are described under Install; `ytgrab --version` prints the version.
 
+### yt-dlp builds
+
+YTGrab keeps yt-dlp, the tool that does the downloading, up to date with its **Stable** releases. When YouTube changes something and downloads start failing, the fix usually reaches yt-dlp's **Nightly** builds a day or two earlier: choose Nightly in **Settings → This computer → yt-dlp builds**, and YTGrab installs it between downloads (checked against its published checksum). Switch back to Stable once the fix is in a release; YTGrab then installs the latest stable build again.
+
 ### About YTGrab
 
 The last card in **Settings** shows your YTGrab version and whether it's up to date, plus the yt-dlp, FFmpeg, and JavaScript runtime versions it uses. **Check for updates** looks for a new release right away. The version also shows at the bottom of the sidebar; click it to jump here.

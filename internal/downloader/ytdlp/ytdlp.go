@@ -734,7 +734,7 @@ func classifyFailure(stderr string) error {
 	case strings.Contains(lower, "requested format is not available"):
 		return &Error{Code: "format_unavailable", Message: "That quality isn't offered for this video any more. Check its formats again, or use a preset like Best quality."}
 	case strings.Contains(lower, "challenge solving failed"), strings.Contains(lower, "signature solving failed"), strings.Contains(lower, "no supported javascript runtime"):
-		return &Error{Code: "youtube_changed", Message: "YouTube changed how its videos are protected, and this yt-dlp can't keep up yet. Update yt-dlp from the tools panel (YTGrab also does it by itself), then retry."}
+		return &Error{Code: "youtube_changed", Message: "YouTube changed how its videos are protected, and this yt-dlp can't keep up yet. Update yt-dlp from the tools panel (YTGrab also does it by itself), then retry. If a fix hasn't reached a release yet, try Nightly builds in Settings → This computer."}
 	case strings.Contains(lower, "no space left on device"), strings.Contains(lower, "not enough space on the disk"):
 		return &Error{Code: "disk_full", Message: "The drive with your download folder is full. Free up space or choose another folder, then Retry."}
 	// Checked first and by specific phrases: YouTube's bot check also mentions cookies.
@@ -747,7 +747,7 @@ func classifyFailure(stderr string) error {
 	case strings.Contains(lower, "ffmpeg not found"), strings.Contains(lower, "ffprobe not found"):
 		return &Error{Code: "dependency_missing", Message: "Install ffmpeg and ffprobe, then retry."}
 	case strings.Contains(lower, "http error 403"):
-		return &Error{Code: "forbidden", Message: "YouTube refused the download (HTTP 403). This usually clears once yt-dlp catches up with a YouTube change: update yt-dlp from the tools panel and retry later. If it keeps happening, turn on Browser sign-in."}
+		return &Error{Code: "forbidden", Message: "YouTube refused the download (HTTP 403). This usually clears once yt-dlp catches up with a YouTube change: update yt-dlp from the tools panel and retry later. If it keeps happening, try Nightly yt-dlp builds in Settings → This computer, or turn on Browser sign-in."}
 	case strings.Contains(lower, "timed out"), strings.Contains(lower, "connection"), strings.Contains(lower, "http error 5"):
 		return &Error{Code: "network", Message: "The download failed because of a network error. Retry shortly."}
 	default:

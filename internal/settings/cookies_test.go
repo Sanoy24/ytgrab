@@ -68,3 +68,32 @@ func TestCookieFileImport(t *testing.T) {
 		t.Errorf("source = %q", manager.CookiesSource())
 	}
 }
+
+func TestYtdlpChannelPersists(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := New(ctx, store, t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manager.YtdlpChannel() != "stable" {
+		t.Fatalf("default = %q", manager.YtdlpChannel())
+	}
+	if err := manager.SetYtdlpChannel(ctx, "beta"); !errors.Is(err, ErrInvalidPreference) {
+		t.Fatalf("unknown channel = %v", err)
+	}
+	if err := manager.SetYtdlpChannel(ctx, "nightly"); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := New(ctx, store, t.TempDir(), false)
+	if err != nil || reloaded.YtdlpChannel() != "nightly" {
+		t.Fatalf("reloaded = %q, %v", reloaded.YtdlpChannel(), err)
+	}
+	if manager.Snapshot().YtdlpChannel != "nightly" {
+		t.Error("the channel isn't in backups")
+	}
+}
