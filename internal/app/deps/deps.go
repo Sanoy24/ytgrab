@@ -136,7 +136,7 @@ func probeRuntime(ctx context.Context, dirs []string) Tool {
 		}
 		message := runtimeName + " is available."
 		if runtimeName == "node" {
-			message = "Node is available; yt-dlp must be run with --js-runtimes node."
+			message = "Node is available."
 		}
 		return Tool{Name: "js-runtime", Required: true, Available: true, Path: path, Version: version, Message: message}
 	}
@@ -236,6 +236,22 @@ func findTool(dirs []string, name string) (string, error) {
 // Find resolves an executable using the same search order as health checks.
 func Find(cfg config.Config, name string) (string, error) {
 	return findTool(searchDirs(cfg), name)
+}
+
+// RuntimeArgs tells yt-dlp exactly which JavaScript runtime to use: the first supported
+// one the health check would pick (Deno 2.3+, else Node 22+), by its path. Without this,
+// yt-dlp looks on PATH only, missing a runtime in YTGrab's tools folder, and may pick a
+// Deno too old to solve YouTube's challenges even when a current Node is installed.
+func RuntimeArgs(ctx context.Context, cfg config.Config) []string {
+	runtime := probeRuntime(ctx, searchDirs(cfg))
+	if !runtime.Available {
+		return nil
+	}
+	name := "deno"
+	if strings.HasPrefix(strings.ToLower(filepath.Base(runtime.Path)), "node") {
+		name = "node"
+	}
+	return []string{"--js-runtimes", name + ":" + runtime.Path}
 }
 
 // Version runs path --version, using the same cache as the health check.

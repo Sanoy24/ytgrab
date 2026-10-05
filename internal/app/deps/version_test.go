@@ -19,7 +19,13 @@ func TestMain(m *testing.M) {
 			_, _ = f.WriteString("run\n")
 			_ = f.Close()
 		}
-		os.Stdout.WriteString("9.9.9\n")
+		// A copy named like a runtime ("deno.exe") prints the version set for it.
+		name := strings.TrimSuffix(filepath.Base(os.Args[0]), filepath.Ext(os.Args[0]))
+		version := os.Getenv("YTGRAB_FAKE_VERSION_" + strings.ToUpper(name))
+		if version == "" {
+			version = "9.9.9"
+		}
+		os.Stdout.WriteString(version + "\n")
 		os.Exit(0)
 	}
 	os.Exit(m.Run())
