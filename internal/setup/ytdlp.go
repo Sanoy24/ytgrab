@@ -20,6 +20,9 @@ import (
 const (
 	ytdlpReleaseURL  = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
 	ytdlpReleasesURL = "https://github.com/yt-dlp/yt-dlp/releases"
+	// Nightly builds are published the same way, with checksums, a day or two before fixes
+	// reach a stable release.
+	ytdlpNightlyReleasesURL = "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases"
 	// YTGrabReleasesURL lists YTGrab's own releases.
 	YTGrabReleasesURL = "https://github.com/Sanoy24/ytgrab/releases"
 )
@@ -68,6 +71,19 @@ func latestTag(ctx context.Context, client *http.Client, releasesURL, name strin
 // against the release's SHA-256 checksums.
 func InstallYtdlp(ctx context.Context, client *http.Client, dir string) (string, error) {
 	return downloadYtdlp(ctx, client, ytdlpReleaseURL, runtime.GOOS, runtime.GOARCH, dir)
+}
+
+// YtdlpReleasesURL lists a channel's releases: "nightly", or the stable ones.
+func YtdlpReleasesURL(channel string) string {
+	if channel == "nightly" {
+		return ytdlpNightlyReleasesURL
+	}
+	return ytdlpReleasesURL
+}
+
+// InstallYtdlpChannel is InstallYtdlp for a channel ("stable" or "nightly").
+func InstallYtdlpChannel(ctx context.Context, client *http.Client, dir, channel string) (string, error) {
+	return downloadYtdlp(ctx, client, YtdlpReleasesURL(channel)+"/latest/download", runtime.GOOS, runtime.GOARCH, dir)
 }
 
 const maxYtdlpSize = 200 << 20

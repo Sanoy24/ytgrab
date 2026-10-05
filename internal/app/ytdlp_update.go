@@ -24,10 +24,19 @@ type latestRelease struct {
 	lookup   func(context.Context) (string, error)
 }
 
-func newLatestYtdlp() *latestRelease {
+// newLatestYtdlp looks up the newest yt-dlp on the channel channel() names.
+func newLatestYtdlp(channel func() string) *latestRelease {
 	return &latestRelease{lookup: func(ctx context.Context) (string, error) {
-		return setup.LatestYtdlpVersion(ctx, http.DefaultClient, "")
+		return setup.LatestYtdlpVersion(ctx, http.DefaultClient, setup.YtdlpReleasesURL(channel()))
 	}}
+}
+
+// forget drops the known latest version, so the next look starts fresh (after the channel
+// changes, the other channel's latest means nothing).
+func (latest *latestRelease) forget() {
+	latest.mu.Lock()
+	defer latest.mu.Unlock()
+	latest.version, latest.checked = "", time.Time{}
 }
 
 // YTGrab runs for days in the tray, so new releases are looked for every few hours.
@@ -110,6 +119,7 @@ type ytdlpUpdater struct {
 	cfg     config.Config
 	running func() int
 	latest  *latestRelease
+	channel func() string // "stable" or "nightly"; nil means stable
 	mu      sync.Mutex
 }
 
@@ -137,7 +147,11 @@ func (updater *ytdlpUpdater) UpdateYtdlp(ctx context.Context) (api.YtdlpUpdate, 
 			return api.YtdlpUpdate{Version: current}, nil
 		}
 	}
-	path, err := setup.InstallYtdlp(ctx, http.DefaultClient, SetupToolsDir(updater.cfg))
+	channel := "stable"
+	if updater.channel != nil {
+		channel = updater.channel()
+	}
+	path, err := setup.InstallYtdlpChannel(ctx, http.DefaultClient, SetupToolsDir(updater.cfg), channel)
 	if err != nil {
 		return api.YtdlpUpdate{}, err
 	}

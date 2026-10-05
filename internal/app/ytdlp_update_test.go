@@ -11,7 +11,7 @@ import (
 )
 
 func TestUpdateRefusedWhileDownloadsRunOrAnotherUpdateIsActive(t *testing.T) {
-	updater := &ytdlpUpdater{cfg: config.Config{}, running: func() int { return 1 }, latest: newLatestYtdlp()}
+	updater := &ytdlpUpdater{cfg: config.Config{}, running: func() int { return 1 }, latest: newLatestYtdlp(func() string { return "stable" })}
 	if _, err := updater.UpdateYtdlp(context.Background()); !errors.Is(err, api.ErrDownloadsRunning) {
 		t.Fatalf("update during downloads = %v", err)
 	}

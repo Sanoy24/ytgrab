@@ -48,6 +48,12 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// ytdlpChannelSettings choose between stable and nightly yt-dlp builds.
+type ytdlpChannelSettings interface {
+	YtdlpChannel() string
+	SetYtdlpChannel(context.Context, string) error
+}
+
 // normalizeSettings is implemented by settings that can even out audio loudness.
 type normalizeSettings interface {
 	NormalizeAudio() bool
@@ -139,6 +145,9 @@ func settingsBody(settings Settings) map[string]any {
 	if window, ok := settings.(windowSettings); ok {
 		body["download_window"] = window.DownloadWindow().String()
 	}
+	if channel, ok := settings.(ytdlpChannelSettings); ok {
+		body["ytdlp_channel"] = channel.YtdlpChannel()
+	}
 	if normalize, ok := settings.(normalizeSettings); ok {
 		body["normalize_audio"] = normalize.NormalizeAudio()
 	}
@@ -201,6 +210,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				SponsorBlock  *string        `json:"sponsorblock"`
 				Window        *string        `json:"download_window"`
 				Normalize     *bool          `json:"normalize_audio"`
+				YtdlpChannel  *string        `json:"ytdlp_channel"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -263,6 +273,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				err = normalize.SetNormalizeAudio(r.Context(), *input.Normalize)
+			}
+			if err == nil && input.YtdlpChannel != nil {
+				channel, ok := settings.(ytdlpChannelSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server has no yt-dlp channel setting.")
+					return
+				}
+				err = channel.SetYtdlpChannel(r.Context(), *input.YtdlpChannel)
 			}
 			if errors.Is(err, settingspkg.ErrInvalidPreference) {
 				writeError(w, http.StatusBadRequest, "invalid_preference", err.Error())

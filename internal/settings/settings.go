@@ -27,6 +27,7 @@ const (
 	sponsorBlockKey  = "sponsorblock"
 	windowKey        = "download_window"
 	normalizeKey     = "normalize_audio"
+	ytdlpChannelKey  = "ytdlp_channel"
 )
 
 // SponsorBlockModes: leave sponsor segments alone, mark them as chapters, or cut them out.
@@ -89,6 +90,7 @@ type Manager struct {
 	window       domain.Window
 	onWindow     func() // called after the download window changes
 	normalize    bool
+	ytdlpChannel string // "stable" or "nightly"
 	defaultDir   string
 	configured   bool
 }
@@ -150,11 +152,39 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if saved, ok, err := store.GetSetting(ctx, windowKey); err == nil && ok {
 		window, _ = domain.ParseWindow(saved)
 	}
+	ytdlpChannel := "stable"
+	if saved, ok, err := store.GetSetting(ctx, ytdlpChannelKey); err == nil && ok && saved == "nightly" {
+		ytdlpChannel = "nightly"
+	}
 	normalize := false
 	if saved, ok, err := store.GetSetting(ctx, normalizeKey); err == nil && ok {
 		normalize = saved == "1"
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, window: window, normalize: normalize, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, window: window, normalize: normalize, ytdlpChannel: ytdlpChannel, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// YtdlpChannel is where yt-dlp updates come from: "stable" (the default) or "nightly",
+// whose fixes for YouTube changes arrive a day or two sooner.
+func (manager *Manager) YtdlpChannel() string {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	if manager.ytdlpChannel == "nightly" {
+		return "nightly"
+	}
+	return "stable"
+}
+
+func (manager *Manager) SetYtdlpChannel(ctx context.Context, channel string) error {
+	if channel != "stable" && channel != "nightly" {
+		return ErrInvalidPreference
+	}
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	if err := manager.store.PutSetting(ctx, ytdlpChannelKey, channel); err != nil {
+		return fmt.Errorf("save yt-dlp channel: %w", err)
+	}
+	manager.ytdlpChannel = channel
+	return nil
 }
 
 // NormalizeAudio reports whether converted audio (MP3, FLAC, WAV) is evened out in loudness.

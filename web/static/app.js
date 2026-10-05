@@ -1896,6 +1896,8 @@ function renderPreferences(next) {
   $('#pref-sponsor-row').hidden = typeof next.sponsorblock !== 'string';
   if (typeof next.sponsorblock === 'string') $('#pref-sponsor').value = next.sponsorblock;
   $('#pref-autoupdate-row').hidden = typeof next.auto_update_ytdlp !== 'boolean';
+  $('#pref-channel-row').hidden = typeof next.ytdlp_channel !== 'string';
+  if (next.ytdlp_channel) $('#pref-channel').value = next.ytdlp_channel;
   $('#pref-autoupdate').checked = Boolean(next.auto_update_ytdlp);
   renderSubtitles(next);
   renderSpeed(next);
@@ -2403,6 +2405,17 @@ function init() {
   $('#pref-names').addEventListener('change', (e) => {
     const label = e.currentTarget.selectedOptions[0].textContent;
     savePreference(e.currentTarget, { file_names: e.currentTarget.value }, `New downloads will be named by ${label.toLowerCase()}.`);
+  });
+  $('#pref-channel').addEventListener('change', async (e) => {
+    const nightly = e.currentTarget.value === 'nightly';
+    await savePreference(
+      e.currentTarget,
+      { ytdlp_channel: e.currentTarget.value },
+      nightly
+        ? 'Switching to Nightly yt-dlp builds. The new build installs in the background, between downloads.'
+        : 'Switching back to Stable yt-dlp builds. The stable build installs in the background, between downloads.',
+    );
+    setTimeout(loadHealth, 20000); // show the installed version once it's in
   });
   $('#pref-autoupdate').addEventListener('change', (e) => {
     const on = e.currentTarget.checked;
