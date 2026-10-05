@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-10-05
+
+YTGrab as an archiver: media-server folders, metadata files, and downloads from your phone.
+
 ### Added
 
 - **Save metadata files.** Settings → Downloads can keep each video's details (yt-dlp's info.json), description, and thumbnail as files beside it, for archives and media servers.
@@ -240,6 +244,7 @@ YTGrab now downloads from X (Twitter) too.
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.18.0]: https://github.com/Sanoy24/ytgrab/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/Sanoy24/ytgrab/compare/v1.16.1...v1.17.0
 [1.16.1]: https://github.com/Sanoy24/ytgrab/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/Sanoy24/ytgrab/compare/v1.15.0...v1.16.0
