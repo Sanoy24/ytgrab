@@ -264,6 +264,8 @@ Add the download folder to Jellyfin, Kodi, or Emby as a **Shows** library and th
 
 On the phone, a finished download has **Play**, which plays it in the browser over Wi-Fi, and **Save to phone**, which copies it to the phone's Downloads. Chrome warns that the file "can't be downloaded securely" because the connection isn't encrypted; tap **Keep**, since the file comes straight from your computer. The phone can't change settings, delete files on the computer, or reach anything else on it. **Paired phones** lists each phone with a **Remove** button; turning phone access off removes them all. The connection isn't encrypted, so use it on your home Wi-Fi or another network you trust, not public Wi-Fi.
 
+Your router can give the computer a new address, for example after it restarts. The phone then can't reach YTGrab: the computer shows **Your phone can't reach YTGrab right now** with **Show the code**, and scanning it reconnects the phone (it replaces the old entry). To keep the address from changing, reserve it for this computer in your router's settings, usually called *DHCP reservation* or *static lease*.
+
 If the phone can't connect, check that both are on the same Wi-Fi (guest networks often keep devices apart), and that Windows Firewall allows YTGrab on private networks. A VPN on the computer can also hide it from the phone.
 
 ## Troubleshooting

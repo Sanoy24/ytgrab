@@ -236,3 +236,35 @@ func TestDeviceNames(t *testing.T) {
 		}
 	}
 }
+
+func TestAnAddressChangeIsFlaggedAndRepairingReplacesThePhone(t *testing.T) {
+	service := newService(t, &memoryStore{values: map[string]string{}})
+	pairPhone(t, service) // at 192.168.1.5
+	if service.Status().Moved {
+		t.Fatal("moved before the address changed")
+	}
+
+	// The router gives this computer a new address: the phone's key belonged to the old one.
+	service.address = func() string { return "192.168.1.6" }
+	status := service.Status()
+	if !status.Moved || !status.Devices[0].Moved || status.URL != service.base("192.168.1.6") {
+		t.Fatalf("status = %+v", status)
+	}
+
+	pairing, _ := service.NewPairing()
+	link, _ := url.Parse(pairing.URL)
+	request := httptest.NewRequest(http.MethodGet, pairing.URL, nil)
+	request.RemoteAddr = "192.168.1.20:51000"
+	if request.Host != link.Host {
+		t.Fatalf("host = %s", request.Host)
+	}
+	response := httptest.NewRecorder()
+	service.ServeHTTP(response, request)
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("pair again = %d", response.Code)
+	}
+	status = service.Status()
+	if status.Moved || len(status.Devices) != 1 {
+		t.Fatalf("after pairing again = %+v", status)
+	}
+}

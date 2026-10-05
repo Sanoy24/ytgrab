@@ -98,7 +98,11 @@ func (s *Service) servePair(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	key, err := s.pair(r.Context(), r.URL.Query().Get("code"), r.UserAgent())
+	host := r.Host
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	key, err := s.pair(r.Context(), r.URL.Query().Get("code"), r.UserAgent(), strings.Trim(host, "[]"))
 	switch {
 	case errors.Is(err, ErrTooMany):
 		writePage(w, http.StatusForbidden, "Too many phones", fmt.Sprintf("YTGrab can pair up to %d phones. Remove one in <b>Settings → Phone</b> on your computer, then scan a new code.", MaxDevices))

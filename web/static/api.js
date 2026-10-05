@@ -147,9 +147,13 @@ class FixtureClient {
 
   async phoneStatus() {
     await delay(150);
-    this.phone ??= { enabled: false, url: 'http://192.168.1.5:8788', devices: [] };
+    this.phone ??=
+      this.scenario === 'phone-moved'
+        ? { enabled: true, url: 'http://192.168.1.6:8788', devices: [{ id: 'p0', name: 'Android phone · Chrome', paired_at: '2026-10-01T10:00:00Z', last_seen: '2026-10-04T10:00:00Z', moved: true }] }
+        : { enabled: false, url: 'http://192.168.1.5:8788', devices: [] };
     const { enabled, url, devices } = this.phone;
-    return structuredClone({ enabled, url: enabled ? url : undefined, devices: enabled ? devices : [] });
+    const moved = enabled && devices.some((d) => d.moved);
+    return structuredClone({ enabled, url: enabled ? url : undefined, moved: moved || undefined, devices: enabled ? devices : [] });
   }
 
   async setPhoneAccess(enabled) {
@@ -162,7 +166,13 @@ class FixtureClient {
   async pairPhone() {
     await delay(200);
     // Pretend a phone scans the code a few seconds later.
-    setTimeout(() => this.phone.devices.push({ id: 'p1', name: 'Android phone · Chrome', paired_at: new Date().toISOString(), last_seen: new Date().toISOString() }), 3000);
+    const now = new Date().toISOString();
+    setTimeout(() => {
+      // Like the server: the same kind of phone left behind by an address change is replaced.
+      const stale = this.phone.devices.findIndex((d) => d.moved && d.name === 'Android phone · Chrome');
+      if (stale >= 0) this.phone.devices.splice(stale, 1);
+      this.phone.devices.push({ id: 'p1', name: 'Android phone · Chrome', paired_at: now, last_seen: now });
+    }, 3000);
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8" fill="#fff"/><path d="M1 1h3v3H1zM5 5h2v2H5z"/></svg>';
     return { url: 'http://192.168.1.5:8788/pair?code=sample', qr: `data:image/svg+xml;base64,${btoa(svg)}`, expires_at: new Date(Date.now() + 600_000).toISOString() };
   }

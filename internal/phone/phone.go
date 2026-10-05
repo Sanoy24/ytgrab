@@ -50,6 +50,9 @@ type Device struct {
 	KeyHash  string    `json:"key_hash"`
 	PairedAt time.Time `json:"paired_at"`
 	LastSeen time.Time `json:"last_seen"`
+	// Address is this computer's address the phone paired at. A phone's key belongs to that
+	// address (browsers keep cookies per address), so a new address means pairing again.
+	Address string `json:"address,omitempty"`
 }
 
 // DeviceInfo is a paired phone as the settings page shows it.
@@ -58,6 +61,7 @@ type DeviceInfo struct {
 	Name     string    `json:"name"`
 	PairedAt time.Time `json:"paired_at"`
 	LastSeen time.Time `json:"last_seen"`
+	Moved    bool      `json:"moved,omitempty"` // paired at an address this computer no longer has
 }
 
 // Status is what the settings page shows.
@@ -66,6 +70,9 @@ type Status struct {
 	URL     string       `json:"url,omitempty"`   // where paired phones open YTGrab
 	Error   string       `json:"error,omitempty"` // why phones can't connect
 	Devices []DeviceInfo `json:"devices"`
+	// Moved is set when this computer's address changed since a phone paired, so that phone
+	// can't reach YTGrab until it scans a new code.
+	Moved bool `json:"moved,omitempty"`
 }
 
 // Pairing is a one-time code for a new phone, as a link and its QR code.
@@ -166,14 +173,18 @@ func (s *Service) Status() Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	status := Status{Enabled: s.enabled, Devices: []DeviceInfo{}}
-	for _, device := range s.devices {
-		status.Devices = append(status.Devices, DeviceInfo{ID: device.ID, Name: device.Name, PairedAt: device.PairedAt, LastSeen: device.LastSeen})
-	}
 	if !s.enabled {
 		return status
 	}
+	address := s.address()
+	for _, device := range s.devices {
+		info := DeviceInfo{ID: device.ID, Name: device.Name, PairedAt: device.PairedAt, LastSeen: device.LastSeen}
+		info.Moved = address != "" && device.Address != "" && device.Address != address
+		status.Moved = status.Moved || info.Moved
+		status.Devices = append(status.Devices, info)
+	}
 	status.Error = s.listen
-	if address := s.address(); address != "" {
+	if address != "" {
 		status.URL = s.base(address)
 	} else if status.Error == "" {
 		status.Error = "This computer isn't connected to a Wi-Fi or local network."
@@ -246,8 +257,10 @@ func (s *Service) Forget(ctx context.Context, id string) error {
 	return s.saveLocked(ctx)
 }
 
-// pair trades a one-time code for a phone's key.
-func (s *Service) pair(ctx context.Context, code, userAgent string) (string, error) {
+// pair trades a one-time code for a phone's key. address is how the phone reached this
+// computer. A phone of the same kind left behind by an address change is replaced, since it
+// is most likely this phone pairing again.
+func (s *Service) pair(ctx context.Context, code, userAgent, address string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.code == "" || s.now().After(s.codeEnds) || subtle.ConstantTimeCompare([]byte(code), []byte(s.code)) != 1 {
@@ -259,9 +272,20 @@ func (s *Service) pair(ctx context.Context, code, userAgent string) (string, err
 	s.code = "" // one phone per code
 	key := randomText(32)
 	now := s.now()
-	s.devices = append(s.devices, Device{ID: randomText(8), Name: deviceName(userAgent), KeyHash: hashKey(key), PairedAt: now, LastSeen: now})
+	name := deviceName(userAgent)
+	before := s.devices
+	devices := make([]Device, 0, len(s.devices)+1)
+	replaced := false
+	for _, device := range s.devices {
+		if !replaced && device.Name == name && device.Address != "" && device.Address != address {
+			replaced = true
+			continue
+		}
+		devices = append(devices, device)
+	}
+	s.devices = append(devices, Device{ID: randomText(8), Name: name, KeyHash: hashKey(key), PairedAt: now, LastSeen: now, Address: address})
 	if err := s.saveLocked(ctx); err != nil {
-		s.devices = s.devices[:len(s.devices)-1]
+		s.devices = before
 		return "", err
 	}
 	return key, nil

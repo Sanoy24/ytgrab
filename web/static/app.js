@@ -2384,7 +2384,11 @@ function init() {
   setupSettingsNav();
   // Settings stay on the computer; a phone gets downloads, the Library, and Watching.
   document.body.classList.toggle('on-phone', !!client.onPhone);
-  if (!client.onPhone) initPhone(client);
+  if (!client.onPhone)
+    initPhone(client, () => {
+      showView('settings');
+      scrollToSection($('#set-phone'));
+    });
   $('#app-version').addEventListener('click', () => {
     showView('settings');
     scrollToSection($('#about'));

@@ -3,12 +3,20 @@
 import { $, el, formatWhen, toast } from './ui.js';
 
 let client;
-let status = null; // { enabled, url, error, devices }
+let openSettings; // shows Settings → Phone
+let status = null; // { enabled, url, error, moved, devices }
 let pollTimer = null;
 let codeTimer = null;
 
-export function initPhone(apiClient) {
+export function initPhone(apiClient, showPhoneSettings) {
   client = apiClient;
+  openSettings = showPhoneSettings;
+  $('#phone-moved-fix').addEventListener('click', () => {
+    openSettings();
+    if ($('#phone-qr').hidden) $('#phone-pair').click();
+  });
+  // The computer's address can change any time the router hands out a new one.
+  setInterval(loadPhone, 60_000);
   $('#pref-phone').addEventListener('change', onToggle);
   $('#phone-pair').addEventListener('click', showCode);
   $('#phone-devices').addEventListener('click', (e) => {
@@ -30,6 +38,8 @@ export async function loadPhone() {
 
 function render() {
   $('#set-phone').hidden = false;
+  $('#phone-moved-banner').hidden = !status.moved;
+  $('#phone-moved').hidden = !status.moved;
   $('#pref-phone').checked = status.enabled;
   $('#phone-pair-row').hidden = !status.enabled;
   $('#phone-error').hidden = !status.error;
@@ -46,7 +56,7 @@ function render() {
         'li',
         { className: 'phone-device' },
         el('span', { className: 'phone-device-name', textContent: d.name }),
-        el('span', { className: 'phone-device-when', textContent: `Paired ${formatWhen(d.paired_at)}` }),
+        el('span', { className: 'phone-device-when', textContent: d.moved ? "Can't connect: scan a new code" : `Paired ${formatWhen(d.paired_at)}` }),
         remove,
       );
     }),
@@ -82,6 +92,7 @@ async function showCode(e) {
     button.textContent = 'New code';
     // Watch for the phone to pair, then put the code away.
     const before = status.devices.length;
+    const moved = status.moved; // a phone pairing again replaces its old entry
     clearInterval(pollTimer);
     pollTimer = setInterval(async () => {
       try {
@@ -89,7 +100,7 @@ async function showCode(e) {
       } catch {
         return;
       }
-      if (status.devices.length > before) {
+      if (status.devices.length > before || (moved && !status.moved)) {
         render();
         hideCode();
         toast(`${status.devices.at(-1).name} is paired.`);

@@ -602,6 +602,19 @@ test('pairs a phone with a QR code and removes it', async ({ page }) => {
   await expect(page.locator('#phone-pair-row')).toBeHidden();
 });
 
+test('says when a phone lost the computer after an address change, and reconnects it', async ({ page }) => {
+  await page.goto('/?fixture=phone-moved');
+  const banner = page.locator('#phone-moved-banner');
+  await expect(banner).toContainText("Your phone can't reach YTGrab right now.");
+  await banner.getByRole('button', { name: 'Show the code' }).click();
+  await expect(page.getByAltText('QR code for pairing a phone')).toBeVisible();
+  await expect(page.locator('#phone-devices')).toContainText("Can't connect: scan a new code");
+  await expect(page.locator('#toast')).toContainText('Android phone · Chrome is paired.', { timeout: 8000 });
+  await expect(banner).toBeHidden();
+  await expect(page.locator('#phone-devices li')).toHaveCount(1);
+  await expect(page.locator('#phone-devices')).not.toContainText("Can't connect");
+});
+
 test('on a phone: no settings, and finished downloads save to the phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await page.goto('/?fixture=default&phone=1#settings');
