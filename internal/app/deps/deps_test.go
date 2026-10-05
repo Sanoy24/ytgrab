@@ -5,6 +5,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/config"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -51,10 +52,16 @@ func TestRuntimeArgsNameTheCheckedRuntime(t *testing.T) {
 	}
 	t.Setenv("YTGRAB_FAKE_TOOL_LOG", filepath.Join(t.TempDir(), "runs.log"))
 	t.Setenv("PATH", "") // only the tools folder below
+	// Named as the lookup expects: "deno.exe" on Windows, "deno" elsewhere (the test
+	// binary itself is "deps.test" there).
+	suffix := ""
+	if runtime.GOOS == "windows" {
+		suffix = ".exe"
+	}
 	tools := func(names ...string) config.Config {
 		dir := t.TempDir()
 		for _, name := range names {
-			copyFile(t, self, filepath.Join(dir, name+filepath.Ext(self)))
+			copyFile(t, self, filepath.Join(dir, name+suffix))
 		}
 		return config.Config{ToolsDir: dir}
 	}
@@ -62,13 +69,13 @@ func TestRuntimeArgsNameTheCheckedRuntime(t *testing.T) {
 	t.Setenv("YTGRAB_FAKE_VERSION_DENO", "deno 2.9.7")
 	t.Setenv("YTGRAB_FAKE_VERSION_NODE", "v24.4.1")
 	cfg := tools("deno", "node")
-	if got := RuntimeArgs(context.Background(), cfg); len(got) != 2 || got[0] != "--js-runtimes" || got[1] != "deno:"+filepath.Join(cfg.ToolsDir, "deno"+filepath.Ext(self)) {
+	if got := RuntimeArgs(context.Background(), cfg); len(got) != 2 || got[0] != "--js-runtimes" || got[1] != "deno:"+filepath.Join(cfg.ToolsDir, "deno"+suffix) {
 		t.Errorf("current Deno = %v", got)
 	}
 	// A Deno too old for YouTube's challenges gives way to a current Node, by path.
 	t.Setenv("YTGRAB_FAKE_VERSION_DENO", "deno 2.1.0")
 	cfg = tools("deno", "node")
-	if got := RuntimeArgs(context.Background(), cfg); len(got) != 2 || got[1] != "node:"+filepath.Join(cfg.ToolsDir, "node"+filepath.Ext(self)) {
+	if got := RuntimeArgs(context.Background(), cfg); len(got) != 2 || got[1] != "node:"+filepath.Join(cfg.ToolsDir, "node"+suffix) {
 		t.Errorf("old Deno, current Node = %v", got)
 	}
 	t.Setenv("YTGRAB_FAKE_VERSION_NODE", "v20.0.0")
