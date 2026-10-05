@@ -703,6 +703,16 @@ input[aria-invalid="true"] { border-color: var(--err); }
 }
 .set-control select:hover { border-color: var(--faint); }
 .set-buttons { flex-wrap: wrap; justify-content: flex-end; }
+.mono { font-family: var(--mono); font-size: 0.92em; overflow-wrap: anywhere; }
+.phone-code { flex-direction: column; align-items: flex-end; gap: 8px; }
+.phone-code img { width: 168px; height: 168px; border-radius: 8px; background: #fff; image-rendering: pixelated; }
+.phone-code-link { max-width: 220px; font-size: 0.72rem; color: var(--muted); overflow-wrap: anywhere; text-align: right; }
+.phone-devices { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.phone-device { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.phone-device-name { font-weight: 600; }
+.phone-device-when { color: var(--muted); font-size: 0.83rem; margin-right: auto; }
+/* On a paired phone: no settings, no folder choice, no desktop notifications. */
+.on-phone #open-settings, .on-phone #setup-folder, .on-phone #notify-toggle { display: none !important; }
 .set-card a.btn { text-decoration: none; color: inherit; }
 .window-pickers select { width: auto; }
 .window-pickers span { color: var(--muted); font-size: 0.875rem; }
@@ -736,6 +746,8 @@ input[aria-invalid="true"] { border-color: var(--err); }
   .set-control select { width: 100%; }
   .window-pickers select { flex: 1; }
   .set-buttons { justify-content: flex-start; }
+  .phone-code { align-items: flex-start; }
+  .phone-code-link { text-align: left; }
   .about-list .set-row { flex-direction: row; }
   .about-list dt { width: 8.5rem; }
 }

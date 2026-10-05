@@ -19,6 +19,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/cooldown"
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
+	"github.com/Sanoy24/ytgrab/internal/phone"
 	"github.com/Sanoy24/ytgrab/internal/picker"
 	"github.com/Sanoy24/ytgrab/internal/queue"
 	"github.com/Sanoy24/ytgrab/internal/settings"
@@ -114,6 +115,7 @@ type serverSettings struct {
 	*ytgrabUpdates
 	loginStart
 	watches *watch.Service
+	phones  *phone.Service
 }
 
 // SetYtdlpChannel saves the channel, then installs that channel's latest yt-dlp in the
@@ -140,6 +142,14 @@ func (s serverSettings) Watches() api.Watcher {
 		return nil
 	}
 	return s.watches
+}
+
+// Phones offers phone access to the API (nil until serve starts it).
+func (s serverSettings) Phones() api.PhoneAccess {
+	if s.phones == nil {
+		return nil
+	}
+	return s.phones
 }
 
 // loginStart offers the Windows sign-in entry to the settings page.
@@ -173,20 +183,38 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 			go app.watches.Run(ctx)
 		}
 	}
+	// Phones on the same Wi-Fi reach the same pages through their own server, one port up,
+	// which runs only while phone access is on.
+	var phones *phone.Service
+	if full, ok := store.(phone.Store); ok && len(settings) != 0 {
+		if app, ok := settings[0].(serverSettings); ok {
+			service, err := phone.New(ctx, full, listener.Addr().(*net.TCPAddr).Port+1)
+			if err != nil {
+				return err
+			}
+			phones, app.phones = service, service
+			settings[0] = app
+		}
+	}
 	latest := func() string { return "" }
 	if len(settings) != 0 {
 		if source, ok := settings[0].(interface{ LatestYtdlp() string }); ok {
 			latest = source.LatestYtdlp
 		}
 	}
+	handler := api.NewHandlerWithInspector(func(requestCtx context.Context) deps.Report {
+		report := deps.Check(requestCtx, cfg)
+		deps.MarkOutdated(&report, latest(), time.Now())
+		return report
+	}, store, controller, inspector, settings...)
 	server := &http.Server{
-		Handler: identify(cfg.Version, api.RequireLoopbackHost(api.NewHandlerWithInspector(func(requestCtx context.Context) deps.Report {
-			report := deps.Check(requestCtx, cfg)
-			deps.MarkOutdated(&report, latest(), time.Now())
-			return report
-		}, store, controller, inspector, settings...))),
+		Handler:           identify(cfg.Version, api.RequireLoopbackHost(handler)),
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       30 * time.Second,
+	}
+	if phones != nil {
+		phones.Start(identify(cfg.Version, handler))
+		defer phones.Close()
 	}
 	// Progress streams run until their request context ends. Cancel request contexts
 	// when shutdown starts, or an open browser tab would hold shutdown to its timeout.

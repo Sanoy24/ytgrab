@@ -68,6 +68,11 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 				addBackupRoutes(mux, store, prefs, version)
 			}
 		}
+		if provider, ok := settings[0].(phoneProvider); ok {
+			if phones := provider.Phones(); phones != nil {
+				addPhoneRoutes(mux, phones)
+			}
+		}
 		if provider, ok := settings[0].(watchProvider); ok {
 			if watches := provider.Watches(); watches != nil {
 				addWatchRoutes(mux, watches)

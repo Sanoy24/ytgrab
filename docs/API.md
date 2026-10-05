@@ -56,6 +56,18 @@ Errors use a non-2xx status and `{ "error": { "code": "...", "message": "..." } 
 
 Write requests from another site, and any request whose `Host` is not a loopback name, are rejected with `403`.
 
+### Phone access
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/api/phone` | `{ "enabled", "url", "error", "devices": [{ "id", "name", "paired_at", "last_seen" }] }` |
+| `PUT` | `/api/phone` | `{ "enabled": true }` starts the phone server on the next port up (8788 by default); `false` stops it and forgets every paired phone |
+| `POST` | `/api/phone/pair` | A one-time pairing code, valid 10 minutes: `{ "url", "qr" (an SVG data: URL), "expires_at" }` |
+| `DELETE` | `/api/phone/devices/{id}` | Unpairs a phone |
+| `GET` | `/api/jobs/{id}/file` | A finished download's file, as an attachment, with range requests |
+
+The phone server answers only private-network addresses, by IP address (not a host name). `GET /pair?code=` trades the code for a key in an `HttpOnly` cookie; requests without a paired key get `401`. Paired phones reach only the routes listed in `internal/phone/guard.go` (downloads, playlists, search, Watching, the Library, and `/file`); settings, `/api/phone`, backups, updates, opening files, and deleting files (`delete_file`, `delete_files`) get `403`.
+
 While YouTube is limiting this network, `GET /api/jobs` also returns `"paused_until": "2026-10-01T13:26:20Z"`; queued jobs wait until then.
 
 ## Job

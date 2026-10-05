@@ -9,6 +9,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 - **Save metadata files.** Settings → Downloads can keep each video's details (yt-dlp's info.json), description, and thumbnail as files beside it, for archives and media servers.
 - **Save a yt-dlp archive.** Settings → Backup saves your finished YouTube and Vimeo downloads as a yt-dlp `--download-archive` file, so yt-dlp scripts and other tools skip what you already have.
 - **Jellyfin and Plex layout.** A new file-name style, **For Jellyfin and Plex**, saves each channel as a show: a `Season <year>` folder per upload year, episodes named `S2005E0424` by upload date, a poster, and `.nfo` files with the title, date, and description, so Jellyfin, Kodi, Emby, and Plex list videos with their details.
+- **Use YTGrab from your phone.** Settings → Phone (off by default) lets phones on the same Wi-Fi add links, follow downloads, use Watching, and **Save to phone** finished downloads. Pair a phone by scanning a QR code; only paired phones get in, they can't change settings or delete files on the computer, and you can remove one any time.
 
 ### Fixed
 
