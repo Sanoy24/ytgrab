@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
@@ -246,5 +248,59 @@ func TestLibraryFiles(t *testing.T) {
 	}
 	if len(body.Files) != 2 || body.Files[here.ID] != (libraryFile{Bytes: 1234}) || !body.Files[gone.ID].Missing {
 		t.Fatalf("files = %+v", body.Files)
+	}
+}
+
+func TestDeletingAFileTakesItsSidecars(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name string) string {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	file := write("Talk [jNQXAC9IVRw] 720p.mp4")
+	gone := []string{"Talk [jNQXAC9IVRw] 720p.info.json", "Talk [jNQXAC9IVRw] 720p.description", "Talk [jNQXAC9IVRw] 720p.jpg", "Talk [jNQXAC9IVRw] 720p.en.srt", "Talk [jNQXAC9IVRw] 720p.webp"}
+	kept := []string{"Talk [jNQXAC9IVRw] 1080p.mp4", "Talk [jNQXAC9IVRw] 1080p.jpg", "Talk [jNQXAC9IVRw] 720p.mkv", "Talk [jNQXAC9IVRw] 720p notes.txt", "Other.jpg"}
+	for _, name := range append(append([]string{}, gone...), kept...) {
+		write(name)
+	}
+	job := domain.Job{VideoID: "jNQXAC9IVRw", State: domain.Completed}
+	if removed, err := removeOutput(job, file); err != nil || !removed {
+		t.Fatalf("removeOutput = %v, %v", removed, err)
+	}
+	for _, name := range gone {
+		if _, err := os.Stat(filepath.Join(dir, name)); !os.IsNotExist(err) {
+			t.Errorf("%s was kept", name)
+		}
+	}
+	for _, name := range kept {
+		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+			t.Errorf("%s was removed", name)
+		}
+	}
+}
+
+func TestLibraryArchiveExport(t *testing.T) {
+	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	dir := t.TempDir()
+	finishedJob(t, store, "https://youtu.be/jNQXAC9IVRw", domain.Completed, filepath.Join(dir, "A [jNQXAC9IVRw].m4a"))
+	finishedJob(t, store, "https://www.youtube.com/watch?v=jNQXAC9IVRw", domain.Completed, filepath.Join(dir, "A [jNQXAC9IVRw] 720p.mp4"))
+	finishedJob(t, store, "https://vimeo.com/22439234", domain.Completed, filepath.Join(dir, "B [22439234].mp4"))
+	finishedJob(t, store, "https://youtu.be/aqz-KE-bpKQ", domain.Failed, "")
+	finishedJob(t, store, "https://x.com/a/status/2105708732323909827", domain.Completed, filepath.Join(dir, "C [2105708732323909827].mp4"))
+
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/library/archive", nil))
+	lines := strings.Split(strings.TrimSpace(response.Body.String()), "\n")
+	slices.Sort(lines)
+	if response.Code != http.StatusOK || !slices.Equal(lines, []string{"vimeo 22439234", "youtube jNQXAC9IVRw"}) {
+		t.Fatalf("archive = %d %q", response.Code, response.Body.String())
 	}
 }

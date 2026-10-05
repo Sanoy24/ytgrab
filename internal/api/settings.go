@@ -48,6 +48,12 @@ type preferenceSettings interface {
 	SetDefaultPreset(context.Context, domain.Preset) error
 }
 
+// metadataSettings keep metadata files next to downloads.
+type metadataSettings interface {
+	SaveMetadata() bool
+	SetSaveMetadata(context.Context, bool) error
+}
+
 // ytdlpChannelSettings choose between stable and nightly yt-dlp builds.
 type ytdlpChannelSettings interface {
 	YtdlpChannel() string
@@ -148,6 +154,9 @@ func settingsBody(settings Settings) map[string]any {
 	if channel, ok := settings.(ytdlpChannelSettings); ok {
 		body["ytdlp_channel"] = channel.YtdlpChannel()
 	}
+	if metadata, ok := settings.(metadataSettings); ok {
+		body["save_metadata"] = metadata.SaveMetadata()
+	}
 	if normalize, ok := settings.(normalizeSettings); ok {
 		body["normalize_audio"] = normalize.NormalizeAudio()
 	}
@@ -211,6 +220,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				Window        *string        `json:"download_window"`
 				Normalize     *bool          `json:"normalize_audio"`
 				YtdlpChannel  *string        `json:"ytdlp_channel"`
+				SaveMetadata  *bool          `json:"save_metadata"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -273,6 +283,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				err = normalize.SetNormalizeAudio(r.Context(), *input.Normalize)
+			}
+			if err == nil && input.SaveMetadata != nil {
+				metadata, ok := settings.(metadataSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server has no metadata setting.")
+					return
+				}
+				err = metadata.SetSaveMetadata(r.Context(), *input.SaveMetadata)
 			}
 			if err == nil && input.YtdlpChannel != nil {
 				channel, ok := settings.(ytdlpChannelSettings)

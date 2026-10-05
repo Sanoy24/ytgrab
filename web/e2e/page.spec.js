@@ -570,3 +570,12 @@ test('offers data-saver formats and a night-hours window', async ({ page }) => {
   await expect(page.locator('#pref-window-start')).toHaveValue('22');
   await expect(page.locator('#pref-window-end')).toHaveValue('8');
 });
+
+test('keeps metadata files when asked', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  const toggle = page.getByLabel('Save metadata files');
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  await expect(page.locator('#toast')).toContainText('keep their details, description, and thumbnail');
+  await expect(page.getByText('Save a yt-dlp archive')).toBeVisible();
+});

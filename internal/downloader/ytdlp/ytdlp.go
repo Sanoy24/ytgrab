@@ -57,6 +57,7 @@ type Downloader struct {
 	FileNames      func() string
 	SponsorBlock   func() string
 	NormalizeAudio func() bool
+	SaveMetadata   func() bool
 }
 
 func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEvent func(Event) error) (Result, error) {
@@ -91,6 +92,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if downloader.NormalizeAudio != nil {
 		cfg.NormalizeAudio = downloader.NormalizeAudio()
+	}
+	if downloader.SaveMetadata != nil {
+		cfg.SaveMetadata = downloader.SaveMetadata()
 	}
 	result, err := downloader.run(ctx, job, onEvent, cfg)
 	// A browser whose sign-in can't be read (Chrome on Windows, often) shouldn't stop a
@@ -243,8 +247,14 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	// Title, artist, date, and chapters go into the file; cover art only into formats that
 	// hold it (M4A, MP3, Opus, FLAC), since a failed embed would fail the whole job.
 	args = append(args, "--embed-metadata", "--embed-chapters")
+	if cfg.SaveMetadata {
+		// Kept beside the file, named like it: Title [id].info.json, .description, .jpg.
+		args = append(args, "--write-info-json", "--write-description", "--write-thumbnail")
+	}
 	if embedsCoverArt(job) {
 		args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
+	} else if cfg.SaveMetadata && job.Site != domain.SiteReddit {
+		args = append(args, "--convert-thumbnails", "jpg") // media servers read JPEG posters
 	}
 	if isVideo(job) && job.Site == domain.SiteYouTube {
 		args = append(args, subtitleArgs(cfg.SubtitlesMode, cfg.SubtitlesLang)...)

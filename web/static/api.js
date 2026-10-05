@@ -360,6 +360,7 @@ class FixtureClient {
       start_at_login_label: 'Start with Windows',
       auto_update_ytdlp: this.autoUpdate ?? true,
       ytdlp_channel: this.ytdlpChannel ?? 'stable',
+      save_metadata: this.saveMetadata ?? false,
       file_names: this.fileNames ?? 'title',
       sponsorblock: this.sponsorBlock ?? 'off',
       download_window: this.downloadWindow ?? '',
@@ -374,7 +375,7 @@ class FixtureClient {
     };
   }
 
-  async setPreferences({ max_downloads, default_preset, speed_limit_kbps, auto_update_ytdlp, file_names, sponsorblock, download_window, normalize_audio, ytdlp_channel }) {
+  async setPreferences({ max_downloads, default_preset, speed_limit_kbps, auto_update_ytdlp, file_names, sponsorblock, download_window, normalize_audio, ytdlp_channel, save_metadata }) {
     await delay(200);
     if (normalize_audio !== undefined) this.normalize = normalize_audio;
     if (download_window !== undefined) {
@@ -386,6 +387,7 @@ class FixtureClient {
     if (file_names !== undefined) this.fileNames = file_names;
     if (auto_update_ytdlp !== undefined) this.autoUpdate = auto_update_ytdlp;
     if (ytdlp_channel !== undefined) this.ytdlpChannel = ytdlp_channel;
+    if (save_metadata !== undefined) this.saveMetadata = save_metadata;
     if (speed_limit_kbps !== undefined) this.speedLimit = speed_limit_kbps;
     if (max_downloads !== undefined) this.maxDownloads = max_downloads;
     if (default_preset !== undefined) this.defaultPreset = default_preset;

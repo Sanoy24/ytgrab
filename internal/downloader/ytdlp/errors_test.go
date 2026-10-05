@@ -68,3 +68,14 @@ func TestDataSaverPresets(t *testing.T) {
 		t.Errorf("X 360p: %s", args)
 	}
 }
+
+func TestSaveMetadataWritesSidecars(t *testing.T) {
+	job, _ := domain.NewJob("https://youtu.be/jNQXAC9IVRw", domain.Video720)
+	args := strings.Join(buildArgs(job, config.Config{SaveMetadata: true}), " ")
+	if !strings.Contains(args, "--write-info-json --write-description --write-thumbnail") || !strings.Contains(args, "--convert-thumbnails jpg") {
+		t.Errorf("args = %s", args)
+	}
+	if args := strings.Join(buildArgs(job, config.Config{}), " "); strings.Contains(args, "--write-info-json") {
+		t.Error("metadata files written when the setting is off")
+	}
+}

@@ -49,6 +49,7 @@ func removeOutput(job domain.Job, path string) (removed bool, err error) {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return false, err
 	}
+	removeSidecars(path)
 	if !job.SplitChapters {
 		return removed, nil
 	}
@@ -66,6 +67,26 @@ func removeOutput(job domain.Job, path string) (removed bool, err error) {
 	}
 	_ = os.Remove(folder) // only succeeds when empty
 	return removed, nil
+}
+
+// sidecarFile matches what yt-dlp writes beside a download, after its name: metadata,
+// the thumbnail, and subtitles ("Title [id] 720p.en.srt").
+var sidecarFile = regexp.MustCompile(`^\.(info\.json|description|jpg|jpeg|webp|png|([A-Za-z0-9_-]{1,20}\.)?(srt|vtt|ass|lrc))$`)
+
+// removeSidecars deletes the files yt-dlp wrote beside a deleted download: only those named
+// exactly like it, followed by one of sidecarFile's endings.
+func removeSidecars(path string) {
+	dir, base := filepath.Dir(path), strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.Type().IsRegular() && strings.HasPrefix(name, base) && sidecarFile.MatchString(name[len(base):]) {
+			_ = os.Remove(filepath.Join(dir, name))
+		}
+	}
 }
 
 func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
@@ -111,6 +132,31 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	})
+
+	// A yt-dlp download archive ("youtube jNQXAC9IVRw" per line) of finished downloads, so
+	// yt-dlp scripts and other tools skip what YTGrab already has. Only YouTube and Vimeo:
+	// for X, Reddit, and Instagram YTGrab keeps the post's ID, not the one yt-dlp records.
+	mux.HandleFunc("GET /api/library/archive", func(w http.ResponseWriter, r *http.Request) {
+		jobs, err := store.List(r.Context(), 500)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "storage", "Could not read the library.")
+			return
+		}
+		seen := map[string]bool{}
+		var lines strings.Builder
+		for _, job := range jobs {
+			extractor := map[string]string{domain.SiteYouTube: "youtube", domain.SiteVimeo: "vimeo"}[job.Site]
+			line := extractor + " " + job.VideoID
+			if job.State != domain.Completed || extractor == "" || seen[line] {
+				continue
+			}
+			seen[line] = true
+			lines.WriteString(line + "\n")
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="ytgrab-archive.txt"`)
+		_, _ = w.Write([]byte(lines.String()))
 	})
 
 	// The Library's file sizes, read on demand rather than with every job list: one look

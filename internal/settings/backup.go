@@ -22,6 +22,7 @@ type Snapshot struct {
 	NormalizeAudio  bool          `json:"normalize_audio"`
 	DownloadWindow  string        `json:"download_window"`
 	YtdlpChannel    string        `json:"ytdlp_channel,omitempty"`
+	SaveMetadata    bool          `json:"save_metadata,omitempty"`
 }
 
 // Snapshot returns the current preferences.
@@ -40,6 +41,7 @@ func (manager *Manager) Snapshot() Snapshot {
 		NormalizeAudio:  manager.NormalizeAudio(),
 		DownloadWindow:  manager.DownloadWindow().String(),
 		YtdlpChannel:    manager.YtdlpChannel(),
+		SaveMetadata:    manager.SaveMetadata(),
 	}
 	if manager.Configured() {
 		snapshot.DownloadsDir = manager.DownloadsDir()
@@ -69,6 +71,7 @@ func (manager *Manager) Restore(ctx context.Context, snapshot Snapshot) (skipped
 	apply("SponsorBlock", manager.SetSponsorBlock(ctx, snapshot.SponsorBlock))
 	apply("loudness", manager.SetNormalizeAudio(ctx, snapshot.NormalizeAudio))
 	apply("download window", manager.SetDownloadWindow(ctx, snapshot.DownloadWindow))
+	apply("metadata files", manager.SetSaveMetadata(ctx, snapshot.SaveMetadata))
 	if snapshot.YtdlpChannel != "" {
 		apply("yt-dlp builds", manager.SetYtdlpChannel(ctx, snapshot.YtdlpChannel))
 	}

@@ -382,6 +382,13 @@
                       </select>
                     </div>
                   </div>
+                  <div class="set-row" id="pref-metadata-row" hidden>
+                    <div class="set-text">
+                      <label for="pref-metadata">Save metadata files</label>
+                      <p class="set-hint">Keeps each video's details, description, and thumbnail as files beside it, for archives and media servers like Jellyfin. Deleting the video deletes them too.</p>
+                    </div>
+                    <div class="set-control"><input type="checkbox" class="pref-check" id="pref-metadata" /></div>
+                  </div>
                   <div class="set-row" id="pref-speed-row" hidden>
                     <div class="set-text">
                       <label for="pref-speed">Speed limit (per download)</label>
@@ -585,6 +592,7 @@
                     </div>
                     <div class="set-control set-buttons">
                       <a class="btn btn-small" id="backup-save" href="/api/backup" download>Save a backup</a>
+                      <a class="btn btn-small" id="archive-save" href="/api/library/archive" download title="A yt-dlp --download-archive file, so other tools skip what you already have">Save a yt-dlp archive</a>
                       <label class="btn btn-small backup-pick" for="backup-file">Restore from a file…</label>
                       <input type="file" id="backup-file" accept=".json,application/json" class="visually-hidden" />
                     </div>
