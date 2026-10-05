@@ -365,7 +365,7 @@ class FixtureClient {
       sponsorblock: this.sponsorBlock ?? 'off',
       download_window: this.downloadWindow ?? '',
       normalize_audio: this.normalize ?? false,
-      file_name_styles: ['title', 'channel-title', 'date-title', 'channel-folder'],
+      file_name_styles: ['title', 'channel-title', 'date-title', 'channel-folder', 'media-server'],
       speed_limit_kbps: this.speedLimit ?? 0,
       speed_limits: [0, 500, 1000, 2000, 5000, 10000],
       subtitles_mode: this.subtitlesMode ?? 'off',

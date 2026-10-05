@@ -1864,6 +1864,7 @@ const NAME_EXAMPLES = {
   'channel-title': 'jawed - Me at the zoo [jNQXAC9IVRw] 720p.mp4',
   'date-title': '2005-04-24 Me at the zoo [jNQXAC9IVRw] 720p.mp4',
   'channel-folder': 'jawed / Me at the zoo [jNQXAC9IVRw] 720p.mp4',
+  'media-server': 'jawed / Season 2005 / jawed - S2005E0424 - Me at the zoo [jNQXAC9IVRw] 720p.mp4, with .nfo files and a poster',
 };
 
 function renderFileNames(next) {

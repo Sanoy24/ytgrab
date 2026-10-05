@@ -579,3 +579,9 @@ test('keeps metadata files when asked', async ({ page }) => {
   await expect(page.locator('#toast')).toContainText('keep their details, description, and thumbnail');
   await expect(page.getByText('Save a yt-dlp archive')).toBeVisible();
 });
+
+test('names files for Jellyfin and Plex', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  await page.getByLabel('File names').selectOption('media-server');
+  await expect(page.locator('#pref-names-example')).toContainText('Season 2005 / jawed - S2005E0424');
+});
