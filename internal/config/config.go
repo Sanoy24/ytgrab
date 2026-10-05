@@ -17,8 +17,10 @@ const defaultListenAddress = "127.0.0.1:8787"
 type Config struct {
 	ListenAddress string
 	ToolsDir      string
-	DataDir       string
-	DownloadsDir  string
+	// SaveMetadata keeps info.json, the description, and the thumbnail next to each file.
+	SaveMetadata bool
+	DataDir      string
+	DownloadsDir string
 	// DownloadsDirSet reports that YTGRAB_DOWNLOAD_DIR was given, which counts as the
 	// user's choice of output folder.
 	DownloadsDirSet bool

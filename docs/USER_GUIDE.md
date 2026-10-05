@@ -233,6 +233,12 @@ The last card in **Settings** shows your YTGrab version and whether it's up to d
 ### Back up and restore
 
 In **Settings → Back up and restore**, **Save a backup** saves a `ytgrab-backup-<date>.json` file with your settings, your watched channels and playlists (with the videos each has already seen, so a restored watch doesn't download them again), and your Library (up to the 500 most recent entries; the queue isn't included). **Restore from a file…** adds a backup to this copy: watches and Library entries already here are kept, and settings are applied through their usual checks. A setting that doesn't fit this computer, like a download folder that doesn't exist here, keeps its current value, and the page says which. **Start with Windows** belongs to each computer and isn't saved.
+For other tools, **Save a yt-dlp archive** saves your finished YouTube and Vimeo downloads in yt-dlp's `--download-archive` format (one `youtube <id>` line each), so a yt-dlp script given that file skips videos you already have. X, Reddit, and Instagram downloads aren't included: YTGrab knows them by the post's ID, not the one yt-dlp records.
+
+### Metadata files
+
+**Save metadata files** (Settings → Downloads) keeps three files beside each new download, named like it: `.info.json` (everything yt-dlp knows about the video), `.description`, and the thumbnail as `.jpg`. Archives and media servers such as Jellyfin read them. Deleting the download with its file deletes them too, along with any subtitle files.
+
 
 ## Troubleshooting
 

@@ -68,7 +68,7 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 		return err
 	}
 	appSettings.SetCookieFile(filepath.Join(cfg.DataDir, "cookies.txt"))
-	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg, DownloadsDir: appSettings.DownloadsDir, CookiesBrowser: appSettings.CookiesSource, Subtitles: appSettings.Subtitles, SpeedLimit: appSettings.SpeedLimit, FileNames: appSettings.FileNames, SponsorBlock: appSettings.SponsorBlock, NormalizeAudio: appSettings.NormalizeAudio}, 2)
+	jobQueue := queue.New(store, ytdlp.Downloader{Config: cfg, DownloadsDir: appSettings.DownloadsDir, CookiesBrowser: appSettings.CookiesSource, Subtitles: appSettings.Subtitles, SpeedLimit: appSettings.SpeedLimit, FileNames: appSettings.FileNames, SponsorBlock: appSettings.SponsorBlock, NormalizeAudio: appSettings.NormalizeAudio, SaveMetadata: appSettings.SaveMetadata}, 2)
 	// One pause gate for downloads and format checks: when YouTube limits this network,
 	// everything waits instead of retrying into a longer block.
 	jobQueue.SetCooldown(cooldown.New())

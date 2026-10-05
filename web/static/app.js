@@ -1900,6 +1900,8 @@ function renderPreferences(next) {
   if (typeof next.sponsorblock === 'string') $('#pref-sponsor').value = next.sponsorblock;
   $('#pref-autoupdate-row').hidden = typeof next.auto_update_ytdlp !== 'boolean';
   $('#pref-channel-row').hidden = typeof next.ytdlp_channel !== 'string';
+  $('#pref-metadata-row').hidden = typeof next.save_metadata !== 'boolean';
+  $('#pref-metadata').checked = Boolean(next.save_metadata);
   if (next.ytdlp_channel) $('#pref-channel').value = next.ytdlp_channel;
   $('#pref-autoupdate').checked = Boolean(next.auto_update_ytdlp);
   renderSubtitles(next);
@@ -2368,7 +2370,7 @@ function init() {
     scrollToSection($('#about'));
   });
   $('#backup-file').addEventListener('change', (e) => restoreBackup(e.currentTarget));
-  if (client.isFixture) $('#backup-save').removeAttribute('href'); // no server to save from
+  if (client.isFixture) for (const id of ['#backup-save', '#archive-save']) $(id).removeAttribute('href'); // no server to save from
   $('#history-search').addEventListener('input', (e) => {
     historyQuery = e.currentTarget.value.trim().toLowerCase();
     render();
@@ -2414,6 +2416,10 @@ function init() {
   $('#pref-names').addEventListener('change', (e) => {
     const label = e.currentTarget.selectedOptions[0].textContent;
     savePreference(e.currentTarget, { file_names: e.currentTarget.value }, `New downloads will be named by ${label.toLowerCase()}.`);
+  });
+  $('#pref-metadata').addEventListener('change', (e) => {
+    const on = e.currentTarget.checked;
+    savePreference(e.currentTarget, { save_metadata: on }, on ? 'New downloads will keep their details, description, and thumbnail as files.' : 'New downloads will keep only the video or audio file.');
   });
   $('#pref-channel').addEventListener('change', async (e) => {
     const nightly = e.currentTarget.value === 'nightly';

@@ -2,6 +2,17 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Save metadata files.** Settings → Downloads can keep each video's details (yt-dlp's info.json), description, and thumbnail as files beside it, for archives and media servers.
+- **Save a yt-dlp archive.** Settings → Backup saves your finished YouTube and Vimeo downloads as a yt-dlp `--download-archive` file, so yt-dlp scripts and other tools skip what you already have.
+
+### Fixed
+
+- Deleting a download's file now also deletes the subtitle files and other files yt-dlp saved beside it.
+
 ## [1.17.0] - 2026-10-05
 
 Steadier YouTube downloads, clearer errors, and data-saving formats.
