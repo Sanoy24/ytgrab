@@ -134,6 +134,8 @@
                   <label class="preset"><input type="radio" name="choice" value="preset:video-best" checked /><span><strong>Best quality</strong><small>Highest available</small></span></label>
                   <label class="preset"><input type="radio" name="choice" value="preset:video-1080" /><span><strong>Up to 1080p</strong><small>Full HD</small></span></label>
                   <label class="preset"><input type="radio" name="choice" value="preset:video-720" /><span><strong>Up to 720p</strong><small>Smaller files</small></span></label>
+                  <label class="preset"><input type="radio" name="choice" value="preset:video-480" /><span><strong>Up to 480p</strong><small>Data saver</small></span></label>
+                  <label class="preset"><input type="radio" name="choice" value="preset:video-360" /><span><strong>Up to 360p</strong><small>Smallest video</small></span></label>
                 </div>
                 <div class="preset-group" data-kind="audio" role="presentation" hidden>
                   <span class="preset-group-title visually-hidden">Audio only</span>
@@ -142,6 +144,7 @@
                   <label class="preset"><input type="radio" name="choice" value="preset:audio-opus" /><span><strong>Opus</strong><small>No quality loss</small></span></label>
                   <label class="preset"><input type="radio" name="choice" value="preset:audio-flac" /><span><strong>FLAC</strong><small>Lossless, for editing</small></span></label>
                   <label class="preset"><input type="radio" name="choice" value="preset:audio-wav" /><span><strong>WAV</strong><small>Uncompressed, large</small></span></label>
+                  <label class="preset"><input type="radio" name="choice" value="preset:audio-small" /><span><strong>Small audio</strong><small>For talks · under half the size</small></span></label>
                 </div>
               </div>
               <div id="format-choices" hidden>
@@ -267,10 +270,13 @@
                   <option value="video-best">Video · best quality</option>
                   <option value="video-1080">Video · up to 1080p</option>
                   <option value="video-720">Video · up to 720p</option>
+                  <option value="video-480">Video · up to 480p</option>
+                  <option value="video-360">Video · up to 360p</option>
                   <option value="audio-m4a">Audio · M4A</option>
                   <option value="audio-mp3">Audio · MP3</option>
                   <option value="audio-opus">Audio · Opus</option>
                   <option value="audio-flac">Audio · FLAC</option>
+                  <option value="audio-small">Audio · small (talks)</option>
                 </select>
               </label>
               <label>Start with
@@ -351,11 +357,14 @@
                         <option value="video-best">Video · best quality</option>
                         <option value="video-1080">Video · up to 1080p</option>
                         <option value="video-720">Video · up to 720p</option>
+                        <option value="video-480">Video · up to 480p</option>
+                        <option value="video-360">Video · up to 360p</option>
                         <option value="audio-m4a">Audio · M4A</option>
                         <option value="audio-mp3">Audio · MP3</option>
                         <option value="audio-opus">Audio · Opus</option>
                         <option value="audio-flac">Audio · FLAC</option>
                         <option value="audio-wav">Audio · WAV</option>
+                        <option value="audio-small">Audio · small (talks)</option>
                       </select>
                     </div>
                   </div>
@@ -383,7 +392,8 @@
                   <div class="set-row set-row-wide" id="pref-window-row" hidden>
                     <div class="set-text">
                       <label for="pref-window-start">Download only between</label>
-                      <p class="set-hint">Downloads wait in the queue outside these hours, for example to keep your connection free during the day. Downloads already running finish.</p>
+                      <p class="set-hint">Downloads wait in the queue outside these hours, for example for cheaper night data bundles. Downloads already running finish.</p>
+                      <button type="button" class="btn-link set-shortcut" id="pref-window-night">Use night hours (22:00–08:00)</button>
                     </div>
                     <div class="set-control window-pickers">
                       <select id="pref-window-start" aria-label="Downloads may start from">

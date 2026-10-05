@@ -32,11 +32,15 @@ const (
 	VideoBest Preset = "video-best"
 	Video1080 Preset = "video-1080"
 	Video720  Preset = "video-720"
-	AudioM4A  Preset = "audio-m4a"
-	AudioMP3  Preset = "audio-mp3"
-	AudioOpus Preset = "audio-opus"
-	AudioFLAC Preset = "audio-flac"
-	AudioWAV  Preset = "audio-wav"
+	// Data savers, for slow or metered connections.
+	Video480   Preset = "video-480"
+	Video360   Preset = "video-360"
+	AudioSmall Preset = "audio-small" // low-bitrate Opus, plenty for speech
+	AudioM4A   Preset = "audio-m4a"
+	AudioMP3   Preset = "audio-mp3"
+	AudioOpus  Preset = "audio-opus"
+	AudioFLAC  Preset = "audio-flac"
+	AudioWAV   Preset = "audio-wav"
 )
 
 var ErrInvalidURL = errors.New("enter a valid link to a single YouTube or Vimeo video, or an X, Reddit, or Instagram post")
@@ -189,7 +193,7 @@ func newBaseJob(rawURL string) (Job, error) {
 
 func (preset Preset) Valid() bool {
 	switch preset {
-	case VideoBest, Video1080, Video720, AudioM4A, AudioMP3, AudioOpus, AudioFLAC, AudioWAV:
+	case VideoBest, Video1080, Video720, Video480, Video360, AudioM4A, AudioMP3, AudioOpus, AudioFLAC, AudioWAV, AudioSmall:
 		return true
 	default:
 		return false

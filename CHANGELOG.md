@@ -6,6 +6,7 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Data-saver formats.** New presets for slow or metered connections: video up to 480p or 360p, and **Small audio**, YouTube's own low-bitrate Opus kept as is (a 10 MB M4A becomes about 4 MB), plenty for talks and lectures. The download window gets a one-click **Use night hours (22:00–08:00)** for cheaper night data bundles.
 - **Nightly yt-dlp builds.** Settings → This computer → **yt-dlp builds** switches to Nightly, where fixes for YouTube changes arrive a day or two before a stable release, and back. YTGrab installs the chosen build (with its checksum) between downloads, and errors from YouTube changes now suggest it.
 - **Sign in with a cookies.txt file.** Browser sign-in can use a cookies.txt exported from your browser, which works when a browser's own sign-in can't be read (Chrome and Edge on Windows, usually). YTGrab checks the file, keeps it only in its data folder, and deletes it when you switch sign-in off or to a browser.
 - **Copy report.** A failed download has a **Copy report** button, and Settings → About has **Copy diagnostic report**: versions, settings, the error, and yt-dlp's own words, ready to paste into a bug report.

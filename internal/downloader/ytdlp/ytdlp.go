@@ -302,6 +302,18 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "-f", "bv*[height<=1080]+ba/b[height<=1080]", "--merge-output-format", "mp4/mkv")
 	case domain.Video720:
 		args = append(args, "-f", "bv*[height<=720]+ba/b[height<=720]", "--merge-output-format", "mp4/mkv")
+	case domain.Video480:
+		args = append(args, "-f", "bv*[height<=480]+ba/b[height<=480]", "--merge-output-format", "mp4/mkv")
+	case domain.Video360:
+		args = append(args, "-f", "bv*[height<=360]+ba/b[height<=360]", "--merge-output-format", "mp4/mkv")
+	case domain.AudioSmall:
+		// YouTube's own low-bitrate Opus (about 50 kbit/s) kept as is: well under half the usual
+		// size and plenty for speech. Elsewhere the smallest audio, made Opus at 64k.
+		if job.Site == domain.SiteYouTube {
+			args = append(args, "-f", "ba[acodec=opus][abr<=60]/wa[acodec=opus]/wa", "-x", "--audio-format", "opus")
+		} else {
+			args = append(args, "-f", "wa/ba", "-x", "--audio-format", "opus", "--audio-quality", "64K")
+		}
 	case domain.AudioM4A:
 		if job.Site == domain.SiteYouTube {
 			args = append(args, "-f", "ba[ext=m4a]")
@@ -350,6 +362,12 @@ func xFormatArgs(job domain.Job) []string {
 		return []string{"-f", "b", "-S", "res:1080"}
 	case domain.Video720:
 		return []string{"-f", "b", "-S", "res:720"}
+	case domain.Video480:
+		return []string{"-f", "b", "-S", "res:480"}
+	case domain.Video360:
+		return []string{"-f", "b", "-S", "res:360"}
+	case domain.AudioSmall:
+		return []string{"-f", "ba/b", "-x", "--audio-format", "opus", "--audio-quality", "64K"}
 	case domain.AudioM4A:
 		return []string{"-f", "ba/b", "-x", "--audio-format", "m4a"}
 	case domain.AudioMP3:
@@ -381,7 +399,8 @@ func isVideo(job domain.Job) bool {
 	if job.Format != nil {
 		return job.Format.Kind == "video"
 	}
-	return job.Preset != nil && (*job.Preset == domain.VideoBest || *job.Preset == domain.Video1080 || *job.Preset == domain.Video720)
+	return job.Preset != nil && (*job.Preset == domain.VideoBest || *job.Preset == domain.Video1080 || *job.Preset == domain.Video720 ||
+		*job.Preset == domain.Video480 || *job.Preset == domain.Video360)
 }
 
 // sponsorCategories are the SponsorBlock segments YTGrab marks or removes: paid sponsors,
@@ -433,7 +452,7 @@ func embedsCoverArt(job domain.Job) bool {
 	switch {
 	case job.Preset == nil:
 		return false
-	case *job.Preset == domain.AudioM4A, *job.Preset == domain.AudioMP3, *job.Preset == domain.AudioOpus, *job.Preset == domain.AudioFLAC:
+	case *job.Preset == domain.AudioM4A, *job.Preset == domain.AudioMP3, *job.Preset == domain.AudioOpus, *job.Preset == domain.AudioFLAC, *job.Preset == domain.AudioSmall:
 		return true
 	}
 	return false
@@ -527,7 +546,7 @@ func baseTemplate(job domain.Job) string {
 		return base + ".%(ext)s"
 	}
 	switch *job.Preset {
-	case domain.VideoBest, domain.Video1080, domain.Video720:
+	case domain.VideoBest, domain.Video1080, domain.Video720, domain.Video480, domain.Video360:
 		return base + " %(height)sp.%(ext)s"
 	case domain.AudioM4A:
 		return base + " %(abr).0fk.%(ext)s"

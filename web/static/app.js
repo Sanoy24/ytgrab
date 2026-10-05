@@ -11,11 +11,14 @@ const PRESET_LABELS = {
   'video-best': 'Video · best',
   'video-1080': 'Video · 1080p',
   'video-720': 'Video · 720p',
+  'video-480': 'Video · 480p',
+  'video-360': 'Video · 360p',
   'audio-m4a': 'Audio · M4A',
   'audio-mp3': 'Audio · MP3',
   'audio-opus': 'Audio · Opus',
   'audio-flac': 'Audio · FLAC',
   'audio-wav': 'Audio · WAV',
+  'audio-small': 'Audio · small',
 };
 
 const STATE_LABELS = {
@@ -2390,6 +2393,12 @@ function init() {
     );
   });
   for (const id of ['#pref-window-start', '#pref-window-end']) $(id).addEventListener('change', (e) => saveWindow(e.currentTarget));
+  // Many mobile plans sell cheaper data overnight (Ethio telecom's night bundles run 22:00-08:00).
+  $('#pref-window-night').addEventListener('click', () => {
+    $('#pref-window-start').value = '22';
+    $('#pref-window-end').value = '8';
+    saveWindow($('#pref-window-start'));
+  });
   $('#pref-normalize').addEventListener('change', (e) => {
     const on = e.currentTarget.checked;
     savePreference(e.currentTarget, { normalize_audio: on }, on ? 'MP3, FLAC, and WAV downloads will be evened out in loudness.' : 'Audio loudness will be left as it is.');

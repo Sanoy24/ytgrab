@@ -558,3 +558,15 @@ test('switches yt-dlp between stable and nightly builds', async ({ page }) => {
   await page.reload();
   await expect(page.getByLabel('yt-dlp builds')).toHaveValue('stable'); // sample data starts fresh
 });
+
+test('offers data-saver formats and a night-hours window', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  for (const name of ['Up to 480p', 'Up to 360p']) await expect(page.locator('#preset-choices .preset', { hasText: name })).toBeVisible();
+  await page.getByRole('button', { name: 'Audio only' }).click();
+  await expect(page.locator('#preset-choices .preset', { hasText: 'Small audio' })).toBeVisible();
+  await page.goto('/?fixture=empty#settings');
+  await page.getByRole('button', { name: 'Use night hours (22:00–08:00)' }).click();
+  await expect(page.locator('#toast')).toContainText('between 22:00 and 08:00');
+  await expect(page.locator('#pref-window-start')).toHaveValue('22');
+  await expect(page.locator('#pref-window-end')).toHaveValue('8');
+});
