@@ -255,8 +255,21 @@ func (inspector *Inspector) extract(ctx context.Context, url string, videoID str
 // runJSON runs yt-dlp for machine-readable metadata with a timeout and bounded output.
 func (inspector *Inspector) runJSON(ctx context.Context, path string, args []string, timeout time.Duration) ([]byte, error) {
 	if inspector.CookiesBrowser != nil {
-		args = append(cookieArgs(inspector.CookiesBrowser()), args...)
+		if cookies := cookieArgs(inspector.CookiesBrowser()); cookies != nil {
+			output, err := inspector.runJSONArgs(ctx, path, append(cookies, args...), timeout)
+			// As with downloads: unreadable browser sign-in shouldn't stop a look that may
+			// not need it.
+			if failure, ok := err.(*Error); ok && failure.Code == "cookies_failed" {
+				return inspector.runJSONArgs(ctx, path, args, timeout)
+			}
+			return output, err
+		}
 	}
+	return inspector.runJSONArgs(ctx, path, args, timeout)
+}
+
+// runJSONArgs runs yt-dlp once with the given arguments (sign-in already decided).
+func (inspector *Inspector) runJSONArgs(ctx context.Context, path string, args []string, timeout time.Duration) ([]byte, error) {
 	args = append(deps.RuntimeArgs(ctx, inspector.Config), args...)
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

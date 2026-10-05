@@ -77,6 +77,7 @@ type Manager struct {
 	store        Store
 	downloadsDir string
 	cookies      string
+	cookieFile   string // where an imported cookies.txt is kept
 	maxDownloads int
 	preset       domain.Preset
 	subtitles    string
@@ -106,7 +107,7 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if err != nil {
 		return nil, fmt.Errorf("load sign-in setting: %w", err)
 	}
-	if !slices.Contains(CookieBrowsers, cookies) {
+	if !slices.Contains(CookieBrowsers, cookies) && cookies != CookieFileSetting {
 		cookies = ""
 	}
 	maxDownloads := defaultDownloads
@@ -328,15 +329,24 @@ func (manager *Manager) CookiesBrowser() string {
 	return manager.cookies
 }
 
-// SetCookiesBrowser turns browser sign-in on for one of CookieBrowsers, or off with "".
+// SetCookiesBrowser turns browser sign-in on for one of CookieBrowsers or the imported
+// cookies.txt (CookieFileSetting), or off with "". Leaving the file deletes it.
 func (manager *Manager) SetCookiesBrowser(ctx context.Context, browser string) error {
-	if browser != "" && !slices.Contains(CookieBrowsers, browser) {
+	if browser != "" && browser != CookieFileSetting && !slices.Contains(CookieBrowsers, browser) {
 		return ErrInvalidBrowser
 	}
 	manager.mu.Lock()
 	defer manager.mu.Unlock()
+	if browser == CookieFileSetting {
+		if info, err := os.Stat(manager.cookieFile); manager.cookieFile == "" || err != nil || !info.Mode().IsRegular() {
+			return ErrNoCookieFile
+		}
+	}
 	if err := manager.store.PutSetting(ctx, cookiesKey, browser); err != nil {
 		return fmt.Errorf("save sign-in setting: %w", err)
+	}
+	if browser != CookieFileSetting {
+		manager.removeCookieFile()
 	}
 	manager.cookies = browser
 	return nil

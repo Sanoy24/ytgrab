@@ -92,6 +92,20 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	if downloader.NormalizeAudio != nil {
 		cfg.NormalizeAudio = downloader.NormalizeAudio()
 	}
+	result, err := downloader.run(ctx, job, onEvent, cfg)
+	// A browser whose sign-in can't be read (Chrome on Windows, often) shouldn't stop a
+	// download that may not need it: try once more without.
+	if failure, ok := err.(*Error); ok && failure.Code == "cookies_failed" && cfg.CookiesBrowser != "" {
+		cfg.CookiesBrowser = ""
+		if retried, retryErr := downloader.run(ctx, job, onEvent, cfg); retryErr == nil {
+			return retried, nil
+		}
+	}
+	return result, err
+}
+
+// run downloads once with the settings already resolved.
+func (downloader Downloader) run(ctx context.Context, job domain.Job, onEvent func(Event) error, cfg config.Config) (Result, error) {
 	if err := checkFreeSpace(cfg.DownloadsDir); err != nil {
 		return Result{}, err
 	}
@@ -448,11 +462,16 @@ var browserName = regexp.MustCompile(`^[a-z]{2,16}$`)
 
 // cookieArgs lets yt-dlp use the browser's YouTube sign-in when the user turned it on.
 // YTGrab never reads or stores the cookies itself.
-func cookieArgs(browser string) []string {
-	if !browserName.MatchString(browser) {
+// cookieArgs signs in with a browser's cookies, or with an imported cookies.txt given by
+// its absolute path.
+func cookieArgs(source string) []string {
+	if filepath.IsAbs(source) {
+		return []string{"--cookies", source}
+	}
+	if !browserName.MatchString(source) {
 		return nil
 	}
-	return []string{"--cookies-from-browser", browser}
+	return []string{"--cookies-from-browser", source}
 }
 
 // outputTemplate names files by quality so different picks of one video never collide;

@@ -1967,18 +1967,64 @@ function renderSignIn(next) {
   box.hidden = !Array.isArray(next.cookie_browsers);
   if (box.hidden) return;
   const select = $('#signin-browser');
-  if (select.options.length !== next.cookie_browsers.length + 1) {
+  const file = next.cookies_file ? [el('option', { value: 'file', textContent: 'Use a cookies.txt file…' })] : [];
+  if (select.options.length !== next.cookie_browsers.length + 1 + file.length) {
     select.replaceChildren(
       el('option', { value: '', textContent: 'Off (recommended)' }),
       ...next.cookie_browsers.map((b) => el('option', { value: b, textContent: `Use ${BROWSER_NAMES[b] || b}` })),
+      ...file,
     );
   }
   select.value = next.cookies_browser || '';
+  renderSignInWarning(select.value);
+}
+
+// Chrome and its relatives on Windows encrypt their sign-in data so yt-dlp often can't read
+// it (yt-dlp issue 10927); YTGrab then carries on without sign-in.
+const CHROMIUM_BROWSERS = new Set(['chrome', 'edge', 'brave', 'chromium', 'opera', 'vivaldi']);
+const onWindows = /win/i.test(navigator.userAgentData?.platform || navigator.platform || '');
+
+function renderSignInWarning(choice) {
+  const warning = $('#signin-warning');
+  warning.hidden = !(onWindows && CHROMIUM_BROWSERS.has(choice));
+  warning.textContent = `On Windows, ${BROWSER_NAMES[choice] || 'this browser'} usually locks its sign-in data so yt-dlp can't read it, and downloads then go ahead without signing in. Firefox works, or export a cookies.txt file from your browser and choose "Use a cookies.txt file…".`;
+}
+
+// Picking "Use a cookies.txt file…" asks for the file; closing that window puts the
+// previous choice back.
+function chooseCookieFile(select, previous) {
+  const input = $('#signin-file');
+  input.value = '';
+  const restore = () => {
+    select.value = previous;
+    renderSignInWarning(previous);
+  };
+  input.oncancel = restore;
+  input.onchange = async () => {
+    const chosen = input.files?.[0];
+    if (!chosen) return restore();
+    select.disabled = true;
+    try {
+      applySettings(await client.importCookies(await chosen.text()));
+      toast('Downloads will sign in with your cookies.txt file. YTGrab keeps it only on this computer.');
+    } catch (err) {
+      restore();
+      toast(err.message, true);
+    } finally {
+      select.disabled = false;
+    }
+  };
+  input.click();
 }
 
 async function onSignInChange(e) {
   const select = e.currentTarget;
   const previous = settings?.cookies_browser || '';
+  if (select.value === 'file') {
+    chooseCookieFile(select, previous);
+    return;
+  }
+  renderSignInWarning(select.value);
   select.disabled = true;
   try {
     applySettings(await client.setCookiesBrowser(select.value));

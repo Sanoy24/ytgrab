@@ -352,6 +352,7 @@ class FixtureClient {
       default_dir: String.raw`C:\Users\me\Downloads\ytgrab`,
       can_pick: this.scenario !== 'no-picker',
       cookies_browser: this.cookiesBrowser ?? '',
+      cookies_file: true,
       max_downloads: this.maxDownloads ?? 2,
       max_downloads_limit: 4,
       default_preset: this.defaultPreset ?? 'video-best',
@@ -405,6 +406,15 @@ class FixtureClient {
   async setCookiesBrowser(browser) {
     await delay(200);
     this.cookiesBrowser = browser;
+    return this.settingsBody();
+  }
+
+  async importCookies(text) {
+    await delay(200);
+    if (!text.slice(0, 200).includes('HTTP Cookie File')) {
+      throw new ApiError('invalid_cookie_file', "This isn't a cookies.txt file. Export one in Netscape format (its first line is \"# Netscape HTTP Cookie File\") and choose it again.");
+    }
+    this.cookiesBrowser = 'file';
     return this.settingsBody();
   }
 
@@ -653,6 +663,14 @@ class HttpClient {
   // Turns browser sign-in on for one of the listed browsers, or off with ''.
   setCookiesBrowser(browser) {
     return this.request('PUT', '/api/settings/cookies', { browser });
+  }
+  // Imports a cookies.txt exported from the browser and signs in with it.
+  importCookies(text) {
+    return fetch('/api/settings/cookies-file', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: text }).then(async (response) => {
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new ApiError(body.error?.code || 'import_failed', body.error?.message || 'The cookies file could not be saved.');
+      return body;
+    });
   }
   // Opens the operating system's folder window on this computer; resolves when it closes.
   pickFolder() {

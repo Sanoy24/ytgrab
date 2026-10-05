@@ -29,6 +29,12 @@ type firstRunSettings interface {
 }
 
 // cookieSettings is implemented by settings that support browser sign-in.
+// cookieFileSettings imports a cookies.txt for sign-in.
+type cookieFileSettings interface {
+	CookieFileSupported() bool
+	ImportCookies(context.Context, []byte) error
+}
+
 type cookieSettings interface {
 	CookiesBrowser() string
 	SetCookiesBrowser(context.Context, string) error
@@ -115,6 +121,9 @@ func settingsBody(settings Settings) map[string]any {
 	}
 	if cookies, ok := settings.(cookieSettings); ok {
 		body["cookies_browser"] = cookies.CookiesBrowser()
+		if file, ok := settings.(cookieFileSettings); ok && file.CookieFileSupported() {
+			body["cookies_file"] = true
+		}
 		body["cookie_browsers"] = settingspkg.CookieBrowsers
 	}
 	if startup, ok := settings.(startupSettings); ok && startup.StartAtLoginSupported() {
@@ -279,11 +288,31 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				return
 			}
 			if err := cookies.SetCookiesBrowser(r.Context(), input.Browser); err != nil {
-				if errors.Is(err, settingspkg.ErrInvalidBrowser) {
+				if errors.Is(err, settingspkg.ErrInvalidBrowser) || errors.Is(err, settingspkg.ErrNoCookieFile) {
 					writeError(w, http.StatusBadRequest, "invalid_browser", err.Error())
 					return
 				}
 				writeError(w, http.StatusInternalServerError, "storage", "Could not save the setting.")
+				return
+			}
+			writeJSON(w, http.StatusOK, settingsBody(settings))
+		})
+	}
+	if file, ok := settings.(cookieFileSettings); ok {
+		// The file comes as the request body, as exported from the browser.
+		mux.HandleFunc("POST /api/settings/cookies-file", func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, settingspkg.MaxCookieFileBytes)
+			data, err := io.ReadAll(r.Body)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_cookie_file", "The file is too large to be a cookies.txt.")
+				return
+			}
+			if err := file.ImportCookies(r.Context(), data); err != nil {
+				if errors.Is(err, settingspkg.ErrInvalidCookieFile) {
+					writeError(w, http.StatusBadRequest, "invalid_cookie_file", err.Error())
+					return
+				}
+				writeError(w, http.StatusInternalServerError, "storage", "Could not save the cookies file.")
 				return
 			}
 			writeJSON(w, http.StatusOK, settingsBody(settings))
