@@ -58,6 +58,13 @@
               <button type="button" class="btn-link" id="update-dismiss">Not now</button>
             </div>
           </div>
+          <div class="banner banner-info" id="phone-moved-banner" role="status" hidden>
+            <div>
+              <strong>Your phone can't reach YTGrab right now.</strong>
+              <span>This computer got a new address on your Wi-Fi. Scan a new code with the phone to reconnect it.</span>
+            </div>
+            <button type="button" class="btn btn-small btn-primary" id="phone-moved-fix">Show the code</button>
+          </div>
           <div class="banner banner-info" id="fixture-note" hidden>
             Showing sample data. The download server is not connected yet.
           </div>
@@ -591,6 +598,7 @@
                       <label for="pref-phone">Use YTGrab from your phone</label>
                       <p class="set-hint">Only phones you pair can connect, and they can't change settings or delete files on this computer. Use it on your home Wi-Fi or another network you trust.</p>
                       <p class="set-hint field-error" id="phone-error" role="alert" hidden></p>
+                      <p class="set-hint" id="phone-moved" hidden>This computer's address on your Wi-Fi changed, so phones paired before can't reach it. Scan a new code with each one; it replaces the old entry. To avoid this, reserve this computer's address in your router's settings (often called DHCP reservation).</p>
                     </div>
                     <div class="set-control"><input type="checkbox" class="pref-check" id="pref-phone" /></div>
                   </div>
