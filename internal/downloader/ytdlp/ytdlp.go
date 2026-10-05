@@ -32,11 +32,13 @@ type Event struct {
 	Progress   *domain.Progress
 	Title      string
 	OutputPath string
+	Meta       *Metadata // printed in the media-server style
 }
 
 type Result struct {
 	Title      string
 	OutputPath string
+	Meta       *Metadata
 }
 
 type Error struct {
@@ -160,6 +162,10 @@ func (downloader Downloader) run(ctx context.Context, job domain.Job, onEvent fu
 		if event.OutputPath != "" {
 			result.OutputPath = event.OutputPath
 		}
+		if event.Meta != nil {
+			result.Meta = event.Meta
+			return true // nothing for the page
+		}
 		if callbackErr == nil && onEvent != nil {
 			if err := onEvent(event); err != nil {
 				callbackErr = err
@@ -213,6 +219,9 @@ func (downloader Downloader) run(ctx context.Context, job domain.Job, onEvent fu
 		return Result{}, &Error{Code: "download_failed", Message: "The completed output file could not be confirmed."}
 	}
 	result.OutputPath = confirmed
+	if cfg.FileNames == MediaServerStyle && result.Meta != nil && isVideo(job) {
+		_ = writeNFOs(confirmed, *result.Meta, job.Site) // the video is saved either way
+	}
 	return result, nil
 }
 
@@ -228,6 +237,13 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		"--sleep-requests", "0.5",
 		"-P", cfg.DownloadsDir,
 		"-o", outputTemplate(job, cfg.FileNames),
+	}
+	if cfg.FileNames == MediaServerStyle && isVideo(job) {
+		// Jellyfin and Kodi read "<episode>-thumb.jpg"; the .nfo files are written after the
+		// download from what yt-dlp prints here.
+		thumb := strings.TrimSuffix(outputTemplate(job, cfg.FileNames), ".%(ext)s") + "-thumb.%(ext)s"
+		args = append(args, "--write-thumbnail", "--convert-thumbnails", "jpg", "-o", "thumbnail:"+thumb,
+			"--print", "after_move:"+metaPrefix+metaFields)
 	}
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
 	switch job.Site {
@@ -530,6 +546,8 @@ func nameStart(style string) string {
 		return "%(upload_date>%Y-%m-%d|undated)s "
 	case "channel-folder":
 		return channel + "/"
+	case MediaServerStyle:
+		return channel + "/Season %(upload_date>%Y|0000)s/" + channel + " - S%(upload_date>%Y|0000)sE%(upload_date>%m%d|0000)s - "
 	default:
 		return ""
 	}
@@ -635,6 +653,12 @@ func parseEvent(line string) (Event, bool) {
 			return Event{}, false
 		}
 		return Event{Title: title}, true
+	case strings.HasPrefix(line, metaPrefix):
+		var meta Metadata
+		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, metaPrefix)), &meta); err != nil {
+			return Event{}, false
+		}
+		return Event{Meta: &meta}, true
 	case strings.HasPrefix(line, pathPrefix):
 		var path string
 		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, pathPrefix)), &path); err != nil {

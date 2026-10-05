@@ -36,7 +36,7 @@ var SponsorBlockModes = []string{"off", "mark", "remove"}
 
 // FileNameStyles are the offered ways to name files. Every style keeps the video ID, which
 // keeps names unique and marks the files YTGrab may delete.
-var FileNameStyles = []string{"title", "channel-title", "date-title", "channel-folder"}
+var FileNameStyles = []string{"title", "channel-title", "date-title", "channel-folder", "media-server"}
 
 // SpeedLimits are the offered per-download limits in kB/s; 0 means no limit.
 var SpeedLimits = []int{0, 500, 1000, 2000, 5000, 10000}

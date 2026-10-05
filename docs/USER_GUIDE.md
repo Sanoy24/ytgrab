@@ -197,7 +197,7 @@ Otherwise the notice shows the command for the way you installed it: `scoop upda
 
 - The first time, the page asks where to save downloads; nothing is downloaded until you choose. **Change…** next to **Save to** opens the folder window again, and **Type a path** lets you enter a full path instead. The folder applies to downloads that start afterwards and is remembered.
 - **More settings** (under **Save to**) holds **Parallel downloads** (1–4 at a time, default 2; more rarely helps because YouTube limits speed per network), **Default format** (the format new links start with), **Start with Windows**, and **Browser sign-in**. Changes apply right away.
-- **File names** (in **Settings**): **Title** (the default, `Me at the zoo [jNQXAC9IVRw] 720p.mp4`), **Channel – Title** (`jawed - Me at the zoo [jNQXAC9IVRw] 720p.mp4`), **Date + Title** (upload date first, so files sort by date), or **A folder per channel** (`jawed\Me at the zoo [jNQXAC9IVRw] 720p.mp4`). Every style keeps the video ID in brackets: it keeps names unique and is how YTGrab knows a file is one it saved before deleting it. It applies to downloads that start after you change it.
+- **File names** (in **Settings**): **Title** (the default, `Me at the zoo [jNQXAC9IVRw] 720p.mp4`), **Channel – Title** (`jawed - Me at the zoo [jNQXAC9IVRw] 720p.mp4`), **Date + Title** (upload date first, so files sort by date), **A folder per channel** (`jawed\Me at the zoo [jNQXAC9IVRw] 720p.mp4`), or **For Jellyfin and Plex** (see [Media servers](#media-servers)). Every style keeps the video ID in brackets: it keeps names unique and is how YTGrab knows a file is one it saved before deleting it. It applies to downloads that start after you change it.
 - **Download only between** (in **Settings**, any time by default): choose hours, such as 01:00 and 07:00 (or 22:00 and 06:00 across midnight), and downloads start only then. Outside the window, new downloads wait in the queue and the Download page says when they'll start; downloads already running finish. Watches still check on schedule and their videos wait the same way.
 - **Even out loudness** (in **Settings**, off by default) brings MP3, FLAC, and WAV downloads to a similar volume (about -16 LUFS, the level streaming services use), which helps music collections. M4A and Opus downloads are exact copies of YouTube's audio and stay untouched.
 - **Sponsor segments** (in **Settings**, off by default) uses [SponsorBlock](https://sponsor.ajay.app/), a community-maintained list of sponsor reads, self-promotion, and "like and subscribe" reminders. **Mark as chapters** adds them as chapters you can skip in your player; **Cut them out** removes them from the file. Each download then also asks SponsorBlock's server about that video (only its ID is sent). Videos nobody has marked download unchanged.
@@ -238,6 +238,21 @@ For other tools, **Save a yt-dlp archive** saves your finished YouTube and Vimeo
 ### Metadata files
 
 **Save metadata files** (Settings → Downloads) keeps three files beside each new download, named like it: `.info.json` (everything yt-dlp knows about the video), `.description`, and the thumbnail as `.jpg`. Archives and media servers such as Jellyfin read them. Deleting the download with its file deletes them too, along with any subtitle files.
+
+### Media servers
+
+The **For Jellyfin and Plex** file-name style (Settings → Downloads → File names) saves videos the way media servers expect a TV show: the channel is the show, the upload year is the season, and the upload month and day are the episode number.
+
+```
+jawed\
+  tvshow.nfo
+  Season 2005\
+    jawed - S2005E0424 - Me at the zoo [jNQXAC9IVRw] 720p.mp4
+    jawed - S2005E0424 - Me at the zoo [jNQXAC9IVRw] 720p.nfo
+    jawed - S2005E0424 - Me at the zoo [jNQXAC9IVRw] 720p-thumb.jpg
+```
+
+Add the download folder to Jellyfin, Kodi, or Emby as a **Shows** library and they read the title, date, description, and poster from these files. Plex reads the folders and names; for the descriptions, add an NFO agent such as XBMCnfoTVImporter. YTGrab writes `tvshow.nfo` only when the channel has none, so your own edits to it are kept. Deleting a download with its file deletes its `.nfo` and poster too, and the show's folder once its last episode is gone. Audio downloads get the same folders and names, without the `.nfo` and poster.
 
 
 ## Troubleshooting

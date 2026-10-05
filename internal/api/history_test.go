@@ -282,6 +282,41 @@ func TestDeletingAFileTakesItsSidecars(t *testing.T) {
 	}
 }
 
+func TestDeletingTheLastEpisodeTidiesTheShow(t *testing.T) {
+	write := func(path, text string) {
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	job := domain.Job{VideoID: "jNQXAC9IVRw", State: domain.Completed}
+	root := t.TempDir()
+	show := filepath.Join(root, "jawed")
+	episode := filepath.Join(show, "Season 2005", "jawed - S2005E0424 - Me at the zoo [jNQXAC9IVRw] 240p.mp4")
+	write(episode, "x")
+	write(strings.TrimSuffix(episode, ".mp4")+".nfo", "x")
+	write(strings.TrimSuffix(episode, ".mp4")+"-thumb.jpg", "x")
+	write(filepath.Join(show, "tvshow.nfo"), "<plot>Videos from jawed, saved by YTGrab.</plot>")
+	if _, err := removeOutput(job, episode); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(show); !os.IsNotExist(err) {
+		t.Errorf("show folder was kept: %v", err)
+	}
+
+	// A tvshow.nfo the user wrote, or another season, keeps the show folder.
+	write(episode, "x")
+	write(filepath.Join(show, "tvshow.nfo"), "my notes")
+	if _, err := removeOutput(job, episode); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(show, "tvshow.nfo")); err != nil {
+		t.Errorf("user's tvshow.nfo was removed: %v", err)
+	}
+}
+
 func TestLibraryArchiveExport(t *testing.T) {
 	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
 	if err != nil {
