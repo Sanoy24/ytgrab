@@ -10,13 +10,13 @@ func TestYouTubeFailuresInPlainLanguage(t *testing.T) {
 	for stderr, code := range map[string]string{
 		"ERROR: [youtube] abc: Sign in to confirm your age. This video may be inappropriate for some users.": "signin_required",
 		"WARNING: [youtube] abc: This video is age-restricted; some formats may be missing":                  "signin_required",
-		"ERROR: [youtube] abc: Join this channel to get access to members-only content like this video":     "members_only",
-		"ERROR: [youtube] abc: Premieres in 10 hours":                                                         "not_started",
+		"ERROR: [youtube] abc: Join this channel to get access to members-only content like this video":      "members_only",
+		"ERROR: [youtube] abc: Premieres in 10 hours":                                                        "not_started",
 		"ERROR: [youtube] abc: This live event will begin in a few moments.":                                 "not_started",
 		"ERROR: [youtube] abc: Requested format is not available. Use --list-formats for a list":             "format_unavailable",
 		"WARNING: [youtube] abc: n challenge solving failed: Some formats may be missing.":                   "youtube_changed",
 		"ERROR: unable to download video data: HTTP Error 403: Forbidden":                                    "forbidden",
-		"ERROR: [youtube] abc: Video unavailable":                                                             "video_unavailable",
+		"ERROR: [youtube] abc: Video unavailable":                                                            "video_unavailable",
 		"ERROR: [youtube] abc: Sign in to confirm you're not a bot":                                          "blocked",
 	} {
 		if err, ok := classifyFailure(stderr).(*Error); !ok || err.Code != code {
