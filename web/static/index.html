@@ -521,8 +521,12 @@
                       <label for="signin-browser">Browser sign-in</label>
                       <p class="set-hint">Leave off unless YouTube keeps blocking downloads or a post needs an account. yt-dlp then uses your browser's sign-in, which YTGrab never stores. Firefox works best on Windows, and a secondary account is safer.</p>
                     </div>
-                    <div class="set-control"><select id="signin-browser"></select></div>
+                    <div class="set-control">
+                      <select id="signin-browser"></select>
+                      <input type="file" id="signin-file" accept=".txt,text/plain" class="visually-hidden" tabindex="-1" aria-label="Choose a cookies.txt file" />
+                    </div>
                   </div>
+                  <p class="set-hint set-warning" id="signin-warning" role="status" hidden></p>
                 </div>
               </section>
 

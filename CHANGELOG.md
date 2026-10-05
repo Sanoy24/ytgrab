@@ -6,10 +6,12 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Sign in with a cookies.txt file.** Browser sign-in can use a cookies.txt exported from your browser, which works when a browser's own sign-in can't be read (Chrome and Edge on Windows, usually). YTGrab checks the file, keeps it only in its data folder, and deletes it when you switch sign-in off or to a browser.
 - **Copy report.** A failed download has a **Copy report** button, and Settings → About has **Copy diagnostic report**: versions, settings, the error, and yt-dlp's own words, ready to paste into a bug report.
 
 ### Changed
 
+- When a browser's sign-in can't be read, downloads and format checks try again without signing in instead of failing, and choosing Chrome, Edge, or another Chromium browser on Windows explains the problem up front.
 - Clearer messages for common YouTube failures that used to say only "could not download": age-restricted and members-only videos, premieres that haven't started, a quality no longer offered, HTTP 403 refusals, and YouTube changes that need a newer yt-dlp.
 
 ### Fixed

@@ -531,3 +531,20 @@ test('copies a diagnostic report for a failed download', async ({ page, context 
   await expect(page.locator('#toast')).toContainText('Diagnostic report copied.');
   expect(await page.evaluate(() => navigator.clipboard.readText())).not.toContain('Link:');
 });
+
+test('signs in with a cookies.txt file and refuses other files', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  const select = page.getByLabel('Browser sign-in');
+  const chooser = page.waitForEvent('filechooser');
+  await select.selectOption('file');
+  await (await chooser).setFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
+  await expect(page.locator('#toast')).toContainText("isn't a cookies.txt file");
+  await expect(select).toHaveValue('');
+
+  const again = page.waitForEvent('filechooser');
+  await select.selectOption('file');
+  const cookies = '# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t1893456000\tPREF\tx\n';
+  await (await again).setFiles({ name: 'cookies.txt', mimeType: 'text/plain', buffer: Buffer.from(cookies) });
+  await expect(page.locator('#toast')).toContainText('sign in with your cookies.txt file');
+  await expect(select).toHaveValue('file');
+});
