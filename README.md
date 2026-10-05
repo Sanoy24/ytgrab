@@ -20,7 +20,7 @@ A local YouTube, Vimeo, X (Twitter), Reddit, and Instagram video downloader with
 - **Sensible files.** Names include the quality (`Title [id] 1080p.mp4`); H.264 picks are saved as MP4.
 - **Lives in your tray.** On Windows, macOS, and Linux desktops with a tray, YTGrab runs without a terminal window, shows download progress and notifications from its icon, and can start when you sign in.
 - **Easy setup.** Install with Scoop, Homebrew, or a one-line installer. `ytgrab setup` installs what it needs, asking first; `ytgrab doctor` explains what's missing. The page tells you when a new version is out.
-- **Private by design.** The server listens only on `127.0.0.1` and keeps history in a local SQLite file. No accounts, no telemetry.
+- **Private by design.** The server listens only on `127.0.0.1` and keeps history in a local SQLite file. No accounts, no telemetry. Phone access on your Wi-Fi is opt-in and needs pairing.
 
 YTGrab is a single Go program. Downloading is done by [yt-dlp](https://github.com/yt-dlp/yt-dlp) and merging by [FFmpeg](https://ffmpeg.org/).
 

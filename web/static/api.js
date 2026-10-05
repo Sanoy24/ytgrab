@@ -15,8 +15,17 @@ export class ApiError extends Error {
 }
 
 export function createClient(params = new URLSearchParams(location.search)) {
-  if (params.has('fixture')) return new FixtureClient(params.get('fixture') || 'default');
-  return new HttpClient();
+  const fixture = params.has('fixture');
+  const client = fixture ? new FixtureClient(params.get('fixture') || 'default') : new HttpClient();
+  // The computer opens YTGrab at 127.0.0.1; a paired phone at the computer's network
+  // address. ?phone=1 previews the phone's page with sample data.
+  client.onPhone = fixture ? params.get('phone') === '1' : !['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname);
+  return client;
+}
+
+// Where a finished download's file is saved from ("Save to phone").
+export function fileURL(id) {
+  return `/api/jobs/${encodeURIComponent(id)}/file`;
 }
 
 // Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check) | first-run (no folder chosen) | no-picker (no folder window) | cooldown (YouTube pause) | outdated (yt-dlp update available)
@@ -134,6 +143,33 @@ class FixtureClient {
   async deleteWatch(id) {
     await delay(150);
     this.watches = this.watches.filter((w) => w.id !== id);
+  }
+
+  async phoneStatus() {
+    await delay(150);
+    this.phone ??= { enabled: false, url: 'http://192.168.1.5:8788', devices: [] };
+    const { enabled, url, devices } = this.phone;
+    return structuredClone({ enabled, url: enabled ? url : undefined, devices: enabled ? devices : [] });
+  }
+
+  async setPhoneAccess(enabled) {
+    await this.phoneStatus();
+    this.phone.enabled = enabled;
+    if (!enabled) this.phone.devices = [];
+    return this.phoneStatus();
+  }
+
+  async pairPhone() {
+    await delay(200);
+    // Pretend a phone scans the code a few seconds later.
+    setTimeout(() => this.phone.devices.push({ id: 'p1', name: 'Android phone · Chrome', paired_at: new Date().toISOString(), last_seen: new Date().toISOString() }), 3000);
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8" fill="#fff"/><path d="M1 1h3v3H1zM5 5h2v2H5z"/></svg>';
+    return { url: 'http://192.168.1.5:8788/pair?code=sample', qr: `data:image/svg+xml;base64,${btoa(svg)}`, expires_at: new Date(Date.now() + 600_000).toISOString() };
+  }
+
+  async forgetPhone(id) {
+    await delay(150);
+    this.phone.devices = this.phone.devices.filter((d) => d.id !== id);
   }
 
   async openJob(id) {
@@ -563,6 +599,21 @@ class HttpClient {
   }
   deleteWatch(id) {
     return this.request('DELETE', `/api/watches/${encodeURIComponent(id)}`);
+  }
+  // Phone access: { enabled, url, error, devices: [{ id, name, paired_at, last_seen }] }.
+  phoneStatus() {
+    return this.request('GET', '/api/phone');
+  }
+  // Turning it off also removes every paired phone. Resolves with the new status.
+  setPhoneAccess(enabled) {
+    return this.request('PUT', '/api/phone', { enabled });
+  }
+  // A one-time pairing code: { url, qr (a data: URL), expires_at }.
+  pairPhone() {
+    return this.request('POST', '/api/phone/pair');
+  }
+  forgetPhone(id) {
+    return this.request('DELETE', `/api/phone/devices/${encodeURIComponent(id)}`);
   }
   // Opens a finished download with its default app.
   openJob(id) {

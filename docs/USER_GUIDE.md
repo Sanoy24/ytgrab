@@ -254,6 +254,17 @@ jawed\
 
 Add the download folder to Jellyfin, Kodi, or Emby as a **Shows** library and they read the title, date, description, and poster from these files. Plex reads the folders and names; for the descriptions, add an NFO agent such as XBMCnfoTVImporter. YTGrab writes `tvshow.nfo` only when the channel has none, so your own edits to it are kept. Deleting a download with its file deletes its `.nfo` and poster too, and the show's folder once its last episode is gone. Audio downloads get the same folders and names, without the `.nfo` and poster.
 
+### Phone
+
+**Settings → Phone → Use YTGrab from your phone** (off by default) lets a phone on the same Wi-Fi use YTGrab running on your computer: paste links, follow the queue, manage Watching, and save finished downloads to the phone. The computer still does the downloading.
+
+1. Turn it on. The first time, Windows asks whether YTGrab may use the network: allow it on **private networks**.
+2. Click **Show a code** and scan it with the phone's camera. The phone opens YTGrab; the code works once, for 10 minutes.
+3. Next time, open the address shown under the code (like `http://192.168.1.5:8788`) on the phone. Bookmark it or add it to the home screen.
+
+On the phone, a finished download has **Save to phone**. The phone can't change settings, delete files on the computer, or reach anything else on it. **Paired phones** lists each phone with a **Remove** button; turning phone access off removes them all. The connection isn't encrypted, so use it on your home Wi-Fi or another network you trust, not public Wi-Fi.
+
+If the phone can't connect, check that both are on the same Wi-Fi (guest networks often keep devices apart), and that Windows Firewall allows YTGrab on private networks. A VPN on the computer can also hide it from the phone.
 
 ## Troubleshooting
 

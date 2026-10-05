@@ -1,8 +1,9 @@
-import { createClient, isActive } from './api.js';
+import { createClient, fileURL, isActive } from './api.js';
 import { formatDuration, groupFormats, matchPreset, readSection } from './formats.js';
 import { looksLikeSearch, parseLinks, validateUrl, videoIdOf } from './links.js';
 import { clearSearch, initSearch, runSearch } from './search.js';
 import { $, el, formatBytes, formatEta, formatWhen, ICONS, setThumbnail, skeleton, stateBlock, toast } from './ui.js';
+import { initPhone } from './phone.js';
 import { initWatching, loadWatches, onWatchAction, onWatchSubmit } from './watching.js';
 
 const client = createClient();
@@ -212,7 +213,8 @@ function renderActions(box, job) {
   if (job.state === 'completed' && confirmingRemove.has(job.id)) {
     want.push(['remove-list', 'Remove from list', ''], ['remove-file', 'Delete file too', 'btn-danger'], ['remove-keep', 'Keep', '']);
   } else if (job.state === 'completed') {
-    if (job.output_path) want.push(['open', 'Play', ''], ['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
+    if (job.output_path && client.onPhone) want.push(['save', 'Save to phone', '']);
+    else if (job.output_path) want.push(['open', 'Play', ''], ['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
     want.push(['again', 'Download again', '']);
     want.push(['remove', 'Remove', '']);
   }
@@ -396,7 +398,7 @@ function askClear(finished, files) {
   const box = $('#clear-files');
   const confirmButton = $('#clear-confirm');
   $('#clear-text').textContent = `${finished === 1 ? 'This removes 1 download' : `This removes all ${finished} finished, failed, and cancelled downloads`} from the Library. Downloads in the queue stay.`;
-  $('#clear-files-row').hidden = !files;
+  $('#clear-files-row').hidden = !files || client.onPhone;
   $('#clear-files-label').textContent = `Also delete ${files === 1 ? 'the downloaded file' : `the ${files} downloaded files`} from this computer`;
   box.checked = false;
   const sync = () => {
@@ -715,7 +717,7 @@ const VIEWS = ['download', 'library', 'watching', 'settings'];
 let currentView = 'download';
 
 function showView(name, { focus = false } = {}) {
-  if (!VIEWS.includes(name)) name = 'download';
+  if (!VIEWS.includes(name) || (name === 'settings' && client.onPhone)) name = 'download';
   currentView = name;
   for (const v of VIEWS) $(`#view-${v}`).hidden = v !== name;
   for (const b of document.querySelectorAll('.nav-item')) {
@@ -1020,6 +1022,13 @@ async function runAction(id, action) {
     }
     return;
   }
+  if (action === 'save') {
+    const link = el('a', { href: fileURL(id), download: '' });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    return;
+  }
   if (action === 'open') {
     try {
       await client.openJob(id);
@@ -1041,7 +1050,8 @@ async function runAction(id, action) {
     }
     return;
   }
-  if (action === 'remove' && job.state === 'completed') {
+  // A phone only removes downloads from the list: files on the computer stay.
+  if (action === 'remove' && job.state === 'completed' && !client.onPhone) {
     confirmingRemove.add(id);
     render();
     return;
@@ -2366,6 +2376,9 @@ function init() {
   $('#about-check').addEventListener('click', (e) => checkForUpdates(e.currentTarget));
   $('#about-report').addEventListener('click', () => copyReport(diagnosticReport(null), 'Diagnostic report copied.'));
   setupSettingsNav();
+  // Settings stay on the computer; a phone gets downloads, the Library, and Watching.
+  document.body.classList.toggle('on-phone', !!client.onPhone);
+  if (!client.onPhone) initPhone(client);
   $('#app-version').addEventListener('click', () => {
     showView('settings');
     scrollToSection($('#about'));

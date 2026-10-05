@@ -317,6 +317,38 @@ func TestDeletingTheLastEpisodeTidiesTheShow(t *testing.T) {
 	}
 }
 
+func TestSavingAFinishedFile(t *testing.T) {
+	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	path := filepath.Join(t.TempDir(), "Café [jNQXAC9IVRw] 720p.mp4")
+	if err := os.WriteFile(path, []byte("0123456789"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	done := finishedJob(t, store, "https://youtu.be/jNQXAC9IVRw", domain.Completed, path)
+	failed := finishedJob(t, store, "https://youtu.be/aqz-KE-bpKQ", domain.Failed, "")
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/jobs/"+done.ID+"/file", nil)
+	request.Header.Set("Range", "bytes=2-4") // phones play video while it downloads
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusPartialContent || response.Body.String() != "234" {
+		t.Fatalf("file = %d %q", response.Code, response.Body.String())
+	}
+	if got := response.Header().Get("Content-Disposition"); !strings.HasPrefix(got, "attachment;") || !strings.Contains(got, "Caf%C3%A9") {
+		t.Errorf("Content-Disposition = %q", got)
+	}
+
+	response = httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/jobs/"+failed.ID+"/file", nil))
+	if response.Code != http.StatusConflict {
+		t.Errorf("failed job file = %d", response.Code)
+	}
+}
+
 func TestLibraryArchiveExport(t *testing.T) {
 	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
 	if err != nil {

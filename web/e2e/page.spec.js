@@ -585,3 +585,34 @@ test('names files for Jellyfin and Plex', async ({ page }) => {
   await page.getByLabel('File names').selectOption('media-server');
   await expect(page.locator('#pref-names-example')).toContainText('Season 2005 / jawed - S2005E0424');
 });
+
+test('pairs a phone with a QR code and removes it', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  await page.getByLabel('Use YTGrab from your phone').check();
+  await expect(page.locator('#toast')).toContainText('Phone access is on');
+  await expect(page.locator('#phone-url')).toHaveText('http://192.168.1.5:8788');
+  await page.getByRole('button', { name: 'Show a code' }).click();
+  await expect(page.getByAltText('QR code for pairing a phone')).toBeVisible();
+  // The sample phone "scans" the code after 3 seconds; the code then goes away.
+  await expect(page.locator('#toast')).toContainText('Android phone · Chrome is paired.', { timeout: 8000 });
+  await expect(page.getByAltText('QR code for pairing a phone')).toBeHidden();
+  await page.getByRole('button', { name: 'Remove Android phone · Chrome' }).click();
+  await expect(page.locator('#phone-devices-row')).toBeHidden();
+  await page.getByLabel('Use YTGrab from your phone').uncheck();
+  await expect(page.locator('#phone-pair-row')).toBeHidden();
+});
+
+test('on a phone: no settings, and finished downloads save to the phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('/?fixture=default&phone=1#settings');
+  await expect(page.locator('#view-download')).toBeVisible(); // settings stay on the computer
+  await expect(page.locator('#open-settings')).toBeHidden();
+  await page.goto('/?fixture=default&phone=1#library');
+  const done = page.locator('#history .job', { hasText: 'Lecture 1' });
+  await expect(done.getByRole('button', { name: /^Save to phone/ })).toBeVisible();
+  await expect(done.getByRole('button', { name: /^Show in folder/ })).toHaveCount(0);
+  await done.getByRole('button', { name: /^Remove/ }).click(); // straight from the list, never the file
+  await expect(page.locator('#toast')).toHaveText('Removed from the list.');
+  await page.locator('#clear-history').click();
+  await expect(page.locator('#clear-files-row')).toBeHidden();
+});

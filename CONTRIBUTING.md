@@ -26,7 +26,7 @@ Download failures are often caused by YouTube changes rather than YTGrab. Update
 
 ## Design principles
 
-- Everything stays local: the server listens only on `127.0.0.1`, with no accounts or telemetry.
+- Everything stays local: the server listens only on `127.0.0.1`, with no accounts or telemetry. The opt-in phone server (`internal/phone`) is the one exception; routes a phone may use are listed there, and new routes stay computer-only unless added.
 - User input never becomes a yt-dlp option; the server builds every command itself.
 - Media goes straight from yt-dlp to disk, never through the server or browser.
 

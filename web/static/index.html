@@ -332,6 +332,7 @@
               <button type="button" class="settings-link" data-section="set-media"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg><span>Audio &amp; video</span></button>
               <button type="button" class="settings-link" data-section="set-browser"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></svg><span>Browser</span></button>
               <button type="button" class="settings-link" data-section="set-computer"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>This computer</span></button>
+              <button type="button" class="settings-link" data-section="set-phone"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span>Phone</span></button>
               <button type="button" class="settings-link" data-section="set-backup"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Z"/><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span>Backup</span></button>
               <button type="button" class="settings-link" data-section="about"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>About</span></button>
             </nav>
@@ -576,6 +577,39 @@
                         <option value="stable">Stable (recommended)</option>
                         <option value="nightly">Nightly</option>
                       </select>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-group" id="set-phone" aria-labelledby="set-phone-title" hidden>
+                <h3 class="set-title" id="set-phone-title">Phone</h3>
+                <p class="set-desc">Add links, follow downloads, and save finished videos from a phone on the same Wi-Fi.</p>
+                <div class="set-card">
+                  <div class="set-row">
+                    <div class="set-text">
+                      <label for="pref-phone">Use YTGrab from your phone</label>
+                      <p class="set-hint">Only phones you pair can connect, and they can't change settings or delete files on this computer. Use it on your home Wi-Fi or another network you trust.</p>
+                      <p class="set-hint field-error" id="phone-error" role="alert" hidden></p>
+                    </div>
+                    <div class="set-control"><input type="checkbox" class="pref-check" id="pref-phone" /></div>
+                  </div>
+                  <div class="set-row phone-pair" id="phone-pair-row" hidden>
+                    <div class="set-text">
+                      <span class="set-label">Pair a phone</span>
+                      <p class="set-hint">Scan the code with the phone's camera. Each code works once, for 10 minutes.</p>
+                      <p class="set-hint" id="phone-address">Paired phones open YTGrab at <span class="mono" id="phone-url"></span>. Bookmark it or add it to the home screen.</p>
+                    </div>
+                    <div class="set-control phone-code">
+                      <img id="phone-qr" alt="QR code for pairing a phone" width="168" height="168" hidden />
+                      <span class="phone-code-link mono" id="phone-code-link" hidden></span>
+                      <button type="button" class="btn btn-small" id="phone-pair">Show a code</button>
+                    </div>
+                  </div>
+                  <div class="set-row" id="phone-devices-row" hidden>
+                    <div class="set-text">
+                      <span class="set-label">Paired phones</span>
+                      <ul class="phone-devices" id="phone-devices"></ul>
                     </div>
                   </div>
                 </div>
