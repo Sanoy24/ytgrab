@@ -1,6 +1,8 @@
 package ytdlp
 
 import (
+	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/domain"
 	"strings"
 	"testing"
 )
@@ -42,5 +44,27 @@ func TestOtherSitesDontBlameYouTube(t *testing.T) {
 	err, ok := classifyFor("reddit", "ERROR: [Reddit] abc: HTTP Error 403: Forbidden").(*Error)
 	if !ok || err.Code == "" || strings.Contains(err.Message, "YouTube") || !strings.Contains(err.Message, "Reddit") {
 		t.Errorf("reddit 403 = %+v", err)
+	}
+}
+
+func TestDataSaverPresets(t *testing.T) {
+	for preset, want := range map[domain.Preset]string{
+		domain.Video480:   "-f bv*[height<=480]+ba/b[height<=480]",
+		domain.Video360:   "-f bv*[height<=360]+ba/b[height<=360]",
+		domain.AudioSmall: "-f ba[acodec=opus][abr<=60]/wa[acodec=opus]/wa -x --audio-format opus",
+	} {
+		job, err := domain.NewJob("https://youtu.be/aqz-KE-bpKQ", preset)
+		if err != nil {
+			t.Fatalf("%s: %v", preset, err)
+		}
+		args := strings.Join(buildArgs(job, config.Config{}), " ")
+		if !strings.Contains(args, want) {
+			t.Errorf("%s: %s", preset, args)
+		}
+	}
+	// X has no separate streams: the shorter side caps the quality there.
+	x, _ := domain.NewJob("https://x.com/a/status/2105708732323909827", domain.Video360)
+	if args := strings.Join(buildArgs(x, config.Config{}), " "); !strings.Contains(args, "-S res:360") {
+		t.Errorf("X 360p: %s", args)
 	}
 }

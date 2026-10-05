@@ -102,7 +102,7 @@ export function groupFormats(info) {
 // Picks the format row that best matches a quick preset, so a choice made
 // before the list loaded carries over.
 export function matchPreset(preset, { video, audio }) {
-  const cap = { 'video-1080': 1080, 'video-720': 720 }[preset];
+  const cap = { 'video-1080': 1080, 'video-720': 720, 'video-480': 480, 'video-360': 360 }[preset];
   if (preset === 'video-best') return video[0];
   if (cap) return video.find((v) => v.height <= cap);
   if (preset === 'audio-m4a') return audio.find((a) => a.ext === 'm4a') || audio[0];

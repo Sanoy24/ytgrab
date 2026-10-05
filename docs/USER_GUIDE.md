@@ -98,6 +98,8 @@ Files include the video's title, channel, upload date, and chapters; M4A, MP3, O
 
 Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`), so different qualities of one video never overwrite each other.
 
+
+**Saving data.** On a slow or metered connection, choose **Up to 480p** or **Up to 360p** for video, or **Small audio** for talks, lectures, and podcasts: it keeps YouTube's own low-bitrate Opus track, well under half the size of the M4A, with no re-encoding. In **Settings → Downloads → Download only between**, **Use night hours (22:00–08:00)** holds downloads for cheaper night data bundles.
 ## Watch channels and playlists
 
 Open **Watching**, paste a channel link (`youtube.com/@name`, `/channel/…`, `/c/…`, or `/user/…`) or a playlist link, choose a format, and press **Start watching**. YTGrab then checks it (every 6 hours unless you choose otherwise) while it's running and adds new videos to the queue by themselves. Notifications and the tray tell you when they finish.

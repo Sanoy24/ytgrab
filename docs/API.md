@@ -85,7 +85,7 @@ While YouTube is limiting this network, `GET /api/jobs` also returns `"paused_un
 }
 ```
 
-Presets: `video-best`, `video-1080`, `video-720`, `audio-m4a`, `audio-mp3`.
+Presets: `video-best`, `video-1080`, `video-720`, `video-480`, `video-360`, `audio-m4a`, `audio-mp3`, `audio-opus`, `audio-flac`, `audio-wav`, `audio-small` (low-bitrate Opus for speech).
 
 ## Creating jobs
 
