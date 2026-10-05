@@ -23,9 +23,9 @@ export function createClient(params = new URLSearchParams(location.search)) {
   return client;
 }
 
-// Where a finished download's file is saved from ("Save to phone").
-export function fileURL(id) {
-  return `/api/jobs/${encodeURIComponent(id)}/file`;
+// Where a finished download's file is saved from ("Save to phone"), or played in the browser.
+export function fileURL(id, { play = false } = {}) {
+  return `/api/jobs/${encodeURIComponent(id)}/file${play ? '?play=1' : ''}`;
 }
 
 // Scenarios: default | empty | error | degraded | loading | blocked (format check fails) | expired (first format job needs a re-check) | first-run (no folder chosen) | no-picker (no folder window) | cooldown (YouTube pause) | outdated (yt-dlp update available)

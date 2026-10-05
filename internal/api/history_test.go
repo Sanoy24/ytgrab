@@ -343,6 +343,12 @@ func TestSavingAFinishedFile(t *testing.T) {
 	}
 
 	response = httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/jobs/"+done.ID+"/file?play=1", nil))
+	if got := response.Header().Get("Content-Disposition"); !strings.HasPrefix(got, "inline;") {
+		t.Errorf("play Content-Disposition = %q", got)
+	}
+
+	response = httptest.NewRecorder()
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/jobs/"+failed.ID+"/file", nil))
 	if response.Code != http.StatusConflict {
 		t.Errorf("failed job file = %d", response.Code)

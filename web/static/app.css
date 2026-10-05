@@ -711,8 +711,9 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .phone-device { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .phone-device-name { font-weight: 600; }
 .phone-device-when { color: var(--muted); font-size: 0.83rem; margin-right: auto; }
-/* On a paired phone: no settings, no folder choice, no desktop notifications. */
-.on-phone #open-settings, .on-phone #setup-folder, .on-phone #notify-toggle { display: none !important; }
+/* On a paired phone: no settings, no folder choice, no updates, no desktop notifications. */
+.on-phone #open-settings, .on-phone #setup-folder, .on-phone #notify-toggle,
+.on-phone #dir-view, .on-phone #dir-form, .on-phone #update-banner { display: none !important; }
 .set-card a.btn { text-decoration: none; color: inherit; }
 .window-pickers select { width: auto; }
 .window-pickers span { color: var(--muted); font-size: 0.875rem; }
