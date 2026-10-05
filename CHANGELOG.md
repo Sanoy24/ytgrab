@@ -2,6 +2,12 @@
 
 All notable changes to YTGrab. Versions follow [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- yt-dlp now uses exactly the JavaScript runtime YTGrab checked. Before, a Deno in YTGrab's tools folder was missed when it wasn't also on PATH, and an outdated Deno could be used even when a current Node was installed, both causing YouTube failures while YTGrab said "Tools ready".
+
 ## [1.16.1] - 2026-10-04
 
 ### Fixed

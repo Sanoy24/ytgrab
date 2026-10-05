@@ -104,11 +104,7 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	if ffmpeg, err := deps.Find(cfg, "ffmpeg"); err == nil {
 		args = append([]string{"--ffmpeg-location", filepath.Dir(ffmpeg)}, args...)
 	}
-	if _, err := deps.Find(cfg, "deno"); err != nil {
-		if _, err := deps.Find(cfg, "node"); err == nil {
-			args = append([]string{"--js-runtimes", "node"}, args...)
-		}
-	}
+	args = append(deps.RuntimeArgs(ctx, cfg), args...)
 	cmd := exec.Command(path, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

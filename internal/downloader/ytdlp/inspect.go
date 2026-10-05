@@ -257,11 +257,7 @@ func (inspector *Inspector) runJSON(ctx context.Context, path string, args []str
 	if inspector.CookiesBrowser != nil {
 		args = append(cookieArgs(inspector.CookiesBrowser()), args...)
 	}
-	if _, err := deps.Find(inspector.Config, "deno"); err != nil {
-		if _, err := deps.Find(inspector.Config, "node"); err == nil {
-			args = append([]string{"--js-runtimes", "node"}, args...)
-		}
-	}
+	args = append(deps.RuntimeArgs(ctx, inspector.Config), args...)
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.Command(path, args...)
