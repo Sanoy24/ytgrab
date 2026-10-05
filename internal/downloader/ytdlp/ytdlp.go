@@ -42,6 +42,8 @@ type Result struct {
 type Error struct {
 	Code    string
 	Message string
+	// Detail is yt-dlp's own error lines, kept for diagnostic reports.
+	Detail string
 }
 
 func (err *Error) Error() string { return err.Message }
@@ -177,6 +179,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if waitErr != nil {
 		err := classifyFor(job.Site, stderrTail)
+		if failure, ok := err.(*Error); ok {
+			failure.Detail = errorDetail(stderrTail)
+		}
 		if failure, ok := err.(*Error); ok && (failure.Code == "drm_protected" || failure.Code == "video_unavailable") {
 			removeThumbnails(cfg.DownloadsDir, job.VideoID) // a retry won't use them
 		}
@@ -686,6 +691,8 @@ func siteFailure(site, stderr string) error {
 			return &Error{Code: site + "_limited", Message: siteNames[site] + " is limiting requests from this network. Wait a few minutes, then retry."}
 		case "video_unavailable":
 			return &Error{Code: "video_unavailable", Message: "This post is unavailable or private."}
+		case "forbidden", "youtube_changed":
+			return &Error{Code: toolError.Code, Message: siteNames[site] + " refused the download. Update yt-dlp from the tools panel and retry later; if it keeps happening, turn on Browser sign-in."}
 		case "download_failed":
 			return &Error{Code: "download_failed", Message: "yt-dlp could not download this post's video. Check that yt-dlp is up to date and retry."}
 		}
@@ -698,6 +705,17 @@ func classifyFailure(stderr string) error {
 	switch {
 	case strings.Contains(lower, "drm protected"):
 		return &Error{Code: "drm_protected", Message: "This video is copy-protected (DRM), so it can't be downloaded."}
+	// YouTube's own reasons, checked before the general "not available" below.
+	case strings.Contains(lower, "confirm your age"), strings.Contains(lower, "age-restricted"), strings.Contains(lower, "inappropriate for some users"):
+		return &Error{Code: "signin_required", Message: "YouTube shows this video only to signed-in adults. Turn on Browser sign-in in Settings with a browser where you're signed in to YouTube, then retry."}
+	case strings.Contains(lower, "members-only"), strings.Contains(lower, "join this channel"):
+		return &Error{Code: "members_only", Message: "This video is for the channel's paying members only. YTGrab can download it only if you're a member: turn on Browser sign-in with a browser signed in to that account."}
+	case strings.Contains(lower, "premieres in"), strings.Contains(lower, "live event will begin"), strings.Contains(lower, "this live event"):
+		return &Error{Code: "not_started", Message: "This premiere or live stream hasn't started yet. Retry after it has aired."}
+	case strings.Contains(lower, "requested format is not available"):
+		return &Error{Code: "format_unavailable", Message: "That quality isn't offered for this video any more. Check its formats again, or use a preset like Best quality."}
+	case strings.Contains(lower, "challenge solving failed"), strings.Contains(lower, "signature solving failed"), strings.Contains(lower, "no supported javascript runtime"):
+		return &Error{Code: "youtube_changed", Message: "YouTube changed how its videos are protected, and this yt-dlp can't keep up yet. Update yt-dlp from the tools panel (YTGrab also does it by itself), then retry."}
 	case strings.Contains(lower, "no space left on device"), strings.Contains(lower, "not enough space on the disk"):
 		return &Error{Code: "disk_full", Message: "The drive with your download folder is full. Free up space or choose another folder, then Retry."}
 	// Checked first and by specific phrases: YouTube's bot check also mentions cookies.
@@ -709,11 +727,40 @@ func classifyFailure(stderr string) error {
 		return &Error{Code: "video_unavailable", Message: "This video is unavailable or private."}
 	case strings.Contains(lower, "ffmpeg not found"), strings.Contains(lower, "ffprobe not found"):
 		return &Error{Code: "dependency_missing", Message: "Install ffmpeg and ffprobe, then retry."}
+	case strings.Contains(lower, "http error 403"):
+		return &Error{Code: "forbidden", Message: "YouTube refused the download (HTTP 403). This usually clears once yt-dlp catches up with a YouTube change: update yt-dlp from the tools panel and retry later. If it keeps happening, turn on Browser sign-in."}
 	case strings.Contains(lower, "timed out"), strings.Contains(lower, "connection"), strings.Contains(lower, "http error 5"):
 		return &Error{Code: "network", Message: "The download failed because of a network error. Retry shortly."}
 	default:
 		return &Error{Code: "download_failed", Message: "yt-dlp could not download this video. Check that yt-dlp is up to date and retry."}
 	}
+}
+
+// errorDetail keeps yt-dlp's last ERROR and WARNING lines (or its last lines when there
+// are none), up to 1500 characters, for the diagnostic report.
+func errorDetail(stderr string) string {
+	var lines, kept []string
+	for _, line := range strings.Split(strings.ReplaceAll(stderr, "\r", ""), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			lines = append(lines, line)
+		}
+	}
+	for _, line := range lines {
+		if strings.HasPrefix(line, "ERROR:") || strings.HasPrefix(line, "WARNING:") {
+			kept = append(kept, line)
+		}
+	}
+	if len(kept) == 0 {
+		kept = lines
+	}
+	if len(kept) > 6 {
+		kept = kept[len(kept)-6:]
+	}
+	detail := strings.Join(kept, "\n")
+	if len(detail) > 1500 {
+		detail = strings.ToValidUTF8(detail[len(detail)-1500:], "")
+	}
+	return detail
 }
 
 // removeThumbnails deletes the cover images yt-dlp saved for a download that failed for

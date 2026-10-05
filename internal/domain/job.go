@@ -107,6 +107,8 @@ type Progress struct {
 type JobError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	// Detail is what yt-dlp itself said (its last error lines), for diagnostic reports.
+	Detail string `json:"detail,omitempty"`
 }
 
 type Job struct {

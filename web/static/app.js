@@ -205,6 +205,7 @@ function renderActions(box, job) {
   if ((job.state === 'queued' || job.state === 'paused') && !firstWaiting(job)) want.push(['top', 'Move to top', '']);
   if (isActive(job.state)) want.push(['cancel', 'Cancel', 'btn-danger']);
   if (job.state === 'failed' || job.state === 'cancelled') want.push(['retry', 'Retry', ''], ['remove', 'Remove', '']);
+  if (job.state === 'failed') want.push(['report', 'Copy report', '']);
   if (job.state === 'completed' && confirmingRemove.has(job.id)) {
     want.push(['remove-list', 'Remove from list', ''], ['remove-file', 'Delete file too', 'btn-danger'], ['remove-keep', 'Keep', '']);
   } else if (job.state === 'completed') {
@@ -1003,6 +1004,10 @@ async function loadJobs() {
 async function runAction(id, action) {
   const job = jobs.find((j) => j.id === id);
   if (!job) return;
+  if (action === 'report') {
+    await copyReport(diagnosticReport(job), 'Report copied. Paste it into a bug report or message.');
+    return;
+  }
   if (action === 'copy') {
     try {
       await navigator.clipboard.writeText(job.output_path);
@@ -2062,6 +2067,45 @@ function setupSettingsNav() {
   }
 }
 
+// ---------- diagnostic report ----------
+
+// Versions, settings that affect downloads, and, for a failed download, what went wrong in
+// YTGrab's words and yt-dlp's. Copied for the user to paste into a bug report; it includes
+// the link, so it's theirs to share or not.
+function diagnosticReport(job) {
+  const tool = (name) => healthReport?.dependencies.find((d) => d.name === name);
+  const describe = (d) => (d?.available ? `${shortVersion(d.version)}${d.outdated ? ' (update available)' : ''}` : 'not found');
+  const platform = navigator.userAgentData?.platform || navigator.platform || 'unknown';
+  const lines = [
+    'YTGrab diagnostic report',
+    `YTGrab: ${versionInfo?.version || 'unknown'} on ${platform}`,
+    `yt-dlp: ${describe(tool('yt-dlp'))}`,
+    `FFmpeg: ${describe(tool('ffmpeg'))}`,
+    `JavaScript runtime: ${describe(tool('js-runtime'))}`,
+    `Browser sign-in: ${$('#signin-browser')?.value || 'off'}`,
+  ];
+  if (job) {
+    lines.push(
+      '',
+      `Link: ${job.url}`,
+      `Format: ${PRESET_LABELS[job.preset] || job.format?.label || job.preset || 'custom'}`,
+      `Attempt: ${job.attempt}`,
+      `Error: ${job.error?.code || 'none'} (${job.error?.message || ''})`,
+    );
+    if (job.error?.detail) lines.push('yt-dlp said:', job.error.detail);
+  }
+  return lines.join('\n');
+}
+
+async function copyReport(text, done) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(done);
+  } catch {
+    toast("Couldn't copy the report. Your browser blocked the clipboard.", true);
+  }
+}
+
 // ---------- about ----------
 
 function renderAbout() {
@@ -2266,6 +2310,7 @@ function init() {
   });
   $('#export-history').addEventListener('click', exportHistory);
   $('#about-check').addEventListener('click', (e) => checkForUpdates(e.currentTarget));
+  $('#about-report').addEventListener('click', () => copyReport(diagnosticReport(null), 'Diagnostic report copied.'));
   setupSettingsNav();
   $('#app-version').addEventListener('click', () => {
     showView('settings');

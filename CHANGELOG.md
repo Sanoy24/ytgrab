@@ -4,6 +4,14 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **Copy report.** A failed download has a **Copy report** button, and Settings → About has **Copy diagnostic report**: versions, settings, the error, and yt-dlp's own words, ready to paste into a bug report.
+
+### Changed
+
+- Clearer messages for common YouTube failures that used to say only "could not download": age-restricted and members-only videos, premieres that haven't started, a quality no longer offered, HTTP 403 refusals, and YouTube changes that need a newer yt-dlp.
+
 ### Fixed
 
 - yt-dlp now uses exactly the JavaScript runtime YTGrab checked. Before, a Deno in YTGrab's tools folder was missed when it wasn't also on PATH, and an outdated Deno could be used even when a current Node was installed, both causing YouTube failures while YTGrab said "Tools ready".

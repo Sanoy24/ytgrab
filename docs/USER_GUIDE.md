@@ -229,6 +229,8 @@ In **Settings → Back up and restore**, **Save a backup** saves a `ytgrab-backu
 
 ## Troubleshooting
 
+A failed download explains what went wrong in plain words. For anything you can't fix from that, press its **Copy report** button (or **Copy diagnostic report** in Settings → About) and paste the result into a [bug report](https://github.com/Sanoy24/ytgrab/issues/new): it lists your YTGrab, yt-dlp, FFmpeg, and JavaScript runtime versions, the link, and yt-dlp's own error lines. It contains the video's link, so check it before sharing.
+
 | What you see | What to do |
 | --- | --- |
 | "Windows protected your PC" when starting | The app isn't code-signed. Click **More info → Run anyway**. |
