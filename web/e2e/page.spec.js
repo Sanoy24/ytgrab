@@ -607,9 +607,12 @@ test('on a phone: no settings, and finished downloads save to the phone', async 
   await page.goto('/?fixture=default&phone=1#settings');
   await expect(page.locator('#view-download')).toBeVisible(); // settings stay on the computer
   await expect(page.locator('#open-settings')).toBeHidden();
+  await expect(page.locator('#dir-edit')).toBeHidden(); // the folder is chosen on the computer
   await page.goto('/?fixture=default&phone=1#library');
   const done = page.locator('#history .job', { hasText: 'Lecture 1' });
-  await expect(done.getByRole('button', { name: /^Save to phone/ })).toBeVisible();
+  await expect(done.getByRole('button', { name: /^Play/ })).toBeVisible();
+  await done.getByRole('button', { name: /^Save to phone/ }).click();
+  await expect(page.locator('#toast')).toContainText('tap Keep');
   await expect(done.getByRole('button', { name: /^Show in folder/ })).toHaveCount(0);
   await done.getByRole('button', { name: /^Remove/ }).click(); // straight from the list, never the file
   await expect(page.locator('#toast')).toHaveText('Removed from the list.');

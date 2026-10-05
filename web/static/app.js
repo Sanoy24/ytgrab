@@ -213,7 +213,7 @@ function renderActions(box, job) {
   if (job.state === 'completed' && confirmingRemove.has(job.id)) {
     want.push(['remove-list', 'Remove from list', ''], ['remove-file', 'Delete file too', 'btn-danger'], ['remove-keep', 'Keep', '']);
   } else if (job.state === 'completed') {
-    if (job.output_path && client.onPhone) want.push(['save', 'Save to phone', '']);
+    if (job.output_path && client.onPhone) want.push(['play', 'Play', ''], ['save', 'Save to phone', '']);
     else if (job.output_path) want.push(['open', 'Play', ''], ['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
     want.push(['again', 'Download again', '']);
     want.push(['remove', 'Remove', '']);
@@ -907,7 +907,7 @@ function toolList(dependencies) {
     msg.textContent = d.available && /^available\.?$/i.test(d.message || '') ? '' : d.message || '';
     if (d.path) li.title = d.path;
     li.append(name, state, msg);
-    if (d.name === 'yt-dlp' && client.updateYtdlp) {
+    if (d.name === 'yt-dlp' && client.updateYtdlp && !client.onPhone) {
       // yt-dlp needs updating when YouTube changes; offer it in place.
       const label = !d.available ? 'Install' : d.outdated ? 'Update' : 'Check for update';
       const button = el('button', { type: 'button', className: 'btn btn-small tool-action', textContent: label });
@@ -1022,11 +1022,17 @@ async function runAction(id, action) {
     }
     return;
   }
+  if (action === 'play') {
+    window.open(fileURL(id, { play: true }), '_blank', 'noopener');
+    return;
+  }
   if (action === 'save') {
     const link = el('a', { href: fileURL(id), download: '' });
     document.body.append(link);
     link.click();
     link.remove();
+    // Browsers warn about any download over plain http; this one never leaves the Wi-Fi.
+    toast("Saving to this phone. If the browser says it can't download the file securely, tap Keep: it comes straight from your computer.");
     return;
   }
   if (action === 'open') {

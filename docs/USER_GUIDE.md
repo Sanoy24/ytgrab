@@ -262,7 +262,7 @@ Add the download folder to Jellyfin, Kodi, or Emby as a **Shows** library and th
 2. Click **Show a code** and scan it with the phone's camera. The phone opens YTGrab; the code works once, for 10 minutes.
 3. Next time, open the address shown under the code (like `http://192.168.1.5:8788`) on the phone. Bookmark it or add it to the home screen.
 
-On the phone, a finished download has **Save to phone**. The phone can't change settings, delete files on the computer, or reach anything else on it. **Paired phones** lists each phone with a **Remove** button; turning phone access off removes them all. The connection isn't encrypted, so use it on your home Wi-Fi or another network you trust, not public Wi-Fi.
+On the phone, a finished download has **Play**, which plays it in the browser over Wi-Fi, and **Save to phone**, which copies it to the phone's Downloads. Chrome warns that the file "can't be downloaded securely" because the connection isn't encrypted; tap **Keep**, since the file comes straight from your computer. The phone can't change settings, delete files on the computer, or reach anything else on it. **Paired phones** lists each phone with a **Remove** button; turning phone access off removes them all. The connection isn't encrypted, so use it on your home Wi-Fi or another network you trust, not public Wi-Fi.
 
 If the phone can't connect, check that both are on the same Wi-Fi (guest networks often keep devices apart), and that Windows Firewall allows YTGrab on private networks. A VPN on the computer can also hide it from the phone.
 

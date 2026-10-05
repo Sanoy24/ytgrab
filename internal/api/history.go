@@ -158,8 +158,8 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	// The saved file itself, for "Save to phone". Range requests let a phone play it while
-	// it downloads.
+	// The saved file itself, for "Save to phone", or with ?play=1 to play in the browser.
+	// Range requests let a phone start playing before the whole file arrives.
 	mux.HandleFunc("GET /api/jobs/{id}/file", func(w http.ResponseWriter, r *http.Request) {
 		job, err := store.Get(r.Context(), r.PathValue("id"))
 		if err != nil {
@@ -182,7 +182,11 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 			writeError(w, http.StatusNotFound, "file_missing", "The file was moved or deleted.")
 			return
 		}
-		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filepath.Base(path)}))
+		disposition := "attachment"
+		if r.URL.Query().Get("play") == "1" {
+			disposition = "inline"
+		}
+		w.Header().Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": filepath.Base(path)}))
 		w.Header().Set("Cache-Control", "no-store")
 		http.ServeContent(w, r, filepath.Base(path), info.ModTime(), file)
 	})
