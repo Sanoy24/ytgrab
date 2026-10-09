@@ -249,11 +249,30 @@ func (inspector *Inspector) extract(ctx context.Context, url string, videoID str
 	if err != nil {
 		return Inspection{}, err
 	}
-	return parseInspection(output, videoID, domain.SiteOf(url))
+	result, err := parseInspection(output, videoID, domain.SiteOf(url))
+	// Right after the bot check, an embedded player sometimes answers without formats;
+	// asking again gets them.
+	if failure, ok := err.(*Error); ok && failure.Code == "video_unavailable" && len(result.Video) == 0 && BotCheckActive() && ctx.Err() == nil {
+		if output, retryErr := inspector.runJSON(ctx, path, args, 25*time.Second); retryErr == nil {
+			return parseInspection(output, videoID, domain.SiteOf(url))
+		}
+	}
+	return result, err
 }
 
 // runJSON runs yt-dlp for machine-readable metadata with a timeout and bounded output.
+// The URL is always the last argument, after "--".
 func (inspector *Inspector) runJSON(ctx context.Context, path string, args []string, timeout time.Duration) ([]byte, error) {
+	if domain.SiteOf(args[len(args)-1]) != domain.SiteYouTube {
+		return inspector.signedIn(ctx, path, args, timeout)
+	}
+	return withBotCheckFallback(ctx, func(clients string) ([]byte, error) {
+		return inspector.signedIn(ctx, path, append(clientArgs(clients), args...), timeout)
+	})
+}
+
+// signedIn runs yt-dlp with browser sign-in when it is on.
+func (inspector *Inspector) signedIn(ctx context.Context, path string, args []string, timeout time.Duration) ([]byte, error) {
 	if inspector.CookiesBrowser != nil {
 		if cookies := cookieArgs(inspector.CookiesBrowser()); cookies != nil {
 			output, err := inspector.runJSONArgs(ctx, path, append(cookies, args...), timeout)
