@@ -46,6 +46,8 @@ type Error struct {
 	Message string
 	// Detail is yt-dlp's own error lines, kept for diagnostic reports.
 	Detail string
+	// botCheck marks YouTube's "confirm you're not a bot" (see withBotCheckFallback).
+	botCheck bool
 }
 
 func (err *Error) Error() string { return err.Message }
@@ -98,9 +100,20 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	if downloader.SaveMetadata != nil {
 		cfg.SaveMetadata = downloader.SaveMetadata()
 	}
+	if job.Site != domain.SiteYouTube {
+		return downloader.signedIn(ctx, job, onEvent, cfg)
+	}
+	return withBotCheckFallback(ctx, func(clients string) (Result, error) {
+		cfg.YouTubeClients = clients
+		return downloader.signedIn(ctx, job, onEvent, cfg)
+	})
+}
+
+// signedIn downloads with browser sign-in when it is on. A browser whose sign-in can't be
+// read (Chrome on Windows, often) shouldn't stop a download that may not need it: then it
+// tries once more without.
+func (downloader Downloader) signedIn(ctx context.Context, job domain.Job, onEvent func(Event) error, cfg config.Config) (Result, error) {
 	result, err := downloader.run(ctx, job, onEvent, cfg)
-	// A browser whose sign-in can't be read (Chrome on Windows, often) shouldn't stop a
-	// download that may not need it: try once more without.
 	if failure, ok := err.(*Error); ok && failure.Code == "cookies_failed" && cfg.CookiesBrowser != "" {
 		cfg.CookiesBrowser = ""
 		if retried, retryErr := downloader.run(ctx, job, onEvent, cfg); retryErr == nil {
@@ -249,6 +262,7 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	switch job.Site {
 	case domain.SiteYouTube:
 		args = append(args, sponsorBlockArgs(cfg.SponsorBlock)...) // SponsorBlock only knows YouTube
+		args = append(args, clientArgs(cfg.YouTubeClients)...)
 	case domain.SiteX:
 		args = append(args, xTitleCleanup...)
 	}
@@ -798,7 +812,7 @@ func classifyFailure(stderr string) error {
 	// using YTGrab. Signed-in requests usually get through. "not a bot" alone, since
 	// Windows can mangle the apostrophe.
 	case strings.Contains(lower, "confirm you") && strings.Contains(lower, "not a bot"):
-		return &Error{Code: "blocked", Message: "YouTube wants to check that this network isn't a bot. That happens when many people share one internet address, as with most mobile and some home internet, even if you haven't downloaded anything. Turn on Browser sign-in in Settings with a browser signed in to YouTube, which usually gets past it, or try another network such as a phone hotspot."}
+		return &Error{Code: "blocked", botCheck: true, Message: "YouTube wants to check that this network isn't a bot. That happens when many people share one internet address, as with most mobile and some home internet, even if you haven't downloaded anything. Turn on Browser sign-in in Settings with a browser signed in to YouTube, which usually gets past it, or try another network such as a phone hotspot."}
 	case strings.Contains(lower, "http error 429"), strings.Contains(lower, "too many requests"):
 		return &Error{Code: "blocked", Message: "YouTube is limiting requests from this network. Wait a while, then retry."}
 	case strings.Contains(lower, "private video"), strings.Contains(lower, "video unavailable"), strings.Contains(lower, "not available"), strings.Contains(lower, "does not exist"):

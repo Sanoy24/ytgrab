@@ -19,6 +19,9 @@ type Config struct {
 	ToolsDir      string
 	// SaveMetadata keeps info.json, the description, and the thumbnail next to each file.
 	SaveMetadata bool
+	// YouTubeClients picks yt-dlp's YouTube player clients ("" for its own choice); set
+	// per download while YouTube's bot check is on.
+	YouTubeClients string
 	DataDir      string
 	DownloadsDir string
 	// DownloadsDirSet reports that YTGRAB_DOWNLOAD_DIR was given, which counts as the
