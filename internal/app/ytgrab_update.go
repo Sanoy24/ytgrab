@@ -124,7 +124,7 @@ func updateCommand(exe, goos string) string {
 	case strings.Contains(path, "/scoop/apps/ytgrab/"):
 		return "scoop update ytgrab"
 	case strings.Contains(path, "/cellar/ytgrab/"):
-		return "brew upgrade ytgrab"
+		return "brew update && brew upgrade ytgrab" // brew refreshes its package lists at most daily
 	case strings.Contains(path, "/.local/share/ytgrab/") && goos != "windows":
 		return "curl -fsSL https://raw.githubusercontent.com/Sanoy24/ytgrab/main/install.sh | sh"
 	case strings.Contains(path, "/go/bin/"):
