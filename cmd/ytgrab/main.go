@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/autostart"
 	"github.com/Sanoy24/ytgrab/internal/config"
+	"github.com/Sanoy24/ytgrab/internal/launcher"
 	"github.com/Sanoy24/ytgrab/internal/reveal"
 	"github.com/Sanoy24/ytgrab/internal/selfupdate"
 	"github.com/Sanoy24/ytgrab/internal/setup"
@@ -33,6 +36,8 @@ const usage = `Usage:
   ytgrab doctor                check the tools and folders YTGrab needs
   ytgrab setup [--yes] [--update-ytdlp]
                                install what is missing, asking before each step
+  ytgrab app [--remove]        add YTGrab, with its icon, to Launchpad (macOS) or
+                               the applications menu (Linux)
   ytgrab --version             print the version
 `
 
@@ -43,6 +48,8 @@ func run(args []string) int {
 			return doctor(args[1:])
 		case "setup":
 			return runSetup(args[1:])
+		case "app":
+			return runApp(args[1:])
 		case "help", "-h", "--help", "-help":
 			fmt.Print(usage)
 			return 0
@@ -172,6 +179,45 @@ func toolEnv(cfg config.Config) setup.Env {
 	env := setup.SystemEnv(check, app.SetupToolsDir(cfg), os.Stdin, os.Stdout)
 	env.Extra = func() []setup.Line { return app.DoctorChecks(cfg) }
 	return env
+}
+
+// runApp adds YTGrab to the apps, for installs that only put the program on the PATH
+// (Homebrew), or takes it out again.
+func runApp(args []string) int {
+	flags := flag.NewFlagSet("ytgrab app", flag.ContinueOnError)
+	remove := flags.Bool("remove", false, "remove YTGrab from your apps")
+	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	if *remove {
+		removed, err := launcher.Remove()
+		switch {
+		case err != nil:
+			fmt.Fprintf(os.Stderr, "could not remove YTGrab from your apps: %v\n", err)
+			return 1
+		case removed == "":
+			fmt.Println("YTGrab wasn't in your apps.")
+		default:
+			fmt.Printf("Removed %s\n", removed)
+		}
+		return 0
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not find this program: %v\n", err)
+		return 1
+	}
+	where, err := launcher.Install(launcher.StablePath(exe), version)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return 1
+	}
+	if runtime.GOOS == "darwin" {
+		fmt.Printf("Added YTGrab to %s. Open it from Launchpad or Spotlight; it lives in the menu bar.\n", filepath.Dir(where))
+	} else {
+		fmt.Printf("Added YTGrab to your applications menu (%s).\n", where)
+	}
+	return 0
 }
 
 func doctor(args []string) int {
