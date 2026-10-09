@@ -22,8 +22,8 @@ type Config struct {
 	// YouTubeClients picks yt-dlp's YouTube player clients ("" for its own choice); set
 	// per download while YouTube's bot check is on.
 	YouTubeClients string
-	DataDir      string
-	DownloadsDir string
+	DataDir        string
+	DownloadsDir   string
 	// DownloadsDirSet reports that YTGRAB_DOWNLOAD_DIR was given, which counts as the
 	// user's choice of output folder.
 	DownloadsDirSet bool
