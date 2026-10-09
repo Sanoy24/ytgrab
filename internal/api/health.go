@@ -71,6 +71,11 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 		if provider, ok := settings[0].(phoneProvider); ok {
 			if phones := provider.Phones(); phones != nil {
 				addPhoneRoutes(mux, phones)
+				// Podcast feeds reach phones through phone access, with its feed key.
+				feeds, ok := phones.(FeedAccess)
+				if store, isFeedStore := jobs.(feedStore); ok && isFeedStore {
+					addFeedRoutes(mux, jobs, store, feeds)
+				}
 			}
 		}
 		if provider, ok := settings[0].(watchProvider); ok {

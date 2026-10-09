@@ -140,6 +140,17 @@ class FixtureClient {
     return structuredClone(watch);
   }
 
+  async watchFeed(id) {
+    await delay(150);
+    const path = `/feeds/${id}?key=sample`;
+    if (!this.phone?.enabled) return { local_url: `http://127.0.0.1:8787${path}`, reason: 'Turn on phone access in Settings → Phone, so a podcast app on your phone can reach this computer.' };
+    return { url: `${this.phone.url}${path}`, local_url: `http://127.0.0.1:8787${path}` };
+  }
+
+  async resetFeeds() {
+    await delay(150);
+  }
+
   async deleteWatch(id) {
     await delay(150);
     this.watches = this.watches.filter((w) => w.id !== id);
@@ -595,6 +606,14 @@ class HttpClient {
   // Watched channels and playlists: { watches, interval_hours, max_backfill, max_per_check }.
   listWatches() {
     return this.request('GET', '/api/watches');
+  }
+  // A watch's podcast feed: { url (for phones), local_url, reason (why url is missing) }.
+  watchFeed(id) {
+    return this.request('GET', `/api/watches/${encodeURIComponent(id)}/feed`);
+  }
+  // Retires every podcast feed address; apps need the new ones.
+  resetFeeds() {
+    return this.request('POST', '/api/feeds/reset');
   }
   // { url, preset, folder, backfill }: lists the channel now, so it can take a few seconds.
   addWatch(body) {

@@ -189,6 +189,29 @@ func TestPhonesStayInTheirLane(t *testing.T) {
 	}
 }
 
+func TestFeedsNeedNoPairingButTheirOwnKey(t *testing.T) {
+	store := &memoryStore{values: map[string]string{}}
+	service := newService(t, store)
+	if got := visit(service, http.MethodGet, "/feeds/w1?key=whatever", ""); got.Code != http.StatusOK {
+		t.Errorf("feed from an unpaired podcast app = %d (the feed itself checks the key)", got.Code)
+	}
+	if got := visit(service, http.MethodPost, "/feeds/w1", ""); got.Code != http.StatusUnauthorized {
+		t.Errorf("POST to a feed = %d", got.Code)
+	}
+	ctx := context.Background()
+	key, err := service.FeedKey(ctx)
+	if again, _ := service.FeedKey(ctx); err != nil || key == "" || again != key {
+		t.Fatalf("FeedKey = %q, %q, %v", key, again, err)
+	}
+	if !service.ValidFeedKey(ctx, key) || service.ValidFeedKey(ctx, "") || service.ValidFeedKey(ctx, key+"x") {
+		t.Error("ValidFeedKey")
+	}
+	_ = service.ResetFeedKey(ctx)
+	if service.ValidFeedKey(ctx, key) {
+		t.Error("the old key still works after a reset")
+	}
+}
+
 func TestOnlyTheLocalNetwork(t *testing.T) {
 	service := newService(t, &memoryStore{values: map[string]string{}})
 	key := pairPhone(t, service)

@@ -10,6 +10,38 @@ export function initWatching(dependencies) {
 
 let watchInfo = null; // { watches, interval_hours, ... }
 const watchBusy = new Set();
+let feedOpen = null; // { id, info: { url, local_url, reason } } for the watch showing its feed
+
+const FEED_ICON = '<path d="M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14"/><circle cx="6" cy="18" r="1.5"/>';
+
+// A watch's podcast feed: its address, and which apps can use it.
+function feedPanel(w) {
+  const { info } = feedOpen;
+  const address = (value, label) => {
+    const input = el('input', { type: 'text', readOnly: true, value, className: 'feed-url' });
+    input.setAttribute('aria-label', label);
+    input.addEventListener('focus', () => input.select());
+    return input;
+  };
+  const panel = el('div', { className: 'watch-feed' });
+  if (info.url) {
+    const copy = el('button', { type: 'button', className: 'btn btn-small', textContent: 'Copy' });
+    copy.dataset.watchAction = 'copy-feed';
+    panel.append(
+      el('strong', { textContent: 'Podcast feed' }),
+      el('div', { className: 'feed-row' }, address(info.url, `Podcast feed address for ${w.title}`), copy),
+      el('p', {
+        className: 'hint',
+        textContent:
+          'Add it in a podcast app that refreshes on the phone itself, such as AntennaPod or Podcast Addict, while on the same Wi-Fi. Apps that refresh through their own servers (Pocket Casts, Spotify) can’t reach this computer. Episodes play best when the watch saves M4A or MP3.',
+      }),
+    );
+  } else {
+    panel.append(el('strong', { textContent: 'Podcast feed' }), el('p', { className: 'hint', textContent: info.reason || 'The feed isn’t available right now.' }));
+    if (info.local_url) panel.append(el('p', { className: 'hint', textContent: 'For a podcast app on this computer:' }), address(info.local_url, `Podcast feed address on this computer for ${w.title}`));
+  }
+  return panel;
+}
 
 export async function loadWatches() {
   try {
@@ -53,7 +85,9 @@ export function renderWatches() {
         const b = el('button', { type: 'button', className: 'act', title: label, disabled: busy });
         b.dataset.watchAction = action;
         b.setAttribute('aria-label', `${label}: ${w.title}`);
-        b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[action === 'check' ? 'retry' : action === 'unpause' ? 'resume' : action === 'pause' ? 'pause' : 'remove']}</svg>`;
+        const icon = action === 'feed' ? FEED_ICON : ICONS[action === 'check' ? 'retry' : action === 'unpause' ? 'resume' : action === 'pause' ? 'pause' : 'remove'];
+        b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg>`;
+        if (action === 'feed') b.setAttribute('aria-expanded', String(feedOpen?.id === w.id));
         return b;
       };
       const card = el(
@@ -67,8 +101,9 @@ export function renderWatches() {
           el('p', { className: 'watch-meta', textContent: meta.join(' · ') }),
           ...(w.last_error ? [el('p', { className: 'watch-error', textContent: w.last_error })] : []),
         ),
-        el('div', { className: 'watch-actions-row' }, button('check', 'Check now'), button(w.paused ? 'unpause' : 'pause', w.paused ? 'Resume watching' : 'Pause watching'), button('remove', 'Stop watching')),
+        el('div', { className: 'watch-actions-row' }, button('feed', 'Podcast feed'), button('check', 'Check now'), button(w.paused ? 'unpause' : 'pause', w.paused ? 'Resume watching' : 'Pause watching'), button('remove', 'Stop watching')),
       );
+      if (feedOpen?.id === w.id) card.append(feedPanel(w));
       card.dataset.id = w.id;
       if (w.paused) card.dataset.paused = 'true';
       return card;
@@ -79,6 +114,33 @@ export function renderWatches() {
 export async function onWatchAction(id, action) {
   const watch = watchInfo?.watches.find((w) => w.id === id);
   if (!watch) return;
+  if (action === 'feed') {
+    if (feedOpen?.id === id) {
+      feedOpen = null;
+    } else {
+      try {
+        feedOpen = { id, info: await deps.client.watchFeed(id) };
+      } catch (err) {
+        toast(err.message, true);
+        return;
+      }
+    }
+    renderWatches();
+    return;
+  }
+  if (action === 'copy-feed') {
+    const url = feedOpen?.info.url;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Feed address copied. Add it in your podcast app.');
+    } catch {
+      // Browsers only allow copying on secure pages, which a phone's view of YTGrab isn't.
+      const input = document.querySelector('.watch-feed .feed-url');
+      input?.focus();
+      toast('Press and hold the selected address to copy it.');
+    }
+    return;
+  }
   if (action === 'remove' && !confirm(`Stop watching ${watch.title}? Videos it already downloaded are kept.`)) return;
   watchBusy.add(id);
   renderWatches();

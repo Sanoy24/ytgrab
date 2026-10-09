@@ -632,3 +632,20 @@ test('on a phone: no settings, and finished downloads save to the phone', async 
   await page.locator('#clear-history').click();
   await expect(page.locator('#clear-files-row')).toBeHidden();
 });
+
+test('shows a watch podcast feed once phone access is on', async ({ page }) => {
+  await page.goto('/?fixture=default#watching');
+  const watch = page.locator('#watch-list .watch').first();
+  await watch.getByRole('button', { name: /^Podcast feed/ }).click();
+  await expect(watch.locator('.watch-feed')).toContainText('Turn on phone access in Settings → Phone');
+  await watch.getByRole('button', { name: /^Podcast feed/ }).click(); // closes it
+  await expect(watch.locator('.watch-feed')).toHaveCount(0);
+
+  await page.goto('/?fixture=default#settings');
+  await page.getByLabel('Use YTGrab from your phone').check();
+  await expect(page.getByRole('button', { name: 'Make new feed addresses' })).toBeVisible();
+  await page.locator('.nav-item[data-view=watching]').click();
+  await watch.getByRole('button', { name: /^Podcast feed/ }).click();
+  await expect(watch.getByRole('textbox', { name: /^Podcast feed address for/ })).toHaveValue(/^http:\/\/192\.168\.1\.5:8788\/feeds\/.+\?key=/);
+  await expect(watch.locator('.watch-feed')).toContainText('AntennaPod');
+});

@@ -65,6 +65,10 @@ Write requests from another site, and any request whose `Host` is not a loopback
 | `POST` | `/api/phone/pair` | A one-time pairing code, valid 10 minutes: `{ "url", "qr" (an SVG data: URL), "expires_at" }` |
 | `DELETE` | `/api/phone/devices/{id}` | Unpairs a phone |
 | `GET` | `/api/jobs/{id}/file` | A finished download's file, as an attachment, with range requests |
+| `GET` | `/api/watches/{id}/feed` | The watch's podcast feed address: `{ "url" (for phones, when phone access is on), "local_url", "reason" (why `url` is missing) }` |
+| `POST` | `/api/feeds/reset` | Makes a new feed key, retiring every feed address |
+| `GET` | `/feeds/{watch}?key=` | The watch's finished downloads as RSS 2.0 with iTunes tags, newest first (up to 100); a wrong key is `404` |
+| `GET` | `/feeds/{watch}/{job}.{ext}?key=` | An episode's file, inline, with range requests |
 
 The phone server answers only private-network addresses, by IP address (not a host name). `GET /pair?code=` trades the code for a key in an `HttpOnly` cookie; requests without a paired key get `401`. Paired phones reach only the routes listed in `internal/phone/guard.go` (downloads, playlists, search, Watching, the Library, and `/file`); settings, `/api/phone`, backups, updates, opening files, and deleting files (`delete_file`, `delete_files`) get `403`.
 

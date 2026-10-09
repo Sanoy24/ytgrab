@@ -112,6 +112,16 @@ Open **Watching**, paste a channel link (`youtube.com/@name`, `/channel/…`, `/
 - Checks use one request to YouTube each and go through the same pause as everything else when YouTube is limiting your network, so watching a few channels doesn't make blocks more likely. Watching hundreds might.
 - **Vimeo**: watch a channel (`vimeo.com/channels/name`), a group (`vimeo.com/groups/name`), or a public showcase (`vimeo.com/showcase/123`); channels and groups check their newest videos like a YouTube channel, showcases their whole list. Vimeo no longer lets apps list a person's own videos (`vimeo.com/name`), so watch one of their channels or showcases instead. Vimeo doesn't list video lengths, so **Minimum length** lets every Vimeo video through.
 
+### Podcast feeds
+
+Each watch has a podcast feed of what it downloaded, so new episodes show up in a podcast app on your phone by themselves. Turn on phone access first (**Settings → Phone**; the phone doesn't need pairing for this), then press the feed button on the watch and copy the address into the app's **Add podcast by URL**.
+
+- Use an app that refreshes feeds **on the phone itself**, such as **AntennaPod** or **Podcast Addict** on Android. Apps that refresh through their own servers, like Pocket Casts, Spotify, or Overcast, can't reach a computer on your home Wi-Fi.
+- The app refreshes while the phone is on the same Wi-Fi as the computer and YTGrab is running; downloaded episodes then play anywhere.
+- Episodes play best when the watch saves **M4A** or **MP3**. Video formats work in apps that play video.
+- The feed lists the watch's 100 newest finished downloads whose files are still there.
+- Each address carries a secret key. If one got out, **Settings → Phone → Make new feed addresses** retires all of them; copy the new ones into your apps. If the computer gets a new address on your Wi-Fi, the feed addresses change too.
+
 ## Split a video into chapters
 
 When the video's creator marked chapters, the Download page says how many and offers **Also save each of the N chapters as its own file**. YTGrab then saves the whole video as usual, plus a folder of the same name with one file per chapter, numbered and titled (`01 Intro.m4a`, `02 Docs.m4a`, …). It works for video and audio formats; it can't be combined with **Only part of the video**. Deleting the download's file (from its menu or with **Clear**) also deletes its chapter files, and the folder unless you put other files in it.

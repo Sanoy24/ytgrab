@@ -44,6 +44,7 @@ var phoneRoutes = func() *http.ServeMux {
 		"PUT /api/watches/{id}",
 		"DELETE /api/watches/{id}",
 		"POST /api/watches/{id}/check",
+		"GET /api/watches/{id}/feed",
 	} {
 		mux.Handle(pattern, http.NotFoundHandler())
 	}
@@ -74,6 +75,11 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.servePair(w, r)
 		return
 	}
+	// Podcast apps can't pair: feed addresses carry their own key, which the feed checks.
+	if strings.HasPrefix(r.URL.Path, "/feeds/") && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
+		s.serveApp(w, r)
+		return
+	}
 	cookie, _ := r.Cookie(CookieName)
 	if cookie == nil || !s.paired(cookie.Value) {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
@@ -87,6 +93,10 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "computer_only", "This can only be done in YTGrab on your computer.")
 		return
 	}
+	s.serveApp(w, r)
+}
+
+func (s *Service) serveApp(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	app := s.app
 	s.mu.Unlock()
