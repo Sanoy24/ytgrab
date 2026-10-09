@@ -19,6 +19,7 @@ export function initPhone(apiClient, showPhoneSettings) {
   setInterval(loadPhone, 60_000);
   $('#pref-phone').addEventListener('change', onToggle);
   $('#phone-pair').addEventListener('click', showCode);
+  $('#phone-feeds-reset').addEventListener('click', resetFeeds);
   $('#phone-devices').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-device]');
     if (b) forget(b, b.dataset.device);
@@ -42,6 +43,7 @@ function render() {
   $('#phone-moved').hidden = !status.moved;
   $('#pref-phone').checked = status.enabled;
   $('#phone-pair-row').hidden = !status.enabled;
+  $('#phone-feeds-row').hidden = !status.enabled;
   $('#phone-error').hidden = !status.error;
   $('#phone-error').textContent = status.error || '';
   $('#phone-url').textContent = status.url || '';
@@ -122,6 +124,20 @@ function hideCode() {
   $('#phone-qr').removeAttribute('src');
   $('#phone-code-link').hidden = true;
   $('#phone-pair').textContent = 'Show a code';
+}
+
+async function resetFeeds(e) {
+  if (!confirm('Make new podcast feed addresses? The old ones stop working, and podcast apps need the new ones.')) return;
+  const button = e.currentTarget;
+  button.disabled = true;
+  try {
+    await client.resetFeeds();
+    toast('New feed addresses made. Copy them again from Watching.');
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function forget(button, id) {

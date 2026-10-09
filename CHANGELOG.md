@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **Podcast feeds for watched channels.** Each watch has a feed address (the new feed button in Watching) for podcast apps that refresh on the phone, such as AntennaPod and Podcast Addict: new episodes from the channel arrive in the app by themselves while the phone is on your Wi-Fi. Needs phone access on; Settings → Phone can retire all feed addresses.
+
 ### Fixed
 
 - The update notice for Homebrew installs now says `brew update && brew upgrade ytgrab`: Homebrew checks for new versions only once a day, so `brew upgrade` alone could still report the old version as the latest.

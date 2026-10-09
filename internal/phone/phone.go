@@ -26,6 +26,7 @@ import (
 const (
 	enabledKey = "phone_access"
 	devicesKey = "phone_devices"
+	feedKeyKey = "feed_key"
 
 	// CookieName holds a paired phone's key.
 	CookieName = "ytgrab_phone"
@@ -241,6 +242,43 @@ func (s *Service) NewPairing() (Pairing, error) {
 		return Pairing{}, err
 	}
 	return Pairing{URL: link, QR: qr, ExpiresAt: s.codeEnds}, nil
+}
+
+// FeedKey is the secret in podcast feed addresses. Podcast apps can't pair like a browser,
+// so each feed address carries it; one per install, made on first use.
+func (s *Service) FeedKey(ctx context.Context) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.feedKeyLocked(ctx)
+}
+
+func (s *Service) feedKeyLocked(ctx context.Context) (string, error) {
+	key, ok, err := s.store.GetSetting(ctx, feedKeyKey)
+	if err != nil {
+		return "", fmt.Errorf("read feed key: %w", err)
+	}
+	if ok && key != "" {
+		return key, nil
+	}
+	key = randomText(24)
+	if err := s.store.PutSetting(ctx, feedKeyKey, key); err != nil {
+		return "", fmt.Errorf("save feed key: %w", err)
+	}
+	return key, nil
+}
+
+// ValidFeedKey reports whether key is the feed key.
+func (s *Service) ValidFeedKey(ctx context.Context, key string) bool {
+	if key == "" {
+		return false
+	}
+	current, ok, err := s.store.GetSetting(ctx, feedKeyKey)
+	return err == nil && ok && subtle.ConstantTimeCompare([]byte(key), []byte(current)) == 1
+}
+
+// ResetFeedKey replaces the feed key, so every earlier feed address stops working.
+func (s *Service) ResetFeedKey(ctx context.Context) error {
+	return s.store.PutSetting(ctx, feedKeyKey, randomText(24))
 }
 
 // Forget unpairs a phone; its key stops working at once.
