@@ -793,7 +793,13 @@ func classifyFailure(stderr string) error {
 	// Checked first and by specific phrases: YouTube's bot check also mentions cookies.
 	case strings.Contains(lower, "cookie database"), strings.Contains(lower, "cookies database"), strings.Contains(lower, "failed to decrypt"), strings.Contains(lower, "failed to load cookies"), strings.Contains(lower, "unsupported browser"):
 		return &Error{Code: "cookies_failed", Message: "YTGrab couldn't use your browser's sign-in. Close that browser and retry, or choose another browser in the settings (on Windows, Firefox works best)."}
-	case strings.Contains(lower, "http error 429"), strings.Contains(lower, "sign in to confirm you're not a bot"), strings.Contains(lower, "sign in to confirm you’re not a bot"), strings.Contains(lower, "too many requests"):
+	// The bot check: YouTube sends this whole internet address to its captcha page. Common
+	// where many people share one address (mobile and some home internet), even without
+	// using YTGrab. Signed-in requests usually get through. "not a bot" alone, since
+	// Windows can mangle the apostrophe.
+	case strings.Contains(lower, "confirm you") && strings.Contains(lower, "not a bot"):
+		return &Error{Code: "blocked", Message: "YouTube wants to check that this network isn't a bot. That happens when many people share one internet address, as with most mobile and some home internet, even if you haven't downloaded anything. Turn on Browser sign-in in Settings with a browser signed in to YouTube, which usually gets past it, or try another network such as a phone hotspot."}
+	case strings.Contains(lower, "http error 429"), strings.Contains(lower, "too many requests"):
 		return &Error{Code: "blocked", Message: "YouTube is limiting requests from this network. Wait a while, then retry."}
 	case strings.Contains(lower, "private video"), strings.Contains(lower, "video unavailable"), strings.Contains(lower, "not available"), strings.Contains(lower, "does not exist"):
 		return &Error{Code: "video_unavailable", Message: "This video is unavailable or private."}

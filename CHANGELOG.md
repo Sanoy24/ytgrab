@@ -18,6 +18,7 @@ YTGrab as an archiver: media-server folders, metadata files, and downloads from 
 ### Fixed
 
 - Deleting a download's file now also deletes the subtitle files and other files yt-dlp saved beside it.
+- When YouTube asks to confirm a network isn't a bot, which happens on shared internet addresses even without downloading, YTGrab now says that Browser sign-in or another network usually gets past it, instead of only asking you to wait.
 
 ## [1.17.0] - 2026-10-05
 

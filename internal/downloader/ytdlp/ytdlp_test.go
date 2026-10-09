@@ -149,8 +149,13 @@ func TestCookieFailuresAreExplained(t *testing.T) {
 	}
 	// The bot check mentions --cookies-from-browser but is still a block.
 	err, _ := classifyFailure("ERROR: [youtube] x: Sign in to confirm you're not a bot. Use --cookies-from-browser or --cookies for the authentication.").(*Error)
-	if err == nil || err.Code != "blocked" {
+	if err == nil || err.Code != "blocked" || !strings.Contains(err.Message, "Browser sign-in") {
 		t.Fatalf("bot check classified as %v", err)
+	}
+	// As Windows shows it, with the apostrophe mangled, after a 429 warning.
+	err, _ = classifyFailure("WARNING: [youtube] x: Unable to download webpage: HTTP Error 429: Too Many Requests\nERROR: [youtube] x: Sign in to confirm you�re not a bot.").(*Error)
+	if err == nil || !strings.Contains(err.Message, "isn't a bot") {
+		t.Fatalf("mangled bot check = %v", err)
 	}
 }
 
