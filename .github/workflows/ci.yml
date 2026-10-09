@@ -32,6 +32,17 @@ jobs:
           tar -xzf dist-ci/ytgrab-0.0.0-ci-darwin-arm64.tar.gz -C "$RUNNER_TEMP" ./ytgrab
           otool -L "$RUNNER_TEMP/ytgrab" | grep AppKit
           sh .github/scripts/smoke.sh "$RUNNER_TEMP/ytgrab"
+      - name: ytgrab app adds YTGrab.app with its icon
+        if: runner.os == 'macOS'
+        run: |
+          go build -o "$RUNNER_TEMP/app-check/ytgrab" ./cmd/ytgrab
+          HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/app-check/ytgrab" app
+          app="$RUNNER_TEMP/home/Applications/YTGrab.app"
+          plutil -lint "$app/Contents/Info.plist"
+          test -x "$app/Contents/MacOS/YTGrab"
+          test -s "$app/Contents/Resources/ytgrab.icns"
+          HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/app-check/ytgrab" app --remove
+          test ! -e "$app"
       - name: Installer adds YTGrab.app
         if: runner.os == 'macOS'
         run: |

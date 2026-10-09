@@ -15,9 +15,12 @@ YTGrab as an archiver: media-server folders, metadata files, and downloads from 
 - **Jellyfin and Plex layout.** A new file-name style, **For Jellyfin and Plex**, saves each channel as a show: a `Season <year>` folder per upload year, episodes named `S2005E0424` by upload date, a poster, and `.nfo` files with the title, date, and description, so Jellyfin, Kodi, Emby, and Plex list videos with their details.
 - **Use YTGrab from your phone.** Settings → Phone (off by default) lets phones on the same Wi-Fi add links, follow downloads, use Watching, and **Save to phone** finished downloads. Pair a phone by scanning a QR code; only paired phones get in, they can't change settings or delete files on the computer, and you can remove one any time. If the router gives the computer a new address, YTGrab says so and shows a new code to reconnect the phone.
 
+- **`ytgrab app`** adds YTGrab, with its icon, to Launchpad and Spotlight on macOS, or to the applications menu on Linux. Homebrew installs only the program, so Homebrew users now get the app too (`brew install` says so).
+
 ### Fixed
 
 - Deleting a download's file now also deletes the subtitle files and other files yt-dlp saved beside it.
+- **Open at login** on macOS kept pointing at the Homebrew version it was turned on with, so it stopped working after `brew upgrade`; it now uses Homebrew's path that follows upgrades.
 - **Downloads keep working through YouTube's bot check.** YouTube sometimes asks a whole internet address to confirm it isn't a bot, which on shared mobile and home internet happens without any downloading, and every YouTube download and format check then failed. YTGrab now switches to YouTube's embedded players, which still get every quality, for six hours, and goes back once the check is over. If a video won't play embedded either, the message says what helps (Browser sign-in, another network) instead of only asking you to wait.
 
 ## [1.17.0] - 2026-10-05

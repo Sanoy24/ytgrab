@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Sanoy24/ytgrab/internal/launcher"
 )
 
 // ErrUnsupported is returned when this program can't be started at sign-in.
@@ -25,5 +27,6 @@ func ForThisProgram() Entry {
 	if err != nil || strings.Contains(filepath.ToSlash(exe), "/go-build") {
 		return Entry{}
 	}
-	return Entry{Exe: exe}
+	// Under Homebrew, the path that survives upgrades.
+	return Entry{Exe: launcher.StablePath(exe)}
 }
