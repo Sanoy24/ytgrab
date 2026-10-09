@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Fixed
+
+- The update notice for Homebrew installs now says `brew update && brew upgrade ytgrab`: Homebrew checks for new versions only once a day, so `brew upgrade` alone could still report the old version as the latest.
+
 ## [1.18.0] - 2026-10-09
 
 YTGrab as an archiver: media-server folders, metadata files, downloads from your phone, and a way past YouTube's bot check.

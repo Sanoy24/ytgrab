@@ -51,7 +51,7 @@ brew install sanoy24/tap/ytgrab
 ytgrab --open
 ```
 
-Homebrew installs yt-dlp, FFmpeg, and Deno with it, and nothing is quarantined, so there are no macOS warnings. Upgrade with `brew upgrade ytgrab`; when YouTube downloads start failing, `brew upgrade yt-dlp` (or the update button in the page) gets a newer yt-dlp. On Linux, add `zenity` from your package manager for the folder window.
+Homebrew installs yt-dlp, FFmpeg, and Deno with it, and nothing is quarantined, so there are no macOS warnings. Upgrade with `brew update && brew upgrade ytgrab` (`brew update` first, since Homebrew checks for new versions only once a day); when YouTube downloads start failing, `brew update && brew upgrade yt-dlp` (or the update button in the page) gets a newer yt-dlp. On Linux, add `zenity` from your package manager for the folder window.
 
 **With the installer:** run this in Terminal:
 
@@ -191,7 +191,7 @@ Paste a playlist link (`youtube.com/playlist?list=…`). YTGrab lists the first 
 
 Once a day YTGrab checks GitHub for a newer release. On Windows and Linux, a copy unpacked from a release archive or put in place by the install script can update itself: press **Update now** in the notice. YTGrab downloads the release for your system, checks it against the checksum published with it, makes sure the new version starts, replaces itself, and restarts in the background (with its tray icon); the page reloads when it's back. Your settings, history, and downloads are kept. It won't update while downloads are running: let them finish or cancel them first.
 
-Otherwise the notice shows the command for the way you installed it: `scoop update ytgrab`, `brew upgrade ytgrab`, the curl installer, or `go install`. Quit YTGrab, run it, and start YTGrab again. For a copy unpacked from a zip, the notice links to the release page; download the new zip and replace the files in your YTGrab folder (your settings and history are kept, because they live in the data folder). **Not now** hides the notice until the next version.
+Otherwise the notice shows the command for the way you installed it: `scoop update ytgrab`, `brew update && brew upgrade ytgrab`, the curl installer, or `go install`. Quit YTGrab, run it, and start YTGrab again. For a copy unpacked from a zip, the notice links to the release page; download the new zip and replace the files in your YTGrab folder (your settings and history are kept, because they live in the data folder). **Not now** hides the notice until the next version.
 
 ## Settings and data
 

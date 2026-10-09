@@ -37,8 +37,8 @@ func TestUpdateCommand(t *testing.T) {
 	}{
 		{`C:\Users\me\scoop\apps\ytgrab\current\ytgrab.exe`, "windows", "scoop update ytgrab"},
 		{`D:\Scoop\apps\ytgrab\1.7.0\ytgrab.exe`, "windows", "scoop update ytgrab"},
-		{"/opt/homebrew/Cellar/ytgrab/1.7.0/bin/ytgrab", "darwin", "brew upgrade ytgrab"},
-		{"/home/linuxbrew/.linuxbrew/Cellar/ytgrab/1.7.0/bin/ytgrab", "linux", "brew upgrade ytgrab"},
+		{"/opt/homebrew/Cellar/ytgrab/1.7.0/bin/ytgrab", "darwin", "brew update && brew upgrade ytgrab"},
+		{"/home/linuxbrew/.linuxbrew/Cellar/ytgrab/1.7.0/bin/ytgrab", "linux", "brew update && brew upgrade ytgrab"},
 		{"/home/me/.local/share/ytgrab/ytgrab", "linux", "curl -fsSL https://raw.githubusercontent.com/Sanoy24/ytgrab/main/install.sh | sh"},
 		{"/home/me/go/bin/ytgrab", "linux", "go install github.com/Sanoy24/ytgrab/cmd/ytgrab@latest"},
 		{`C:\Apps\YTGrab\ytgrab.exe`, "windows", ""},
