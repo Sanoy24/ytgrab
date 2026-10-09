@@ -4,9 +4,9 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
-## [1.18.0] - 2026-10-05
+## [1.18.0] - 2026-10-09
 
-YTGrab as an archiver: media-server folders, metadata files, and downloads from your phone.
+YTGrab as an archiver: media-server folders, metadata files, downloads from your phone, and a way past YouTube's bot check.
 
 ### Added
 
