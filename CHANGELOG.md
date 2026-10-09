@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-10-09
+
+Podcast feeds for watched channels.
+
 ### Added
 
 - **Podcast feeds for watched channels.** Each watch has a feed address (the new feed button in Watching) for podcast apps that refresh on the phone, such as AntennaPod and Podcast Addict: new episodes from the channel arrive in the app by themselves while the phone is on your Wi-Fi. Needs phone access on; Settings → Phone can retire all feed addresses.
@@ -256,6 +260,7 @@ YTGrab now downloads from X (Twitter) too.
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.19.0]: https://github.com/Sanoy24/ytgrab/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/Sanoy24/ytgrab/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/Sanoy24/ytgrab/compare/v1.16.1...v1.17.0
 [1.16.1]: https://github.com/Sanoy24/ytgrab/compare/v1.16.0...v1.16.1
