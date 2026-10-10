@@ -323,7 +323,7 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	}
 	if job.Format != nil {
 		if job.Format.Kind == "video" {
-			args = append(args, "-f", videoSelector(*job.Format), "--merge-output-format", "mp4/webm/mkv")
+			args = append(args, "-f", withLanguage(videoSelector(*job.Format), job.AudioLanguage), "--merge-output-format", "mp4/webm/mkv")
 		} else {
 			args = append(args, "-f", job.Format.ID)
 			if job.Site != domain.SiteYouTube && (job.Format.Ext == "m4a" || job.Format.Ext == "mp4") {
@@ -335,7 +335,25 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	if job.Preset == nil {
 		return finish(args)
 	}
+	start := len(args)
+	args = youtubePresetArgs(args, job)
+	if job.AudioLanguage != "" {
+		for i := start; i < len(args)-1; i++ {
+			if args[i] == "-f" {
+				args[i+1] = withLanguage(args[i+1], job.AudioLanguage)
+			}
+		}
+	}
+	return finish(args)
+}
+
+// youtubePresetArgs adds a preset's format choice for YouTube, Vimeo, Reddit, and Instagram.
+func youtubePresetArgs(args []string, job domain.Job) []string {
 	switch *job.Preset {
+	case domain.VideoCompat:
+		// H.264 and AAC, which YouTube offers up to 1080p; anything else only when a site has
+		// neither.
+		args = append(args, "-f", "bv*[vcodec^=avc1][height<=1080]+ba[acodec^=mp4a]/b[vcodec^=avc1][height<=1080]/bv*[height<=1080]+ba/b", "--merge-output-format", "mp4")
 	case domain.VideoBest:
 		args = append(args, "-f", "bv*+ba/b", "--merge-output-format", "mp4/mkv")
 	case domain.Video1080:
@@ -371,7 +389,29 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	case domain.AudioWAV:
 		args = append(args, "-f", "ba", "-x", "--audio-format", "wav")
 	}
-	return finish(args)
+	return args
+}
+
+// audioPick matches "ba" (best audio) and "wa" (smallest audio) in a format choice.
+var audioPick = regexp.MustCompile(`\b(ba|wa)\b`)
+
+// withLanguage makes a format choice try the audio track in language first, then fall back
+// to the choice as it was (yt-dlp's own pick, the original audio). A video's format IDs
+// already name one track, so a choice without "ba" or "wa" is left alone.
+func withLanguage(selector, language string) string {
+	if language == "" || !domain.ValidLanguage(language) {
+		return selector
+	}
+	var preferred []string
+	for _, alternative := range strings.Split(selector, "/") {
+		if audioPick.MatchString(alternative) {
+			preferred = append(preferred, audioPick.ReplaceAllString(alternative, "${1}[language="+language+"]"))
+		}
+	}
+	if len(preferred) == 0 {
+		return selector
+	}
+	return strings.Join(preferred, "/") + "/" + selector
 }
 
 // xTitleCleanup decodes the HTML entities X leaves in post text, so file names and tags
@@ -398,7 +438,7 @@ func xFormatArgs(job domain.Job) []string {
 		return []string{"-f", "b"}
 	}
 	switch *job.Preset {
-	case domain.Video1080:
+	case domain.Video1080, domain.VideoCompat: // X's files are H.264 and AAC already
 		return []string{"-f", "b", "-S", "res:1080"}
 	case domain.Video720:
 		return []string{"-f", "b", "-S", "res:720"}
@@ -440,7 +480,7 @@ func isVideo(job domain.Job) bool {
 		return job.Format.Kind == "video"
 	}
 	return job.Preset != nil && (*job.Preset == domain.VideoBest || *job.Preset == domain.Video1080 || *job.Preset == domain.Video720 ||
-		*job.Preset == domain.Video480 || *job.Preset == domain.Video360)
+		*job.Preset == domain.Video480 || *job.Preset == domain.Video360 || *job.Preset == domain.VideoCompat)
 }
 
 // sponsorCategories are the SponsorBlock segments YTGrab marks or removes: paid sponsors,
@@ -541,6 +581,10 @@ func outputTemplate(job domain.Job, style string) string {
 		// A clip never takes the full video's name.
 		name = strings.TrimSuffix(name, ".%(ext)s") + " " + job.Section.Label() + ".%(ext)s"
 	}
+	if domain.ValidLanguage(job.AudioLanguage) {
+		// Another language's copy never takes the original's name either.
+		name = strings.TrimSuffix(name, ".%(ext)s") + " " + job.AudioLanguage + ".%(ext)s"
+	}
 	return name
 }
 
@@ -588,7 +632,7 @@ func baseTemplate(job domain.Job) string {
 		return base + ".%(ext)s"
 	}
 	switch *job.Preset {
-	case domain.VideoBest, domain.Video1080, domain.Video720, domain.Video480, domain.Video360:
+	case domain.VideoBest, domain.Video1080, domain.Video720, domain.Video480, domain.Video360, domain.VideoCompat:
 		return base + " %(height)sp.%(ext)s"
 	case domain.AudioM4A:
 		return base + " %(abr).0fk.%(ext)s"

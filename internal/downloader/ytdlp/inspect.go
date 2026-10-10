@@ -37,6 +37,8 @@ type Format struct {
 	TotalBitrate   *float64 `json:"tbr,omitempty"`
 	FileSizeApprox *int64   `json:"filesize_approx"`
 	Language       string   `json:"language,omitempty"`
+	// LanguagePreference is 10 for a video's original audio and -1 for dubbed versions.
+	LanguagePreference *int `json:"language_preference,omitempty"`
 }
 
 type Inspection struct {

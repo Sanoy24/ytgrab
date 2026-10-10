@@ -134,3 +134,29 @@ func TestJobEventsStreamUpdates(t *testing.T) {
 		t.Fatalf("updated SSE job = %+v", updated)
 	}
 }
+
+func TestJobAudioLanguage(t *testing.T) {
+	store, err := sqlitestore.Open(context.Background(), filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil)
+	post := func(body string) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/jobs", bytes.NewBufferString(body)))
+		return response
+	}
+	// Only language codes reach yt-dlp's format filter.
+	if got := post(`{"url":"https://youtu.be/Txzj3pNt20o","preset":"video-compat","audio_language":"es]+bv*"}`); got.Code != http.StatusBadRequest {
+		t.Fatalf("invalid language = %d", got.Code)
+	}
+	created := post(`{"url":"https://youtu.be/Txzj3pNt20o","preset":"video-compat","audio_language":"es-US"}`)
+	var job domain.Job
+	if err := json.Unmarshal(created.Body.Bytes(), &job); err != nil || created.Code != http.StatusCreated || job.AudioLanguage != "es-US" || *job.Preset != domain.VideoCompat {
+		t.Fatalf("created = %d %s", created.Code, created.Body.String())
+	}
+	if stored, _ := store.Get(context.Background(), job.ID); stored.AudioLanguage != "es-US" {
+		t.Errorf("stored language = %q", stored.AudioLanguage)
+	}
+}

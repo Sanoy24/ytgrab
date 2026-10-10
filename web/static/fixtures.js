@@ -247,3 +247,20 @@ export const xPost = {
   ],
   audio: [],
 };
+
+// A video dubbed into other languages: YouTube lists the dubbed tracks first and marks the
+// original with a language_preference of 10.
+const track = (id, ext, codec, abr, mb, language, original) => ({ ...a(id, ext, codec, abr, mb), language, language_preference: original ? 10 : -1 });
+export const dubbed = {
+  ...inspection,
+  video_id: 'Txzj3pNt20o',
+  title: 'THIS IS MASSIVE!',
+  audio: [
+    track('251-0', 'webm', 'opus', 135.2, 20.4, 'nl-NL'),
+    track('140-0', 'm4a', 'mp4a.40.2', 129.5, 21.4, 'nl-NL'),
+    track('251-1', 'webm', 'opus', 135.2, 20.4, 'es-US'),
+    track('140-1', 'm4a', 'mp4a.40.2', 129.5, 21.4, 'es-US'),
+    track('251-2', 'webm', 'opus', 135.2, 20.4, 'en-US', true),
+    track('140-2', 'm4a', 'mp4a.40.2', 129.5, 21.4, 'en-US', true),
+  ],
+};

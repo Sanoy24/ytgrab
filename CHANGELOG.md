@@ -4,6 +4,15 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **Plays everywhere.** A video format for phones, older TVs, and podcast apps: MP4 with H.264 video and AAC audio, up to 1080p.
+- **Audio language.** For videos dubbed into several languages, the formats now offer **Audio language**: the original by default, or any dubbed track. The file name ends with the language, so it never replaces the original's.
+
+### Fixed
+
+- Choosing an exact audio format for a dubbed video could save a dubbed track instead of the original, since YouTube lists the dubbed ones first. The list now shows the original's tracks.
+
 ## [1.19.0] - 2026-10-09
 
 Podcast feeds for watched channels.

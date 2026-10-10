@@ -143,6 +143,7 @@
                   <label class="preset"><input type="radio" name="choice" value="preset:video-720" /><span><strong>Up to 720p</strong><small>Smaller files</small></span></label>
                   <label class="preset"><input type="radio" name="choice" value="preset:video-480" /><span><strong>Up to 480p</strong><small>Data saver</small></span></label>
                   <label class="preset"><input type="radio" name="choice" value="preset:video-360" /><span><strong>Up to 360p</strong><small>Smallest video</small></span></label>
+                  <label class="preset"><input type="radio" name="choice" value="preset:video-compat" /><span><strong>Plays everywhere</strong><small>MP4 for phones and TVs</small></span></label>
                 </div>
                 <div class="preset-group" data-kind="audio" role="presentation" hidden>
                   <span class="preset-group-title visually-hidden">Audio only</span>
@@ -155,6 +156,10 @@
                 </div>
               </div>
               <div id="format-choices" hidden>
+                <div class="audio-language" id="audio-language-row" hidden>
+                  <label for="audio-language">Audio language</label>
+                  <select id="audio-language"></select>
+                </div>
                 <div class="preset-group" data-kind="video" role="presentation">
                   <span class="preset-group-title visually-hidden">Video (with best audio)</span>
                   <div class="format-list" id="video-formats"></div>
@@ -279,6 +284,7 @@
                   <option value="video-720">Video · up to 720p</option>
                   <option value="video-480">Video · up to 480p</option>
                   <option value="video-360">Video · up to 360p</option>
+                  <option value="video-compat">Video · plays everywhere (MP4)</option>
                   <option value="audio-m4a">Audio · M4A</option>
                   <option value="audio-mp3">Audio · MP3</option>
                   <option value="audio-opus">Audio · Opus</option>
@@ -367,6 +373,7 @@
                         <option value="video-720">Video · up to 720p</option>
                         <option value="video-480">Video · up to 480p</option>
                         <option value="video-360">Video · up to 360p</option>
+                        <option value="video-compat">Video · plays everywhere (MP4)</option>
                         <option value="audio-m4a">Audio · M4A</option>
                         <option value="audio-mp3">Audio · MP3</option>
                         <option value="audio-opus">Audio · Opus</option>

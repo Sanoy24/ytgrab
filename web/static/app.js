@@ -14,6 +14,7 @@ const PRESET_LABELS = {
   'video-720': 'Video · 720p',
   'video-480': 'Video · 480p',
   'video-360': 'Video · 360p',
+  'video-compat': 'Video · plays everywhere',
   'audio-m4a': 'Audio · M4A',
   'audio-mp3': 'Audio · MP3',
   'audio-opus': 'Audio · Opus',
@@ -1195,6 +1196,8 @@ async function onSubmit(e) {
   }
   if (section) body.section = section;
   else if ($('#split-chapters').checked) body.split_chapters = true;
+  const language = chosenAudioLanguage();
+  if (language) body.audio_language = language;
   const button = $('#submit');
   button.disabled = true;
   button.textContent = 'Adding…';
@@ -1354,6 +1357,7 @@ async function inspect(url) {
     const info = await client.inspect(url, { signal: ctl.signal });
     const grouped = {
       ...groupFormats(info),
+      info, // kept to list another audio language's formats
       title: info.title,
       duration: info.duration_seconds,
       chapters: info.chapters || 0,
@@ -1391,6 +1395,34 @@ async function inspect(url) {
   }
 }
 
+// A video dubbed into several languages: pick which audio to keep (the original by default).
+// Changing it lists that language's audio formats and goes with the download.
+function renderAudioLanguages(grouped) {
+  const row = $('#audio-language-row');
+  row.hidden = !grouped.languages?.length || !grouped.info;
+  if (row.hidden) return;
+  const select = $('#audio-language');
+  select.replaceChildren(
+    ...grouped.languages.map((l) => el('option', { value: l.code, textContent: l.original ? `${l.name} (original)` : l.name })),
+  );
+  select.value = grouped.language;
+  select.onchange = () => {
+    const regrouped = { ...grouped, ...groupFormats(grouped.info, select.value) };
+    const url = validateUrl($('#url').value).url;
+    if (url && inspections.has(url)) inspections.get(url).grouped = regrouped;
+    showFormats(regrouped, selectedChoice());
+  };
+}
+
+// The chosen audio language, sent only when it isn't the original (yt-dlp's own pick).
+function chosenAudioLanguage() {
+  const row = $('#audio-language-row');
+  if (row.hidden) return '';
+  const code = $('#audio-language').value;
+  const original = [...$('#audio-language').options][0]?.value;
+  return code && code !== original ? code : '';
+}
+
 function formatRow(choice, checked) {
   const input = el('input', {
     type: 'radio',
@@ -1412,6 +1444,9 @@ const SITE_NAMES = { x: 'X', reddit: 'Reddit', instagram: 'Instagram', vimeo: 'V
 
 const X_AUDIO = { kind: 'preset', id: 'audio-m4a', label: 'M4A', detail: "The post's audio, no re-encoding" };
 
+// Offered after the video's own formats: H.264 and AAC in MP4, for phones and TVs.
+const VIDEO_CONVERSIONS = [{ kind: 'preset', id: 'video-compat', label: 'Plays everywhere', detail: 'MP4 · H.264 + AAC, up to 1080p, for phones and TVs' }];
+
 // Conversions offered next to the video's own audio formats.
 const AUDIO_CONVERSIONS = [
   { kind: 'preset', id: 'audio-mp3', label: 'MP3', detail: 'Converted, plays anywhere' },
@@ -1429,7 +1464,8 @@ function showFormats(grouped, previous) {
   // Carry a choice made before the list loaded over to the closest real format.
   // X lists no separate audio streams: offer M4A taken out of the video, like the presets.
   const conversions = grouped.site === 'x' ? [X_AUDIO, ...AUDIO_CONVERSIONS] : AUDIO_CONVERSIONS;
-  const all = [...video, ...audio, ...conversions].map((c) => `${c.kind}:${c.id}`);
+  const videoChoices = video.length ? [...video, ...VIDEO_CONVERSIONS] : [];
+  const all = [...videoChoices, ...audio, ...conversions].map((c) => `${c.kind}:${c.id}`);
   const [kind, value] = previous.split(':');
   const match = kind === 'preset' ? matchPreset(value, grouped) : null;
   let checked = match ? `${match.kind}:${match.id}` : previous;
@@ -1437,9 +1473,10 @@ function showFormats(grouped, previous) {
 
   $('#video-formats').replaceChildren(
     ...(video.length
-      ? video.map((c) => formatRow(c, `video:${c.id}` === checked))
+      ? videoChoices.map((c) => formatRow(c, `${c.kind}:${c.id}` === checked))
       : [el('p', { className: 'hint', textContent: 'No video formats available.' })]),
   );
+  renderAudioLanguages(grouped);
   $('#audio-formats').replaceChildren(
     ...[...audio, ...conversions].map((c) => formatRow(c, `${c.kind}:${c.id}` === checked)),
   );
