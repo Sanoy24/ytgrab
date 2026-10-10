@@ -99,6 +99,10 @@ Files include the video's title, channel, upload date, and chapters; M4A, MP3, O
 Files are named `Title [video-id] 1080p.mp4` (audio: `Title [video-id] 130k.m4a`), so different qualities of one video never overwrite each other.
 
 
+**Plays everywhere.** Some phones, older TVs, and podcast apps can't play the VP9 or AV1 video and WebM or MKV files YouTube's best formats come in. **Plays everywhere** saves MP4 with H.264 video and AAC audio, up to 1080p, which nearly everything plays.
+
+**Dubbed videos.** Some videos come with audio in several languages. YTGrab keeps the original audio. To keep another language instead, choose it under **Audio language**, which appears with the formats when a video has several; the file name then ends with the language, like `… 1080p es-US.mp4`, so it never replaces the original's.
+
 **Saving data.** On a slow or metered connection, choose **Up to 480p** or **Up to 360p** for video, or **Small audio** for talks, lectures, and podcasts: it keeps YouTube's own low-bitrate Opus track, well under half the size of the M4A, with no re-encoding. In **Settings → Downloads → Download only between**, **Use night hours (22:00–08:00)** holds downloads for cheaper night data bundles.
 ## Watch channels and playlists
 

@@ -32,7 +32,7 @@ test('replaces presets with real formats and adds the chosen one', async ({ page
   await page.goto('/?fixture=empty');
   await page.locator('#url').fill('https://youtu.be/aBcDeFgHiJk');
   await expect(page.locator('#inspect')).toContainText('full walkthrough');
-  await expect(page.locator('#video-formats .preset')).toHaveCount(10);
+  await expect(page.locator('#video-formats .preset')).toHaveCount(11); // 10 resolutions and Plays everywhere
   await page.locator('#video-formats label', { hasText: '720p 60fps' }).click();
   await page.locator('#submit').click();
   await expect(page.locator('#queue .job-meta').first()).toContainText('Video · 720p');
@@ -193,7 +193,7 @@ test('downloads only part of a video', async ({ page }) => {
 test('switches between video and audio and remembers each choice', async ({ page }) => {
   await page.goto('/?fixture=empty');
   await page.locator('#url').fill('https://youtu.be/aBcDeFgHiJk');
-  await expect(page.locator('#video-formats .preset')).toHaveCount(10);
+  await expect(page.locator('#video-formats .preset')).toHaveCount(11); // 10 resolutions and Plays everywhere
   await page.locator('#video-formats label', { hasText: '720p 60fps' }).click();
   await page.getByRole('button', { name: 'Audio only' }).click();
   await expect(page.locator('#audio-formats .preset').first()).toBeVisible();
@@ -648,4 +648,30 @@ test('shows a watch podcast feed once phone access is on', async ({ page }) => {
   await watch.getByRole('button', { name: /^Podcast feed/ }).click();
   await expect(watch.getByRole('textbox', { name: /^Podcast feed address for/ })).toHaveValue(/^http:\/\/192\.168\.1\.5:8788\/feeds\/.+\?key=/);
   await expect(watch.locator('.watch-feed')).toContainText('AntennaPod');
+});
+
+test('keeps the original audio of a dubbed video, or the language chosen', async ({ page }) => {
+  await page.goto('/?fixture=default');
+  await page.locator('#url').fill('https://youtu.be/Txzj3pNt20o');
+  const language = page.getByLabel('Audio language');
+  await expect(language).toBeVisible();
+  await expect(language.locator('option').first()).toHaveText(/English.*\(original\)/);
+  await page.locator('.kind-tab[data-kind=audio]').click();
+  // The original's tracks, though YouTube listed the dubbed ones first.
+  await expect(page.locator('#audio-formats input[value="audio:251-2"]')).toHaveCount(1);
+  await expect(page.locator('#audio-formats input[value="audio:251-0"]')).toHaveCount(0);
+  await language.selectOption('es-US');
+  await expect(page.locator('#audio-formats input[value="audio:251-1"]')).toHaveCount(1);
+  await expect(page.locator('#audio-formats input[value="audio:251-2"]')).toHaveCount(0);
+});
+
+test('offers a video format that plays everywhere', async ({ page }) => {
+  await page.goto('/?fixture=default');
+  await page.locator('#preset-choices').getByText('Plays everywhere').click();
+  await page.locator('#url').fill('https://youtu.be/aBcDeFgHiJk');
+  // Once the formats load, the choice carries over to the video list.
+  await expect(page.locator('#video-formats input[value="preset:video-compat"]')).toBeChecked();
+  await page.getByRole('button', { name: 'Add to queue' }).click();
+  await expect(page.locator('#toast')).toContainText('Added');
+  await expect(page.locator('#queue')).toContainText('plays everywhere');
 });

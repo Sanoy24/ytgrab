@@ -267,6 +267,7 @@ class FixtureClient {
     if (url.includes('xxxxxxxxxxx'))
       throw new ApiError('video_unavailable', 'This video is unavailable or private.');
     if (url.includes('x.com/i/status/1600649710662213632')) return structuredClone(fx.xPost); // two videos
+    if (url.includes('Txzj3pNt20o')) return structuredClone(fx.dubbed); // dubbed audio
     return structuredClone(fx.inspection);
   }
 

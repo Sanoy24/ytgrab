@@ -38,11 +38,34 @@ export function formatDuration(seconds) {
 
 // Returns { video: Choice[], audio: Choice[] }, each Choice being
 // { kind, id, label, detail, height?, ext? }, sorted best first.
-export function groupFormats(info) {
+// A video's audio languages when it has several (dubbed versions), original first:
+// [{ code, name, original }]. yt-dlp gives the original track a language_preference of 10.
+export function audioLanguages(info) {
+  const byCode = new Map();
+  for (const a of info.audio || []) {
+    if (!a.language) continue;
+    const original = (a.language_preference ?? 0) >= 10;
+    byCode.set(a.language, { code: a.language, name: languageName(a.language), original: original || byCode.get(a.language)?.original || false });
+  }
+  if (byCode.size < 2) return [];
+  return [...byCode.values()].sort((a, b) => b.original - a.original || a.name.localeCompare(b.name));
+}
+
+function languageName(code) {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
+// language picks the audio track of a video with several; by default the original.
+export function groupFormats(info, language = audioLanguages(info)[0]?.code) {
   // YouTube also lists "-drc" (dynamic range compressed) copies of audio streams; show
   // the original and keep a DRC copy only when it is the sole version.
   const ids = new Set((info.audio || []).map((a) => a.format_id));
   const bestAudio = (info.audio || [])
+    .filter((a) => !language || !a.language || a.language === language)
     .filter((a) => !(a.format_id.endsWith('-drc') && ids.has(a.format_id.slice(0, -4))))
     .sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0));
   const m4a = bestAudio.find((a) => a.ext === 'm4a');
@@ -96,7 +119,7 @@ export function groupFormats(info) {
     });
   }
 
-  return { video, audio };
+  return { video, audio, languages: audioLanguages(info), language: language || '' };
 }
 
 // Picks the format row that best matches a quick preset, so a choice made
@@ -106,6 +129,7 @@ export function matchPreset(preset, { video, audio }) {
   if (preset === 'video-best') return video[0];
   if (cap) return video.find((v) => v.height <= cap);
   if (preset === 'audio-m4a') return audio.find((a) => a.ext === 'm4a') || audio[0];
+  if (preset === 'video-compat') return { kind: 'preset', id: 'video-compat' }; // stays a preset
   return null; // MP3, Opus, FLAC, and WAV stay conversion presets
 }
 

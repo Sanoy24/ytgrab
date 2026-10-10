@@ -33,14 +33,17 @@ const (
 	Video1080 Preset = "video-1080"
 	Video720  Preset = "video-720"
 	// Data savers, for slow or metered connections.
-	Video480   Preset = "video-480"
-	Video360   Preset = "video-360"
-	AudioSmall Preset = "audio-small" // low-bitrate Opus, plenty for speech
-	AudioM4A   Preset = "audio-m4a"
-	AudioMP3   Preset = "audio-mp3"
-	AudioOpus  Preset = "audio-opus"
-	AudioFLAC  Preset = "audio-flac"
-	AudioWAV   Preset = "audio-wav"
+	Video480 Preset = "video-480"
+	Video360 Preset = "video-360"
+	// VideoCompat is H.264 video and AAC audio in MP4, up to 1080p: it plays on phones,
+	// older TVs, and in podcast apps that won't play VP9, AV1, or WebM.
+	VideoCompat Preset = "video-compat"
+	AudioSmall  Preset = "audio-small" // low-bitrate Opus, plenty for speech
+	AudioM4A    Preset = "audio-m4a"
+	AudioMP3    Preset = "audio-mp3"
+	AudioOpus   Preset = "audio-opus"
+	AudioFLAC   Preset = "audio-flac"
+	AudioWAV    Preset = "audio-wav"
 )
 
 var ErrInvalidURL = errors.New("enter a valid link to a single YouTube or Vimeo video, or an X, Reddit, or Instagram post")
@@ -139,10 +142,13 @@ type Job struct {
 	// SplitChapters also saves each chapter as its own file, in a folder next to the video.
 	SplitChapters bool `json:"split_chapters,omitempty"`
 	// Section, when set, downloads only that part of the video.
-	Section   *Section  `json:"section,omitempty"`
-	Error     *JobError `json:"error"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Section *Section `json:"section,omitempty"`
+	// AudioLanguage, when set, picks that audio track of a video with several (dubbed
+	// versions); otherwise yt-dlp picks the original. A language code like "es-US".
+	AudioLanguage string    `json:"audio_language,omitempty"`
+	Error         *JobError `json:"error"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 func NewJob(rawURL string, preset Preset) (Job, error) {
@@ -191,9 +197,14 @@ func newBaseJob(rawURL string) (Job, error) {
 	}, nil
 }
 
+var languagePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}$`)
+
+// ValidLanguage reports whether code looks like a language code yt-dlp reports ("en", "pt-BR").
+func ValidLanguage(code string) bool { return languagePattern.MatchString(code) }
+
 func (preset Preset) Valid() bool {
 	switch preset {
-	case VideoBest, Video1080, Video720, Video480, Video360, AudioM4A, AudioMP3, AudioOpus, AudioFLAC, AudioWAV, AudioSmall:
+	case VideoBest, Video1080, Video720, Video480, Video360, VideoCompat, AudioM4A, AudioMP3, AudioOpus, AudioFLAC, AudioWAV, AudioSmall:
 		return true
 	default:
 		return false
