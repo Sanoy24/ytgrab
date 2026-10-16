@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **Search inside your videos.** The Library's search box also finds words in the subtitles saved with your downloads, and each match links to that moment: clicking the time plays the file from there in the browser, on the computer or your phone. The search index stays on your computer and updates as downloads finish.
+
 ## [1.20.0] - 2026-10-16
 
 A library you can keep: original audio, files that play everywhere, watches that tidy up after themselves, and imports from yt-dlp.

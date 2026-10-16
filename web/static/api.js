@@ -223,6 +223,12 @@ class FixtureClient {
     return { added: ok.length, already: 0, skipped: lines.length - ok.length };
   }
 
+  async searchLibrary(q) {
+    await delay(150);
+    if (!/tree|binar|lect/i.test(q)) return { results: [] };
+    return { results: [{ job_id: 'job_1', title: 'Lecture 1 — Introduction', video_id: 'YE7VzlLtp-4', matches: [{ start: 751, snippet: 'and now a \x02binary\x03 search \x02tree\x03, which keeps…' }, { start: 1630, snippet: '…balancing the \x02tree\x03 after each insert' }] }] };
+  }
+
   async feedsOPML() {
     await delay(150);
     if (!this.phone?.enabled) throw new ApiError('phone_off', 'Turn on phone access in Settings → Phone first, so a podcast app on your phone can reach the feeds.');
@@ -679,6 +685,10 @@ class HttpClient {
       if (!response.ok) throw new ApiError(body.error?.code || 'import_failed', body.error?.message || 'The archive could not be imported.');
       return body;
     });
+  }
+  // Words in titles and saved subtitles: { results: [{ job_id, title, matches: [{ start, snippet }] }] }.
+  searchLibrary(q) {
+    return this.request('GET', `/api/library/search?q=${encodeURIComponent(q)}`);
   }
   // Every watch's feed as OPML text.
   feedsOPML() {

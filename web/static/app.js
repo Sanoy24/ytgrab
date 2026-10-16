@@ -642,6 +642,59 @@ function plural(n, one, many) {
 // Restores a backup file the user picked, then reloads what it may have changed.
 // Videos in a yt-dlp archive count as already downloaded: playlist reviews leave them
 // unticked and watches skip them.
+// ---------- search inside videos ----------
+
+let librarySearchTimer;
+let librarySearchSeq = 0;
+
+// Finds words in saved subtitles; each match links to the moment in the downloaded file.
+async function searchInside(text) {
+  const seq = ++librarySearchSeq;
+  const box = $('#library-hits');
+  if (text.length < 2) {
+    box.hidden = true;
+    return;
+  }
+  let results;
+  try {
+    results = (await client.searchLibrary(text)).results || [];
+  } catch {
+    return; // the title filter below still works
+  }
+  if (seq !== librarySearchSeq) return; // typed on meanwhile
+  const inside = results.filter((r) => r.matches.length);
+  box.hidden = !inside.length;
+  $('#library-hits-list').replaceChildren(
+    ...inside.map((r) =>
+      el(
+        'article',
+        { className: 'library-hit' },
+        el('strong', { textContent: r.title }),
+        el(
+          'ul',
+          {},
+          ...r.matches.map((m) => {
+            // Browsers start a video at #t=seconds; the file streams from this computer.
+            const link = el('a', { href: `${fileURL(r.job_id, { play: true })}#t=${Math.floor(m.start)}`, target: '_blank', rel: 'noopener', className: 'hit-time', textContent: formatDuration(m.start) || '0:00' });
+            link.setAttribute('aria-label', `Play ${r.title} from ${formatDuration(m.start) || '0:00'}`);
+            return el('li', {}, link, el('span', { className: 'hit-text' }, ...highlighted(m.snippet)));
+          }),
+        ),
+      ),
+    ),
+  );
+}
+
+// The server marks matched words with \x02 and \x03; they become <mark>, as text nodes.
+function highlighted(snippet) {
+  const parts = [];
+  for (const [i, piece] of snippet.split(/[\x02\x03]/).entries()) {
+    if (!piece) continue;
+    parts.push(i % 2 ? el('mark', { textContent: piece }) : document.createTextNode(piece));
+  }
+  return parts;
+}
+
 async function importArchive(input) {
   const file = input.files?.[0];
   input.value = '';
@@ -2478,6 +2531,9 @@ function init() {
   $('#history-search').addEventListener('input', (e) => {
     historyQuery = e.currentTarget.value.trim().toLowerCase();
     render();
+    clearTimeout(librarySearchTimer);
+    const text = e.currentTarget.value.trim(); // currentTarget is gone once the event ends
+    librarySearchTimer = setTimeout(() => searchInside(text), 300);
   });
   setupPasteAndDrop();
   $('#watch-form').addEventListener('submit', onWatchSubmit);

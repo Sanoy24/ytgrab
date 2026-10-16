@@ -254,6 +254,14 @@ Coming from yt-dlp scripts or another tool? **Import a yt-dlp archive** (Setting
 
 For other tools, **Save a yt-dlp archive** saves your finished YouTube and Vimeo downloads in yt-dlp's `--download-archive` format (one `youtube <id>` line each), so a yt-dlp script given that file skips videos you already have. X, Reddit, and Instagram downloads aren't included: YTGrab knows them by the post's ID, not the one yt-dlp records.
 
+### Search inside your videos
+
+The Library's search box finds titles and also **what's said in your videos**: under **Inside your videos**, each match shows the moment it starts (like `12:31`) with the words around it, and clicking the time plays the downloaded file from there in your browser, on the computer or a paired phone.
+
+- It reads the subtitle files saved beside downloads, so turn on **Subtitles → Save as .srt file** (Settings) for the videos you want to search; YouTube's automatic subtitles work too. Subtitles added *into* the video file can't be searched.
+- Everything stays on your computer: YTGrab keeps a search index in its database and updates it as downloads finish.
+- Browsers play MP4 and WebM files; MKV plays in most. If one doesn't, use **Plays everywhere** for videos you'll search often.
+
 ### Metadata files
 
 **Save metadata files** (Settings → Downloads) keeps three files beside each new download, named like it: `.info.json` (everything yt-dlp knows about the video), `.description`, and the thumbnail as `.jpg`. Archives and media servers such as Jellyfin read them. Deleting the download with its file deletes them too, along with any subtitle files.

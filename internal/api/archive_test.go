@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
+	"github.com/Sanoy24/ytgrab/internal/domain"
 	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
 )
 
@@ -50,5 +53,42 @@ func TestImportingAYtdlpArchive(t *testing.T) {
 	// The playlist review now marks the video as already downloaded.
 	if got := request(http.MethodGet, playlist, ""); !strings.Contains(got.Body.String(), `"have":true`) {
 		t.Fatalf("playlist after importing: %s", got.Body.String())
+	}
+}
+
+func TestLibrarySearch(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	dir := t.TempDir()
+	video := filepath.Join(dir, "Lecture 4 [jNQXAC9IVRw] 720p.mp4")
+	_ = os.WriteFile(video, []byte("video"), 0o600)
+	_ = os.WriteFile(strings.TrimSuffix(video, ".mp4")+".en.srt", []byte("1\n00:12:31,000 --> 00:12:33,000\nnow a binary search tree\n"), 0o600)
+	job := finishedJob(t, store, "https://youtu.be/jNQXAC9IVRw", domain.Completed, video)
+	handler := NewHandler(func(context.Context) deps.Report { return deps.Report{} }, store, nil)
+	search := func(q string) []searchResult {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/library/search?q="+url.QueryEscape(q), nil))
+		var body struct {
+			Results []searchResult `json:"results"`
+		}
+		if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil || response.Code != http.StatusOK {
+			t.Fatalf("search %q = %d %s", q, response.Code, response.Body.String())
+		}
+		return body.Results
+	}
+	// Found right after the download finished: the search indexes what's new first.
+	results := search("binary tre")
+	if len(results) != 1 || results[0].JobID != job.ID || len(results[0].Matches) != 1 || *results[0].Matches[0].Start != 751 {
+		t.Fatalf("results = %+v", results)
+	}
+	if got := search(`" OR *`); len(got) != 0 {
+		t.Errorf("punctuation only = %+v", got)
+	}
+	if got := search("giraffe"); len(got) != 0 {
+		t.Errorf("no match = %+v", got)
 	}
 }

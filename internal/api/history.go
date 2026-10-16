@@ -159,6 +159,47 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		})
 	}
 
+	// Library search: titles and the words of saved subtitles, with where each match starts.
+	if index, ok := store.(searchStore); ok {
+		mux.HandleFunc("GET /api/library/search", func(w http.ResponseWriter, r *http.Request) {
+			query := library.SearchQuery(r.URL.Query().Get("q"))
+			results := []searchResult{}
+			if query == "" {
+				writeJSON(w, http.StatusOK, map[string]any{"results": results})
+				return
+			}
+			_ = library.RefreshIndex(r.Context(), index) // a download that just finished is found too
+			hits, err := index.Search(r.Context(), query, 300)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "storage", "Could not search the library.")
+				return
+			}
+			byJob := map[string]int{}
+			for _, hit := range hits {
+				at, seen := byJob[hit.JobID]
+				if !seen {
+					if len(results) == 30 {
+						continue
+					}
+					job, err := store.Get(r.Context(), hit.JobID)
+					if err != nil {
+						continue
+					}
+					results = append(results, searchResult{JobID: job.ID, Title: jobTitle(job), VideoID: job.VideoID, Site: job.Site, Matches: []searchMatch{}})
+					at = len(results) - 1
+					byJob[hit.JobID] = at
+				}
+				if hit.Start < 0 {
+					results[at].InTitle = true
+				} else if len(results[at].Matches) < 3 {
+					start := hit.Start
+					results[at].Matches = append(results[at].Matches, searchMatch{Start: &start, Snippet: hit.Snippet})
+				}
+			}
+			writeJSON(w, http.StatusOK, map[string]any{"results": results})
+		})
+	}
+
 	// The Library's file sizes, read on demand rather than with every job list: one look
 	// at each finished download's file, which also tells moved or deleted files apart.
 	mux.HandleFunc("GET /api/library/files", func(w http.ResponseWriter, r *http.Request) {
@@ -233,6 +274,28 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		}
 		writeJSON(w, http.StatusOK, map[string]int{"removed": removed})
 	})
+}
+
+// searchStore keeps and searches the Library's index (SQLite store).
+type searchStore interface {
+	library.IndexStore
+	Search(context.Context, string, int) ([]sqlitestore.SearchHit, error)
+}
+
+// searchResult is a download that matched, with up to three places in its subtitles.
+// Snippets mark the matched words with \x02 and \x03.
+type searchResult struct {
+	JobID   string        `json:"job_id"`
+	Title   string        `json:"title"`
+	VideoID string        `json:"video_id"`
+	Site    string        `json:"site,omitempty"`
+	InTitle bool          `json:"in_title,omitempty"`
+	Matches []searchMatch `json:"matches"`
+}
+
+type searchMatch struct {
+	Start   *float64 `json:"start"` // seconds into the video
+	Snippet string   `json:"snippet"`
 }
 
 // haveStore knows which videos the user already has (SQLite store).
