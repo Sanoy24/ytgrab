@@ -126,6 +126,7 @@ Each watch has a podcast feed of what it downloaded, so new episodes show up in 
 - The app refreshes while the phone is on the same Wi-Fi as the computer and YTGrab is running; downloaded episodes then play anywhere.
 - Episodes play best when the watch saves **M4A** or **MP3**. Video formats work in apps that play video.
 - The feed lists the watch's 100 newest finished downloads whose files are still there.
+- **Export all podcast feeds (OPML)** in Watching saves every watch's feed in one file, which apps like AntennaPod import at once (on the phone, open Watching there and save it).
 - Each address carries a secret key. If one got out, **Settings → Phone → Make new feed addresses** retires all of them; copy the new ones into your apps. If the computer gets a new address on your Wi-Fi, the feed addresses change too.
 
 ## Split a video into chapters
@@ -249,6 +250,8 @@ The last card in **Settings** shows your YTGrab version and whether it's up to d
 ### Back up and restore
 
 In **Settings → Back up and restore**, **Save a backup** saves a `ytgrab-backup-<date>.json` file with your settings, your watched channels and playlists (with the videos each has already seen, so a restored watch doesn't download them again), and your Library (up to the 500 most recent entries; the queue isn't included). **Restore from a file…** adds a backup to this copy: watches and Library entries already here are kept, and settings are applied through their usual checks. A setting that doesn't fit this computer, like a download folder that doesn't exist here, keeps its current value, and the page says which. **Start with Windows** belongs to each computer and isn't saved.
+Coming from yt-dlp scripts or another tool? **Import a yt-dlp archive** (Settings → Backup) reads a `--download-archive` file, and its YouTube and Vimeo videos count as already downloaded: playlist reviews mark them **Already downloaded** and leave them unticked, and watches skip them. So do videos finished in your Library.
+
 For other tools, **Save a yt-dlp archive** saves your finished YouTube and Vimeo downloads in yt-dlp's `--download-archive` format (one `youtube <id>` line each), so a yt-dlp script given that file skips videos you already have. X, Reddit, and Instagram downloads aren't included: YTGrab knows them by the post's ID, not the one yt-dlp records.
 
 ### Metadata files

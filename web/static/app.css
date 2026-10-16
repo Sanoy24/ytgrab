@@ -709,6 +709,7 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .phone-code { flex-direction: column; align-items: flex-end; gap: 8px; }
 .watch-feed { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); min-width: 0; }
 .feed-row { display: flex; gap: 8px; min-width: 0; }
+.have-badge { margin-left: 8px; padding: 1px 6px; border-radius: 999px; font-size: 0.72rem; background: var(--surface); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
 .audio-language { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .audio-language label { font-weight: 600; font-size: 0.9rem; }
 .feed-url { flex: 1; min-width: 0; font: 0.8rem var(--mono); }

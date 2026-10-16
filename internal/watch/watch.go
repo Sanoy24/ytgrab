@@ -129,9 +129,10 @@ func (s *Service) Add(ctx context.Context, rawURL string, opts Options) (domain.
 	if err := s.store.CreateWatch(ctx, watch, videoIDs(available)); err != nil {
 		return domain.Watch{}, err
 	}
+	have := s.have(ctx, videoIDs(available))
 	var wanted []string
 	for _, entry := range available {
-		if watch.Wants(entry.Title, entry.DurationSeconds) {
+		if watch.Wants(entry.Title, entry.DurationSeconds) && !have[entry.VideoID] {
 			wanted = append(wanted, entry.VideoID)
 		}
 	}
@@ -170,11 +171,13 @@ func (s *Service) Check(ctx context.Context, id string) (domain.Watch, error) {
 	if err != nil {
 		return watch, err
 	}
-	// New videos the filters skip are marked seen, so they are never downloaded later.
+	// New videos the filters skip, and ones the user already has, are marked seen, so they
+	// are never downloaded later.
 	entries := byID(available)
+	have := s.have(ctx, unseenIDs)
 	var unseen, skipped []string
 	for _, id := range unseenIDs {
-		if entry := entries[id]; watch.Wants(entry.Title, entry.DurationSeconds) {
+		if entry := entries[id]; watch.Wants(entry.Title, entry.DurationSeconds) && !have[id] {
 			unseen = append(unseen, id)
 		} else {
 			skipped = append(skipped, id)
@@ -320,6 +323,22 @@ func (s *Service) queue(ctx context.Context, watch domain.Watch, ids []string, t
 		s.wake()
 	}
 	return queued, nil
+}
+
+// have reports which videos the user already has, when the store knows (finished in the
+// Library, or in an imported yt-dlp archive). If it can't tell, nothing is skipped.
+func (s *Service) have(ctx context.Context, ids []string) map[string]bool {
+	owned, ok := s.store.(interface {
+		Have(context.Context, []string) (map[string]bool, error)
+	})
+	if !ok || len(ids) == 0 {
+		return nil
+	}
+	have, err := owned.Have(ctx, ids)
+	if err != nil {
+		return nil
+	}
+	return have
 }
 
 func blocked(err error) bool {

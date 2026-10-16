@@ -18,6 +18,9 @@ type PlaylistEntry struct {
 	// LiveStatus is yt-dlp's live_status when listed, such as "is_upcoming" for a
 	// premiere that can't be downloaded yet.
 	LiveStatus string `json:"live_status,omitempty"`
+	// Have marks a video the user already has (finished in the Library, or in an imported
+	// yt-dlp archive); the review starts with it unticked.
+	Have bool `json:"have,omitempty"`
 }
 
 // Playlist is one page of up to domain.PlaylistPageSize entries, starting at the 1-based

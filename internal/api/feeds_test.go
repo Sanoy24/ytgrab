@@ -113,3 +113,42 @@ func TestPodcastFeed(t *testing.T) {
 		t.Errorf("after reset = %d, %d", reset.Code, got.Code)
 	}
 }
+
+func TestFeedsAsOPML(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	for _, link := range []string{"https://www.youtube.com/@jawed", "https://www.youtube.com/@GoogleDevelopers"} {
+		watch, _ := domain.NewWatch(link, domain.AudioM4A)
+		watch.Title = strings.TrimPrefix(link, "https://www.youtube.com/@")
+		if err := store.CreateWatch(ctx, watch, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	feeds := &fakeFeeds{key: "secret"}
+	mux := http.NewServeMux()
+	addFeedRoutes(mux, store, store, feeds)
+	get := func() *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/feeds/opml", nil))
+		return response
+	}
+	if got := get(); got.Code != http.StatusConflict {
+		t.Fatalf("with phone access off = %d", got.Code)
+	}
+	feeds.enabled = true
+	got := get()
+	var doc opml
+	if err := xml.Unmarshal(got.Body.Bytes(), &doc); err != nil || got.Code != http.StatusOK {
+		t.Fatalf("opml = %d %v\n%s", got.Code, err, got.Body.String())
+	}
+	if len(doc.Outlines) != 2 || doc.Outlines[0].Type != "rss" || !strings.HasPrefix(doc.Outlines[0].XMLURL, "http://192.168.1.5:8788/feeds/watch_") || !strings.HasSuffix(doc.Outlines[0].XMLURL, "?key=secret") {
+		t.Fatalf("outlines = %+v", doc.Outlines)
+	}
+	if !strings.Contains(got.Header().Get("Content-Disposition"), "ytgrab-feeds.opml") {
+		t.Errorf("headers = %v", got.Header())
+	}
+}

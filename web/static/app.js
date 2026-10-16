@@ -640,6 +640,45 @@ function plural(n, one, many) {
 }
 
 // Restores a backup file the user picked, then reloads what it may have changed.
+// Videos in a yt-dlp archive count as already downloaded: playlist reviews leave them
+// unticked and watches skip them.
+async function importArchive(input) {
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  const result = $('#backup-result');
+  result.textContent = 'Importing…';
+  try {
+    const r = await client.importArchive(await file.text());
+    const parts = [`Imported ${plural(r.added, 'video', 'videos')}; playlists and watches will skip ${r.added === 1 ? 'it' : 'them'}.`];
+    if (r.already) parts.push(`${plural(r.already, 'was', 'were')} already known.`);
+    if (r.skipped) parts.push(`${plural(r.skipped, 'line', 'lines')} for other sites or unreadable.`);
+    result.textContent = parts.join(' ');
+    toast('Archive imported.');
+  } catch (err) {
+    result.textContent = err.message;
+    toast(err.message, true);
+  }
+}
+
+// Every watch's podcast feed in one OPML file, which many podcast apps import at once.
+async function exportFeeds(button) {
+  button.disabled = true;
+  try {
+    const text = await client.feedsOPML();
+    const link = el('a', { href: URL.createObjectURL(new Blob([text], { type: 'text/x-opml' })), download: 'ytgrab-feeds.opml' });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+    toast('Feeds saved as ytgrab-feeds.opml. Import it in your podcast app.');
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 async function restoreBackup(input) {
   const file = input.files?.[0];
   input.value = ''; // picking the same file again still restores
@@ -1639,8 +1678,10 @@ function renderPlaylist(list, append = false) {
         el(
           'label',
           {},
-          el('input', { type: 'checkbox', value: entry.url || entry.video_id, checked: true }),
+          // A video already downloaded (or in an imported yt-dlp archive) starts unticked.
+          el('input', { type: 'checkbox', value: entry.url || entry.video_id, checked: !entry.have }),
           el('span', { textContent: entry.title || entry.video_id }),
+          ...(entry.have ? [el('span', { className: 'have-badge', textContent: 'Already downloaded' })] : []),
           el('small', { textContent: formatDuration(entry.duration_seconds) }),
         ),
       ),
@@ -2431,6 +2472,8 @@ function init() {
     scrollToSection($('#about'));
   });
   $('#backup-file').addEventListener('change', (e) => restoreBackup(e.currentTarget));
+  $('#archive-file').addEventListener('change', (e) => importArchive(e.currentTarget));
+  $('#feeds-opml').addEventListener('click', (e) => exportFeeds(e.currentTarget));
   if (client.isFixture) for (const id of ['#backup-save', '#archive-save']) $(id).removeAttribute('href'); // no server to save from
   $('#history-search').addEventListener('input', (e) => {
     historyQuery = e.currentTarget.value.trim().toLowerCase();

@@ -8,6 +8,8 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 - **Plays everywhere.** A video format for phones, older TVs, and podcast apps: MP4 with H.264 video and AAC audio, up to 1080p.
 - **Keep only the newest.** A watch can keep its newest 5, 10, 20, or 50 videos, or those from the last 7, 30, or 90 days, and deletes its older downloads with their files, so a busy channel doesn't fill the disk or its podcast feed. Only the watch's own downloads are deleted, and deleted videos aren't downloaded again.
+- **Import a yt-dlp archive.** Settings → Backup reads a yt-dlp `--download-archive` file; its videos, like the ones finished in your Library, count as already downloaded. Playlist reviews mark them **Already downloaded** and leave them unticked, and watches skip them.
+- **Export all podcast feeds as OPML**, from Watching, for podcast apps that import a list.
 - **Audio language.** For videos dubbed into several languages, the formats now offer **Audio language**: the original by default, or any dubbed track. The file name ends with the language, so it never replaces the original's.
 
 ### Fixed

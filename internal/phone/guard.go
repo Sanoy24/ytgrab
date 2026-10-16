@@ -45,6 +45,7 @@ var phoneRoutes = func() *http.ServeMux {
 		"DELETE /api/watches/{id}",
 		"POST /api/watches/{id}/check",
 		"GET /api/watches/{id}/feed",
+		"GET /api/feeds/opml",
 	} {
 		mux.Handle(pattern, http.NotFoundHandler())
 	}

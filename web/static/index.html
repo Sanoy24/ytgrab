@@ -268,6 +268,7 @@
           <header class="view-head">
             <h2 id="watching-title">Watching</h2>
             <p class="view-sub" id="watching-sub">YTGrab checks these YouTube channels and playlists, and Vimeo channels, groups, and showcases, and downloads new videos as they appear.</p>
+            <button type="button" class="btn-link" id="feeds-opml">Export all podcast feeds (OPML)</button>
           </header>
           <form class="card watch-form" id="watch-form" novalidate>
             <label for="watch-url" class="field-label">Channel or playlist link</label>
@@ -664,6 +665,8 @@
                       <a class="btn btn-small" id="archive-save" href="/api/library/archive" download title="A yt-dlp --download-archive file, so other tools skip what you already have">Save a yt-dlp archive</a>
                       <label class="btn btn-small backup-pick" for="backup-file">Restore from a file…</label>
                       <input type="file" id="backup-file" accept=".json,application/json" class="visually-hidden" />
+                      <label class="btn btn-small backup-pick" for="archive-file" title="Videos in a yt-dlp --download-archive file count as already downloaded">Import a yt-dlp archive…</label>
+                      <input type="file" id="archive-file" accept=".txt,text/plain" class="visually-hidden" aria-label="yt-dlp archive file" tabindex="-1" />
                     </div>
                   </div>
                 </div>
