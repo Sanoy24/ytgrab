@@ -214,6 +214,21 @@ class FixtureClient {
     this.emit();
   }
 
+  async importArchive(text) {
+    await delay(300);
+    const lines = text.split('\n').filter((l) => l.trim());
+    const ok = lines.filter((l) => /^(youtube|vimeo) \S+$/i.test(l.trim()));
+    if (!ok.length) throw new ApiError('invalid_archive', 'No YouTube or Vimeo videos found. A yt-dlp archive has one "youtube <id>" line per video.');
+    this.archived = new Set([...(this.archived || []), ...ok.map((l) => l.trim().split(' ')[1])]);
+    return { added: ok.length, already: 0, skipped: lines.length - ok.length };
+  }
+
+  async feedsOPML() {
+    await delay(150);
+    if (!this.phone?.enabled) throw new ApiError('phone_off', 'Turn on phone access in Settings → Phone first, so a podcast app on your phone can reach the feeds.');
+    return '<?xml version="1.0"?><opml version="2.0"><head><title>YTGrab watched channels</title></head><body></body></opml>';
+  }
+
   async restoreBackup(text) {
     await delay(300);
     let backup;
@@ -292,7 +307,9 @@ class FixtureClient {
       const next = start + 50 <= total ? start + 50 : null;
       return { id: 'PLbig', title: 'A very long series', entries, total, start, next, truncated: next !== null, unavailable: 0 };
     }
-    return { ...structuredClone(fx.playlist), start: 1, next: null };
+    const list = { ...structuredClone(fx.playlist), start: 1, next: null };
+    for (const entry of list.entries) if (this.archived?.has(entry.video_id)) entry.have = true;
+    return list;
   }
 
   async createPlaylistJobs({ video_ids = [], urls = [], preset, folder }) {
@@ -655,6 +672,22 @@ class HttpClient {
   }
   // Merges a backup file's settings, watches, and Library into this copy; resolves with
   // { watches_added, watches_existing, jobs_added, jobs_existing, jobs_invalid, settings_skipped }.
+  // A yt-dlp archive's videos count as already downloaded: { added, already, skipped }.
+  importArchive(text) {
+    return fetch('/api/library/archive', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: text }).then(async (response) => {
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new ApiError(body.error?.code || 'import_failed', body.error?.message || 'The archive could not be imported.');
+      return body;
+    });
+  }
+  // Every watch's feed as OPML text.
+  feedsOPML() {
+    return fetch('/api/feeds/opml').then(async (response) => {
+      if (response.ok) return response.text();
+      const body = await response.json().catch(() => ({}));
+      throw new ApiError(body.error?.code || 'export_failed', body.error?.message || 'The feeds could not be exported.');
+    });
+  }
   restoreBackup(text) {
     return fetch('/api/backup/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: text }).then(async (response) => {
       const body = await response.json().catch(() => ({}));

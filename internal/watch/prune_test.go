@@ -103,3 +103,33 @@ func TestKeepOnlyTheNewestDeletesOnlyTheWatchsOwnDownloads(t *testing.T) {
 		t.Error("accepted a negative limit")
 	}
 }
+
+func TestWatchesSkipVideosTheUserHas(t *testing.T) {
+	service, store, lister := setup(t)
+	ctx := context.Background()
+	lister.ids = []string{id("new"), id("arch"), id("done")}
+	// One video from an imported archive, one finished in the Library.
+	if _, err := store.AddArchived(ctx, []sqlitestore.ArchivedVideo{{VideoID: id("arch")}}); err != nil {
+		t.Fatal(err)
+	}
+	done, _ := domain.NewJob("https://youtu.be/"+id("done"), domain.AudioM4A)
+	_ = store.Create(ctx, done)
+	finish(t, store, done, t.TempDir(), time.Now())
+
+	if _, err := service.Add(ctx, "https://www.youtube.com/@GoogleDevelopers", Options{Preset: domain.AudioM4A, Backfill: 3, IntervalHours: 6}); err != nil {
+		t.Fatal(err)
+	}
+	jobs, _ := store.List(ctx, 50)
+	queued := 0
+	for _, job := range jobs {
+		if job.WatchID != "" {
+			queued++
+			if job.VideoID != id("new") {
+				t.Errorf("queued %s, which the user already has", job.VideoID)
+			}
+		}
+	}
+	if queued != 1 {
+		t.Errorf("queued %d, want only the new video", queued)
+	}
+}

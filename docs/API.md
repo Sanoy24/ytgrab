@@ -67,6 +67,8 @@ Write requests from another site, and any request whose `Host` is not a loopback
 | `GET` | `/api/jobs/{id}/file` | A finished download's file, as an attachment, with range requests |
 | `PUT` | `/api/watches/{id}` also accepts `keep_latest` and `keep_days` | Keep the watch's newest N downloads, or those from the last N days (0 keeps everything); older ones the watch queued are deleted with their files. `POST /api/watches` takes them too |
 | `GET` | `/api/watches/{id}/feed` | The watch's podcast feed address: `{ "url" (for phones, when phone access is on), "local_url", "reason" (why `url` is missing) }` |
+| `GET` | `/api/feeds/opml` | Every watch's feed as OPML 2.0 (`409` while phone access is off) |
+| `POST` | `/api/library/archive` | Imports a yt-dlp download archive (plain text, `youtube <id>` / `vimeo <id>` lines, up to 8 MB): `{ "added", "already", "skipped" }`. `GET /api/playlist` entries then carry `"have": true` for videos already downloaded or imported, and watches skip them |
 | `POST` | `/api/feeds/reset` | Makes a new feed key, retiring every feed address |
 | `GET` | `/feeds/{watch}?key=` | The watch's finished downloads as RSS 2.0 with iTunes tags, newest first (up to 100); a wrong key is `404` |
 | `GET` | `/feeds/{watch}/{job}.{ext}?key=` | An episode's file, inline, with range requests |

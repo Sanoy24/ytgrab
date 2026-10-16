@@ -53,6 +53,17 @@ func addPlaylistRoutes(mux *http.ServeMux, lister PlaylistLister, store JobStore
 		list, err := lister.ListPlaylist(r.Context(), r.URL.Query().Get("url"), start)
 		switch {
 		case err == nil:
+			if owned, ok := store.(haveStore); ok {
+				ids := make([]string, len(list.Entries))
+				for i, entry := range list.Entries {
+					ids[i] = entry.VideoID
+				}
+				if have, err := owned.Have(r.Context(), ids); err == nil {
+					for i := range list.Entries {
+						list.Entries[i].Have = have[list.Entries[i].VideoID]
+					}
+				}
+			}
 			writeJSON(w, http.StatusOK, list)
 		case errors.Is(err, domain.ErrMixPlaylist):
 			writeError(w, http.StatusBadRequest, "mix_playlist", err.Error())

@@ -689,3 +689,28 @@ test('keeps only a watch newest videos, after asking', async ({ page }) => {
   await expect(page.locator('#toast')).toContainText('Keeping the newest 10');
   await expect(watch.getByLabel(/^What to keep from/)).toHaveValue('latest:10');
 });
+
+test('imports a yt-dlp archive, and playlist reviews leave those videos unticked', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  await page.locator('#archive-file').setInputFiles({ name: 'archive.txt', mimeType: 'text/plain', buffer: Buffer.from('youtube course00003\ntwitter 123\n') });
+  await expect(page.locator('#backup-result')).toContainText('Imported 1 video');
+  await expect(page.locator('#backup-result')).toContainText('1 line for other sites');
+  await page.locator('.nav-item[data-view=download]').click();
+  await page.locator('#url').fill('https://www.youtube.com/playlist?list=PLbpi6ZahtOH6Blw3RGYpWkSByi_T7Rygb');
+  const had = page.locator('#playlist-items li', { hasText: 'Lesson 3' });
+  await expect(had).toContainText('Already downloaded');
+  await expect(had.locator('input')).not.toBeChecked();
+  await expect(page.locator('#playlist-items li', { hasText: 'Lesson 4' }).locator('input')).toBeChecked();
+});
+
+test('exports every podcast feed as OPML once phone access is on', async ({ page }) => {
+  await page.goto('/?fixture=default#watching');
+  await page.getByRole('button', { name: 'Export all podcast feeds (OPML)' }).click();
+  await expect(page.locator('#toast')).toContainText('Turn on phone access');
+  await page.goto('/?fixture=default#settings');
+  await page.getByLabel('Use YTGrab from your phone').check();
+  await page.locator('.nav-item[data-view=watching]').click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export all podcast feeds (OPML)' }).click();
+  expect((await download).suggestedFilename()).toBe('ytgrab-feeds.opml');
+});

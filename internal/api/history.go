@@ -1,8 +1,10 @@
 package api
 
 import (
+	"bufio"
 	"context"
 	"errors"
+	"io"
 	"mime"
 	"net/http"
 	"os"
@@ -135,6 +137,28 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		_, _ = w.Write([]byte(lines.String()))
 	})
 
+	// Imports a yt-dlp download archive ("youtube jNQXAC9IVRw" per line): those videos count
+	// as already downloaded, so playlist reviews leave them unticked and watches skip them.
+	if archive, ok := store.(archiveStore); ok {
+		mux.HandleFunc("POST /api/library/archive", func(w http.ResponseWriter, r *http.Request) {
+			videos, skipped, err := parseArchive(http.MaxBytesReader(w, r.Body, 8<<20))
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "invalid_archive", "That file is too large or unreadable.")
+				return
+			}
+			if len(videos) == 0 {
+				writeError(w, http.StatusBadRequest, "invalid_archive", "No YouTube or Vimeo videos found. A yt-dlp archive has one \"youtube <id>\" line per video.")
+				return
+			}
+			added, err := archive.AddArchived(r.Context(), videos)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "storage", "Could not save the archive.")
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]int{"added": added, "already": len(videos) - added, "skipped": skipped})
+		})
+	}
+
 	// The Library's file sizes, read on demand rather than with every job list: one look
 	// at each finished download's file, which also tells moved or deleted files apart.
 	mux.HandleFunc("GET /api/library/files", func(w http.ResponseWriter, r *http.Request) {
@@ -209,6 +233,44 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 		}
 		writeJSON(w, http.StatusOK, map[string]int{"removed": removed})
 	})
+}
+
+// haveStore knows which videos the user already has (SQLite store).
+type haveStore interface {
+	Have(context.Context, []string) (map[string]bool, error)
+}
+
+// archiveStore remembers videos from an imported yt-dlp archive.
+type archiveStore interface {
+	AddArchived(context.Context, []sqlitestore.ArchivedVideo) (int, error)
+}
+
+// archiveSites are the yt-dlp extractors whose archive lines YTGrab can use.
+var archiveSites = map[string]string{"youtube": domain.SiteYouTube, "vimeo": domain.SiteVimeo}
+
+// parseArchive reads a yt-dlp download archive. Lines for other sites, and IDs that don't
+// look like the site's, are counted as skipped.
+func parseArchive(body io.Reader) ([]sqlitestore.ArchivedVideo, int, error) {
+	var videos []sqlitestore.ArchivedVideo
+	seen := map[string]bool{}
+	skipped := 0
+	scanner := bufio.NewScanner(body)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) == 0 {
+			continue
+		}
+		site, known := archiveSites[strings.ToLower(fields[0])]
+		if len(fields) != 2 || !known || !domain.ValidWatchVideoID(site, fields[1]) {
+			skipped++
+			continue
+		}
+		if key := site + " " + fields[1]; !seen[key] {
+			seen[key] = true
+			videos = append(videos, sqlitestore.ArchivedVideo{Site: site, VideoID: fields[1]})
+		}
+	}
+	return videos, skipped, scanner.Err()
 }
 
 // libraryFile is a finished download's file as it is now: its size, or missing when it was

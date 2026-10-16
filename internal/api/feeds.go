@@ -66,6 +66,47 @@ func addFeedRoutes(mux *http.ServeMux, jobs JobStore, store feedStore, feeds Fee
 		}
 		writeJSON(w, http.StatusOK, body)
 	})
+	// Every watch's feed in one OPML file, for podcast apps that import a list.
+	mux.HandleFunc("GET /api/feeds/opml", func(w http.ResponseWriter, r *http.Request) {
+		status := feeds.Status()
+		if !status.Enabled || status.URL == "" {
+			writeError(w, http.StatusConflict, "phone_off", "Turn on phone access in Settings → Phone first, so a podcast app on your phone can reach the feeds.")
+			return
+		}
+		lister, ok := store.(interface {
+			Watches(context.Context) ([]domain.Watch, error)
+		})
+		if !ok {
+			writeError(w, http.StatusNotFound, "not_available", "Watching isn't available.")
+			return
+		}
+		watches, err := lister.Watches(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "storage", "Could not read the watches.")
+			return
+		}
+		key, err := feeds.FeedKey(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "storage", "Could not make the feed addresses.")
+			return
+		}
+		doc := opml{Version: "2.0", Title: "YTGrab watched channels"}
+		for _, watch := range watches {
+			doc.Outlines = append(doc.Outlines, opmlOutline{
+				Type: "rss", Text: watchTitle(watch), Title: watchTitle(watch), HTMLURL: watch.URL,
+				XMLURL: status.URL + "/feeds/" + url.PathEscape(watch.ID) + "?key=" + url.QueryEscape(key),
+			})
+		}
+		data, err := xml.MarshalIndent(doc, "", "  ")
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "feed_failed", "Could not make the list.")
+			return
+		}
+		w.Header().Set("Content-Type", "text/x-opml; charset=utf-8")
+		w.Header().Set("Content-Disposition", `attachment; filename="ytgrab-feeds.opml"`)
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(append([]byte(xml.Header), data...))
+	})
 	mux.HandleFunc("POST /api/feeds/reset", func(w http.ResponseWriter, r *http.Request) {
 		if err := feeds.ResetFeedKey(r.Context()); err != nil {
 			writeError(w, http.StatusInternalServerError, "storage", "Could not reset the feed addresses.")
@@ -252,4 +293,19 @@ type rssEnclosure struct {
 
 type itunesImage struct {
 	Href string `xml:"href,attr"`
+}
+
+type opml struct {
+	XMLName  xml.Name      `xml:"opml"`
+	Version  string        `xml:"version,attr"`
+	Title    string        `xml:"head>title"`
+	Outlines []opmlOutline `xml:"body>outline"`
+}
+
+type opmlOutline struct {
+	Type    string `xml:"type,attr"`
+	Text    string `xml:"text,attr"`
+	Title   string `xml:"title,attr"`
+	XMLURL  string `xml:"xmlUrl,attr"`
+	HTMLURL string `xml:"htmlUrl,attr"`
 }
