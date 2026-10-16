@@ -145,10 +145,13 @@ type Job struct {
 	Section *Section `json:"section,omitempty"`
 	// AudioLanguage, when set, picks that audio track of a video with several (dubbed
 	// versions); otherwise yt-dlp picks the original. A language code like "es-US".
-	AudioLanguage string    `json:"audio_language,omitempty"`
-	Error         *JobError `json:"error"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	AudioLanguage string `json:"audio_language,omitempty"`
+	// WatchID is the watch that queued this download, if one did; a watch that keeps only
+	// its newest videos deletes only its own downloads.
+	WatchID   string    `json:"watch_id,omitempty"`
+	Error     *JobError `json:"error"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func NewJob(rawURL string, preset Preset) (Job, error) {

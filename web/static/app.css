@@ -647,6 +647,8 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .watch-title { display: flex; align-items: center; gap: 8px; font-weight: 650; font-size: 0.95rem; }
 .watch-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .watch-meta { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+.watch-keep { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--muted); font-size: 0.8rem; }
+.watch-keep select { font-size: 0.8rem; padding: 2px 6px; }
 .watch-error { color: var(--err); font-size: 0.8rem; margin-top: 4px; }
 .watch-actions-row { display: flex; gap: 2px; }
 @media (max-width: 640px) {

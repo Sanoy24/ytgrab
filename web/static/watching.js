@@ -12,6 +12,59 @@ let watchInfo = null; // { watches, interval_hours, ... }
 const watchBusy = new Set();
 let feedOpen = null; // { id, info: { url, local_url, reason } } for the watch showing its feed
 
+// What a watch keeps: "all", "latest:N", or "days:N", as the Keep menus list them.
+const KEEP_CHOICES = [
+  ['all', 'Everything'],
+  ['latest:5', 'The newest 5'],
+  ['latest:10', 'The newest 10'],
+  ['latest:20', 'The newest 20'],
+  ['latest:50', 'The newest 50'],
+  ['days:7', 'The last 7 days'],
+  ['days:30', 'The last 30 days'],
+  ['days:90', 'The last 90 days'],
+];
+
+export function keepValue(w) {
+  if (w.keep_latest) return `latest:${w.keep_latest}`;
+  if (w.keep_days) return `days:${w.keep_days}`;
+  return 'all';
+}
+
+export function keepBody(value) {
+  const [kind, n] = value.split(':');
+  return { keep_latest: kind === 'latest' ? Number(n) : 0, keep_days: kind === 'days' ? Number(n) : 0 };
+}
+
+function keepSelect(w) {
+  const select = el('select', { className: 'watch-keep-select', disabled: watchBusy.has(w.id) });
+  select.setAttribute('aria-label', `What to keep from ${w.title}`);
+  const choices = KEEP_CHOICES.some(([v]) => v === keepValue(w)) ? KEEP_CHOICES : [...KEEP_CHOICES, [keepValue(w), keepValue(w)]];
+  select.append(...choices.map(([value, label]) => el('option', { value, textContent: label })));
+  select.value = keepValue(w);
+  select.addEventListener('change', () => changeKeep(w, select));
+  return el('label', { className: 'watch-keep' }, 'Keep ', select);
+}
+
+async function changeKeep(w, select) {
+  const value = select.value;
+  const label = select.selectedOptions[0]?.textContent.toLowerCase();
+  if (value !== 'all' && !confirm(`Keep only ${label} from ${w.title}? YTGrab deletes its older downloads, files included. Videos you added yourself stay.`)) {
+    select.value = keepValue(w);
+    return;
+  }
+  watchBusy.add(w.id);
+  try {
+    await deps.client.updateWatch(w.id, keepBody(value));
+    toast(value === 'all' ? `Keeping everything from ${w.title}.` : `Keeping ${label} from ${w.title}; older downloads are deleted.`);
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    watchBusy.delete(w.id);
+    await deps.refreshJobs();
+    await loadWatches();
+  }
+}
+
 const FEED_ICON = '<path d="M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14"/><circle cx="6" cy="18" r="1.5"/>';
 
 // A watch's podcast feed: its address, and which apps can use it.
@@ -99,6 +152,7 @@ export function renderWatches() {
           { className: 'watch-main' },
           el('h3', { className: 'watch-title' }, el('span', { textContent: w.title, title: w.url })),
           el('p', { className: 'watch-meta', textContent: meta.join(' · ') }),
+          keepSelect(w),
           ...(w.last_error ? [el('p', { className: 'watch-error', textContent: w.last_error })] : []),
         ),
         el('div', { className: 'watch-actions-row' }, button('feed', 'Podcast feed'), button('check', 'Check now'), button(w.paused ? 'unpause' : 'pause', w.paused ? 'Resume watching' : 'Pause watching'), button('remove', 'Stop watching')),
@@ -186,6 +240,7 @@ export async function onWatchSubmit(e) {
       min_minutes: Number($('#watch-min').value),
       keywords: $('#watch-keywords').value.trim(),
       interval_hours: Number($('#watch-interval').value),
+      ...keepBody($('#watch-keep').value),
     });
     $('#watch-keywords').value = '';
     $('#watch-url').value = '';

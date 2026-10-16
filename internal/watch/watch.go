@@ -52,6 +52,8 @@ type Options struct {
 	MinMinutes    int
 	Keywords      string
 	IntervalHours int
+	KeepLatest    int
+	KeepDays      int
 }
 
 // Changes edit a watch; nil fields stay as they are.
@@ -62,6 +64,8 @@ type Changes struct {
 	MinMinutes    *int
 	Keywords      *string
 	IntervalHours *int
+	KeepLatest    *int
+	KeepDays      *int
 }
 
 type Service struct {
@@ -70,7 +74,9 @@ type Service struct {
 	wake   func() // starts queued downloads
 	output io.Writer
 	now    func() time.Time
-	mu     sync.Mutex // one listing at a time
+	// pruning keeps two keep-limit passes (a check and a settings change) from overlapping.
+	pruning sync.Mutex
+	mu      sync.Mutex // one listing at a time
 }
 
 func New(store Store, lister Lister, wake func(), output io.Writer) *Service {
@@ -101,6 +107,10 @@ func (s *Service) Add(ctx context.Context, rawURL string, opts Options) (domain.
 		return domain.Watch{}, err
 	}
 	watch.Folder, watch.MinMinutes, watch.Keywords, watch.IntervalHours = opts.Folder, opts.MinMinutes, opts.Keywords, opts.IntervalHours
+	if !domain.ValidKeep(opts.KeepLatest, opts.KeepDays) {
+		return domain.Watch{}, domain.ErrInvalidWatchOptions
+	}
+	watch.KeepLatest, watch.KeepDays = opts.KeepLatest, opts.KeepDays
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	listing, err := s.lister.ListLatest(ctx, watch.Kind, watch.URL, limitFor(watch.Kind))
@@ -221,10 +231,22 @@ func (s *Service) Update(ctx context.Context, id string, changes Changes) (domai
 	if changes.IntervalHours != nil {
 		watch.IntervalHours = *changes.IntervalHours
 	}
-	if !domain.ValidWatchOptions(watch.MinMinutes, watch.Keywords, watch.IntervalHours) {
+	if changes.KeepLatest != nil {
+		watch.KeepLatest = *changes.KeepLatest
+	}
+	if changes.KeepDays != nil {
+		watch.KeepDays = *changes.KeepDays
+	}
+	if !domain.ValidWatchOptions(watch.MinMinutes, watch.Keywords, watch.IntervalHours) || !domain.ValidKeep(watch.KeepLatest, watch.KeepDays) {
 		return domain.Watch{}, domain.ErrInvalidWatchOptions
 	}
-	return watch, s.store.UpdateWatch(ctx, watch)
+	if err := s.store.UpdateWatch(ctx, watch); err != nil {
+		return domain.Watch{}, err
+	}
+	if changes.KeepLatest != nil || changes.KeepDays != nil {
+		s.prune(ctx, watch) // a new limit applies straight away
+	}
+	return watch, nil
 }
 
 func (s *Service) Delete(ctx context.Context, id string) error {
@@ -243,6 +265,7 @@ func (s *Service) Run(ctx context.Context) {
 		case <-timer.C:
 		}
 		s.checkDue(ctx)
+		s.pruneAll(ctx)
 		timer.Reset(15 * time.Minute)
 	}
 }
@@ -278,6 +301,7 @@ func (s *Service) queue(ctx context.Context, watch domain.Watch, ids []string, t
 		if title := titles[id]; title != "" {
 			job.Title = &title
 		}
+		job.WatchID = watch.ID
 		if watch.Folder {
 			job.Folder = domain.SafeFolderName(watch.Title)
 		}

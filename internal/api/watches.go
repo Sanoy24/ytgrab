@@ -82,6 +82,8 @@ func addWatchRoutes(mux *http.ServeMux, watches Watcher) {
 			MinMinutes    int           `json:"min_minutes"`
 			Keywords      string        `json:"keywords"`
 			IntervalHours int           `json:"interval_hours"`
+			KeepLatest    int           `json:"keep_latest"`
+			KeepDays      int           `json:"keep_days"`
 		}
 		if !decodeOne(w, r, &input) {
 			return
@@ -89,6 +91,7 @@ func addWatchRoutes(mux *http.ServeMux, watches Watcher) {
 		added, err := watches.Add(r.Context(), input.URL, watch.Options{
 			Preset: input.Preset, Folder: input.Folder, Backfill: input.Backfill,
 			MinMinutes: input.MinMinutes, Keywords: input.Keywords, IntervalHours: input.IntervalHours,
+			KeepLatest: input.KeepLatest, KeepDays: input.KeepDays,
 		})
 		if err != nil {
 			writeWatchError(w, r, err)
@@ -112,6 +115,8 @@ func addWatchRoutes(mux *http.ServeMux, watches Watcher) {
 			MinMinutes    *int           `json:"min_minutes"`
 			Keywords      *string        `json:"keywords"`
 			IntervalHours *int           `json:"interval_hours"`
+			KeepLatest    *int           `json:"keep_latest"`
+			KeepDays      *int           `json:"keep_days"`
 		}
 		if !decodeOne(w, r, &input) {
 			return
@@ -119,6 +124,7 @@ func addWatchRoutes(mux *http.ServeMux, watches Watcher) {
 		updated, err := watches.Update(r.Context(), r.PathValue("id"), watch.Changes{
 			Preset: input.Preset, Folder: input.Folder, Paused: input.Paused,
 			MinMinutes: input.MinMinutes, Keywords: input.Keywords, IntervalHours: input.IntervalHours,
+			KeepLatest: input.KeepLatest, KeepDays: input.KeepDays,
 		})
 		if err != nil {
 			writeWatchError(w, r, err)
