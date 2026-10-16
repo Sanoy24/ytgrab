@@ -675,3 +675,17 @@ test('offers a video format that plays everywhere', async ({ page }) => {
   await expect(page.locator('#toast')).toContainText('Added');
   await expect(page.locator('#queue')).toContainText('plays everywhere');
 });
+
+test('keeps only a watch newest videos, after asking', async ({ page }) => {
+  await page.goto('/?fixture=default#watching');
+  const watch = page.locator('#watch-list .watch').first();
+  const keep = watch.getByLabel(/^What to keep from/);
+  await expect(keep).toHaveValue('all');
+  page.once('dialog', (d) => d.dismiss()); // changing its mind keeps everything
+  await keep.selectOption('latest:10');
+  await expect(keep).toHaveValue('all');
+  page.once('dialog', (d) => d.accept());
+  await keep.selectOption('latest:10');
+  await expect(page.locator('#toast')).toContainText('Keeping the newest 10');
+  await expect(watch.getByLabel(/^What to keep from/)).toHaveValue('latest:10');
+});

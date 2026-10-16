@@ -107,7 +107,7 @@ class FixtureClient {
     return { watches: structuredClone(this.watches), interval_hours: 6, max_backfill: 10, max_per_check: 25 };
   }
 
-  async addWatch({ url, preset, folder, backfill, min_minutes = 0, keywords = '', interval_hours = 6 }) {
+  async addWatch({ url, preset, folder, backfill, min_minutes = 0, keywords = '', interval_hours = 6, keep_latest = 0, keep_days = 0 }) {
     await delay(700);
     this.watches ??= [];
     const m = /youtube\.com\/(@[\w.-]{3,30})/.exec(url) || /[?&]list=([\w-]{10,64})/.exec(url);
@@ -119,7 +119,7 @@ class FixtureClient {
     const watch = {
       id: `watch_${this.nextId++}`, kind, url: canonical, title: kind === 'channel' ? m[1].slice(1) : 'Saved playlist',
       preset, folder, paused: false, created_at: at, last_checked: at, last_new: backfill, downloaded: backfill,
-      min_minutes, keywords, interval_hours,
+      min_minutes, keywords, interval_hours, keep_latest, keep_days,
     };
     this.watches.push(watch);
     return structuredClone(watch);

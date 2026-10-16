@@ -65,6 +65,7 @@ Write requests from another site, and any request whose `Host` is not a loopback
 | `POST` | `/api/phone/pair` | A one-time pairing code, valid 10 minutes: `{ "url", "qr" (an SVG data: URL), "expires_at" }` |
 | `DELETE` | `/api/phone/devices/{id}` | Unpairs a phone |
 | `GET` | `/api/jobs/{id}/file` | A finished download's file, as an attachment, with range requests |
+| `PUT` | `/api/watches/{id}` also accepts `keep_latest` and `keep_days` | Keep the watch's newest N downloads, or those from the last N days (0 keeps everything); older ones the watch queued are deleted with their files. `POST /api/watches` takes them too |
 | `GET` | `/api/watches/{id}/feed` | The watch's podcast feed address: `{ "url" (for phones, when phone access is on), "local_url", "reason" (why `url` is missing) }` |
 | `POST` | `/api/feeds/reset` | Makes a new feed key, retiring every feed address |
 | `GET` | `/feeds/{watch}?key=` | The watch's finished downloads as RSS 2.0 with iTunes tags, newest first (up to 100); a wrong key is `404` |

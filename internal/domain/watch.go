@@ -33,12 +33,16 @@ type Watch struct {
 	MinMinutes int    `json:"min_minutes"`
 	Keywords   string `json:"keywords,omitempty"`
 	// IntervalHours is how often it is checked: 1, 6 (the default), or 24.
-	IntervalHours int        `json:"interval_hours"`
-	CreatedAt     time.Time  `json:"created_at"`
-	LastChecked   *time.Time `json:"last_checked"`
-	LastError     string     `json:"last_error,omitempty"`
-	LastNew       int        `json:"last_new"`   // videos queued by the last check
-	Downloaded    int        `json:"downloaded"` // videos queued since the watch was added
+	IntervalHours int `json:"interval_hours"`
+	// Keeping: delete this watch's downloads beyond the newest KeepLatest, or older than
+	// KeepDays; 0 keeps them all. Deleted videos stay seen, so they never come back.
+	KeepLatest  int        `json:"keep_latest,omitempty"`
+	KeepDays    int        `json:"keep_days,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	LastChecked *time.Time `json:"last_checked"`
+	LastError   string     `json:"last_error,omitempty"`
+	LastNew     int        `json:"last_new"`   // videos queued by the last check
+	Downloaded  int        `json:"downloaded"` // videos queued since the watch was added
 }
 
 // Channel names: @handles, channel IDs, and the older /c/ and /user/ names.
@@ -159,6 +163,11 @@ func (w Watch) Interval() time.Duration {
 }
 
 // ValidWatchOptions checks a watch's filters and interval.
+// ValidKeep reports whether a watch's keep limits are in range (0 keeps everything).
+func ValidKeep(latest, days int) bool {
+	return latest >= 0 && latest <= 1000 && days >= 0 && days <= 3650
+}
+
 func ValidWatchOptions(minMinutes int, keywords string, intervalHours int) bool {
 	return minMinutes >= 0 && minMinutes <= 600 && len(keywords) <= 200 &&
 		(intervalHours == 0 || intervalHours == 1 || intervalHours == 6 || intervalHours == 24)
