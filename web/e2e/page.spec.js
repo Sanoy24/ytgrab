@@ -714,3 +714,16 @@ test('exports every podcast feed as OPML once phone access is on', async ({ page
   await page.getByRole('button', { name: 'Export all podcast feeds (OPML)' }).click();
   expect((await download).suggestedFilename()).toBe('ytgrab-feeds.opml');
 });
+
+test('searches inside videos and links to the moment', async ({ page }) => {
+  await page.goto('/?fixture=default#library');
+  await page.locator('#history-search').fill('binary tree');
+  const hits = page.locator('#library-hits');
+  await expect(hits).toBeVisible();
+  await expect(hits).toContainText('Lecture 1 — Introduction');
+  const link = hits.getByRole('link', { name: /^Play Lecture 1 — Introduction from 12:31/ });
+  await expect(link).toHaveAttribute('href', '/api/jobs/job_1/file?play=1#t=751');
+  await expect(hits.locator('mark').first()).toHaveText('binary');
+  await page.locator('#history-search').fill('giraffes');
+  await expect(hits).toBeHidden();
+});

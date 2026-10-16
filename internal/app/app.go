@@ -19,6 +19,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/cooldown"
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
+	"github.com/Sanoy24/ytgrab/internal/library"
 	"github.com/Sanoy24/ytgrab/internal/phone"
 	"github.com/Sanoy24/ytgrab/internal/picker"
 	"github.com/Sanoy24/ytgrab/internal/queue"
@@ -183,6 +184,11 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 			go app.watches.Run(ctx)
 		}
 	}
+	// Library search: new downloads' titles and subtitles are indexed in the background, so a
+	// search seldom waits for it.
+	if index, ok := store.(library.IndexStore); ok {
+		go keepIndexed(ctx, index)
+	}
 	// Phones on the same Wi-Fi reach the same pages through their own server, one port up,
 	// which runs only while phone access is on.
 	var phones *phone.Service
@@ -262,5 +268,20 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 			return err
 		}
 		return nil
+	}
+}
+
+// keepIndexed refreshes the Library search index shortly after start and then every five
+// minutes, until ctx ends.
+func keepIndexed(ctx context.Context, index library.IndexStore) {
+	wait := 30 * time.Second
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(wait):
+		}
+		_ = library.RefreshIndex(ctx, index)
+		wait = 5 * time.Minute
 	}
 }
