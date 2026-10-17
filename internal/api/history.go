@@ -214,7 +214,7 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 				continue
 			}
 			if info, err := os.Stat(*job.OutputPath); err == nil && info.Mode().IsRegular() {
-				files[job.ID] = libraryFile{Bytes: info.Size()}
+				files[job.ID] = libraryFile{Bytes: info.Size(), Subtitles: library.HasSubtitles(job)}
 			} else {
 				files[job.ID] = libraryFile{Missing: true}
 			}
@@ -339,8 +339,9 @@ func parseArchive(body io.Reader) ([]sqlitestore.ArchivedVideo, int, error) {
 // libraryFile is a finished download's file as it is now: its size, or missing when it was
 // moved or deleted outside YTGrab.
 type libraryFile struct {
-	Bytes   int64 `json:"bytes"`
-	Missing bool  `json:"missing,omitempty"`
+	Bytes     int64 `json:"bytes"`
+	Missing   bool  `json:"missing,omitempty"`
+	Subtitles bool  `json:"subtitles,omitempty"` // a subtitle file is saved beside it
 }
 
 // clearResult reports a clear that also deleted files. Kept counts finished downloads

@@ -40,6 +40,8 @@ var phoneRoutes = func() *http.ServeMux {
 		"POST /api/history/clear",
 		"GET /api/library/files",
 		"GET /api/library/search",
+		"GET /api/captions",
+		"POST /api/jobs/{id}/captions",
 		"GET /api/watches",
 		"POST /api/watches",
 		"PUT /api/watches/{id}",

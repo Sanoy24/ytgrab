@@ -15,6 +15,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/api"
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/autostart"
+	"github.com/Sanoy24/ytgrab/internal/captions"
 	"github.com/Sanoy24/ytgrab/internal/config"
 	"github.com/Sanoy24/ytgrab/internal/cooldown"
 	"github.com/Sanoy24/ytgrab/internal/domain"
@@ -115,8 +116,9 @@ type serverSettings struct {
 	*ytdlpUpdater
 	*ytgrabUpdates
 	loginStart
-	watches *watch.Service
-	phones  *phone.Service
+	watches  *watch.Service
+	phones   *phone.Service
+	captions *captions.Service
 }
 
 // SetYtdlpChannel saves the channel, then installs that channel's latest yt-dlp in the
@@ -151,6 +153,14 @@ func (s serverSettings) Phones() api.PhoneAccess {
 		return nil
 	}
 	return s.phones
+}
+
+// Captions offers local captions to the API (nil until serve starts it).
+func (s serverSettings) Captions() api.Captioner {
+	if s.captions == nil {
+		return nil
+	}
+	return s.captions
 }
 
 // loginStart offers the Windows sign-in entry to the settings page.
@@ -200,6 +210,20 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 			}
 			phones, app.phones = service, service
 			settings[0] = app
+		}
+	}
+	// Local captions: made one at a time in the background; each finished file is searchable
+	// at once.
+	if len(settings) != 0 {
+		if app, ok := settings[0].(serverSettings); ok {
+			index, _ := store.(library.IndexStore)
+			app.captions = captions.New(cfg.DataDir, func() (string, error) { return deps.Find(cfg, "ffmpeg") }, store.Get, func() {
+				if index != nil {
+					_ = library.RefreshIndex(ctx, index)
+				}
+			})
+			settings[0] = app
+			go app.captions.Run(ctx)
 		}
 	}
 	latest := func() string { return "" }

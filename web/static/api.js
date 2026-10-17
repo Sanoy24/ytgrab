@@ -223,6 +223,30 @@ class FixtureClient {
     return { added: ok.length, already: 0, skipped: lines.length - ok.length };
   }
 
+  async captionsStatus() {
+    await delay(100);
+    this.captions ??= { supported: true, installed: this.scenario === 'captions', size: 'about 160 MB', jobs: {} };
+    if (this.captions.installing && Date.now() - this.captions.started > 1500) Object.assign(this.captions, { installing: false, installed: true, progress: 1 });
+    for (const [id, job] of Object.entries(this.captions.jobs)) {
+      if (job.state === 'queued') job.state = 'making';
+      else if (job.state === 'making') this.captions.jobs[id] = { state: 'done' };
+    }
+    return structuredClone(this.captions);
+  }
+
+  async installCaptions() {
+    await this.captionsStatus();
+    Object.assign(this.captions, { installing: true, progress: 0.4, started: Date.now() });
+    return structuredClone(this.captions);
+  }
+
+  async requestCaptions(id) {
+    await this.captionsStatus();
+    if (!this.captions.installed) throw new ApiError('captions_unavailable', 'Install local captions in Settings first.');
+    this.captions.jobs[id] = { state: 'queued' };
+    return structuredClone(this.captions);
+  }
+
   async searchLibrary(q) {
     await delay(150);
     if (!/tree|binar|lect/i.test(q)) return { results: [] };
@@ -685,6 +709,16 @@ class HttpClient {
       if (!response.ok) throw new ApiError(body.error?.code || 'import_failed', body.error?.message || 'The archive could not be imported.');
       return body;
     });
+  }
+  // Local captions: { supported, installed, installing, progress, error, how_to, size, jobs }.
+  captionsStatus() {
+    return this.request('GET', '/api/captions');
+  }
+  installCaptions() {
+    return this.request('POST', '/api/captions/install');
+  }
+  requestCaptions(id) {
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/captions`);
   }
   // Words in titles and saved subtitles: { results: [{ job_id, title, matches: [{ start, snippet }] }] }.
   searchLibrary(q) {

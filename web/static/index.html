@@ -499,6 +499,14 @@
                 <h3 class="set-title" id="set-media-title">Audio &amp; video</h3>
                 <p class="set-desc">What goes into each file.</p>
                 <div class="set-card">
+                  <div class="set-row" id="captions-row" hidden>
+                    <div class="set-text">
+                      <span class="set-label">Local captions</span>
+                      <p class="set-hint">Makes subtitles for downloads that have none, with whisper.cpp, on this computer: the sound never leaves it. Captions play in your player and make the video searchable. It takes a few minutes for each hour of speech.</p>
+                      <p class="set-hint set-result" id="captions-state" role="status"></p>
+                    </div>
+                    <div class="set-control"><button type="button" class="btn btn-small" id="captions-install">Install</button></div>
+                  </div>
                   <div class="set-row" id="pref-subs-row" hidden>
                     <div class="set-text">
                       <label for="pref-subs">Subtitles</label>
