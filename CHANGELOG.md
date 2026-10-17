@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-10-17
+
+Search inside your videos.
+
 ### Added
 
 - **Search inside your videos.** The Library's search box also finds words in the subtitles saved with your downloads, and each match links to that moment: clicking the time plays the file from there in the browser, on the computer or your phone. The search index stays on your computer and updates as downloads finish.
@@ -280,6 +284,7 @@ YTGrab now downloads from X (Twitter) too.
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.21.0]: https://github.com/Sanoy24/ytgrab/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/Sanoy24/ytgrab/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/Sanoy24/ytgrab/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/Sanoy24/ytgrab/compare/v1.17.0...v1.18.0
