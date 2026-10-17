@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/picker"
@@ -52,6 +53,12 @@ type preferenceSettings interface {
 type metadataSettings interface {
 	SaveMetadata() bool
 	SetSaveMetadata(context.Context, bool) error
+}
+
+// autoCaptionSettings make local captions for new downloads without subtitles.
+type autoCaptionSettings interface {
+	AutoCaptions() (bool, time.Time)
+	SetAutoCaptions(context.Context, bool) error
 }
 
 // ytdlpChannelSettings choose between stable and nightly yt-dlp builds.
@@ -157,6 +164,9 @@ func settingsBody(settings Settings) map[string]any {
 	if metadata, ok := settings.(metadataSettings); ok {
 		body["save_metadata"] = metadata.SaveMetadata()
 	}
+	if auto, ok := settings.(autoCaptionSettings); ok {
+		body["auto_captions"], _ = auto.AutoCaptions()
+	}
 	if normalize, ok := settings.(normalizeSettings); ok {
 		body["normalize_audio"] = normalize.NormalizeAudio()
 	}
@@ -221,6 +231,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				Normalize     *bool          `json:"normalize_audio"`
 				YtdlpChannel  *string        `json:"ytdlp_channel"`
 				SaveMetadata  *bool          `json:"save_metadata"`
+				AutoCaptions  *bool          `json:"auto_captions"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -283,6 +294,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				err = normalize.SetNormalizeAudio(r.Context(), *input.Normalize)
+			}
+			if err == nil && input.AutoCaptions != nil {
+				auto, ok := settings.(autoCaptionSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server has no automatic captions.")
+					return
+				}
+				err = auto.SetAutoCaptions(r.Context(), *input.AutoCaptions)
 			}
 			if err == nil && input.SaveMetadata != nil {
 				metadata, ok := settings.(metadataSettings)

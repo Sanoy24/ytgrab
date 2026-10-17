@@ -222,6 +222,9 @@ func serve(ctx context.Context, cfg config.Config, output io.Writer, listener ne
 					_ = library.RefreshIndex(ctx, index)
 				}
 			})
+			if completed, ok := store.(library.IndexStore); ok {
+				app.captions.Automatic(app.Manager.AutoCaptions, completed.CompletedJobs)
+			}
 			settings[0] = app
 			go app.captions.Run(ctx)
 		}

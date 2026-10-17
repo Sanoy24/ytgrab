@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/domain"
 )
@@ -29,6 +30,7 @@ const (
 	normalizeKey     = "normalize_audio"
 	ytdlpChannelKey  = "ytdlp_channel"
 	metadataKey      = "save_metadata"
+	autoCaptionsKey  = "auto_captions" // when it was turned on (RFC 3339), or empty
 )
 
 // SponsorBlockModes: leave sponsor segments alone, mark them as chapters, or cut them out.
@@ -91,8 +93,9 @@ type Manager struct {
 	window       domain.Window
 	onWindow     func() // called after the download window changes
 	normalize    bool
-	ytdlpChannel string // "stable" or "nightly"
-	saveMetadata bool   // write info.json, description, and thumbnail next to each file
+	ytdlpChannel string    // "stable" or "nightly"
+	saveMetadata bool      // write info.json, description, and thumbnail next to each file
+	autoCaptions time.Time // zero when off: downloads finished after it get local captions
 	defaultDir   string
 	configured   bool
 }
@@ -154,6 +157,10 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if saved, ok, err := store.GetSetting(ctx, windowKey); err == nil && ok {
 		window, _ = domain.ParseWindow(saved)
 	}
+	var autoCaptions time.Time
+	if saved, ok, err := store.GetSetting(ctx, autoCaptionsKey); err == nil && ok && saved != "" {
+		autoCaptions, _ = time.Parse(time.RFC3339, saved)
+	}
 	saveMetadata := false
 	if saved, ok, err := store.GetSetting(ctx, metadataKey); err == nil && ok {
 		saveMetadata = saved == "1"
@@ -166,7 +173,37 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 	if saved, ok, err := store.GetSetting(ctx, normalizeKey); err == nil && ok {
 		normalize = saved == "1"
 	}
-	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, window: window, normalize: normalize, ytdlpChannel: ytdlpChannel, saveMetadata: saveMetadata, defaultDir: defaultDirectory, configured: found || explicit}, nil
+	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, window: window, normalize: normalize, ytdlpChannel: ytdlpChannel, saveMetadata: saveMetadata, autoCaptions: autoCaptions, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// AutoCaptions reports whether new downloads without subtitles get local captions, and
+// since when: only downloads finished after it is turned on are captioned, not the whole
+// Library at once.
+func (manager *Manager) AutoCaptions() (bool, time.Time) {
+	manager.mu.RLock()
+	defer manager.mu.RUnlock()
+	return !manager.autoCaptions.IsZero(), manager.autoCaptions
+}
+
+func (manager *Manager) SetAutoCaptions(ctx context.Context, on bool) error {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+	since := time.Time{}
+	if on {
+		since = manager.autoCaptions // turning it on again keeps the first time
+		if since.IsZero() {
+			since = time.Now().UTC().Truncate(time.Second)
+		}
+	}
+	value := ""
+	if !since.IsZero() {
+		value = since.Format(time.RFC3339)
+	}
+	if err := manager.store.PutSetting(ctx, autoCaptionsKey, value); err != nil {
+		return fmt.Errorf("save automatic captions setting: %w", err)
+	}
+	manager.autoCaptions = since
+	return nil
 }
 
 // SaveMetadata reports whether downloads also keep their metadata as files: yt-dlp's

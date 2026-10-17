@@ -281,3 +281,37 @@ func TestDownloadWindowSetting(t *testing.T) {
 		t.Fatal("not saved")
 	}
 }
+
+func TestAutoCaptionsRemembersWhenItWasTurnedOn(t *testing.T) {
+	ctx := context.Background()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	manager, err := New(ctx, store, t.TempDir(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if on, _ := manager.AutoCaptions(); on {
+		t.Fatal("on by default")
+	}
+	if err := manager.SetAutoCaptions(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	_, since := manager.AutoCaptions()
+	if err := manager.SetAutoCaptions(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, again := manager.AutoCaptions(); !again.Equal(since) {
+		t.Error("turning it on again moved the start")
+	}
+	reloaded, _ := New(ctx, store, t.TempDir(), true)
+	if on, at := reloaded.AutoCaptions(); !on || !at.Equal(since) {
+		t.Errorf("after a restart = %v %v, want on since %v", on, at, since)
+	}
+	_ = reloaded.SetAutoCaptions(ctx, false)
+	if on, _ := reloaded.AutoCaptions(); on {
+		t.Error("still on")
+	}
+}
