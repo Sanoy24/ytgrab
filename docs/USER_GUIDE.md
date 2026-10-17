@@ -268,7 +268,8 @@ For downloads with no subtitles, YTGrab can make them on your computer with [whi
 
 1. **Settings → Audio & video → Local captions → Install** downloads whisper.cpp and its speech model (about 160 MB, once), each checked against a checksum built into YTGrab. On a Mac, install whisper first with `brew install whisper-cpp`; YTGrab then downloads only the model.
 2. In the Library, a finished download without subtitles gets **Make captions**. YTGrab makes them in the background, one download at a time, using half the processor so the computer stays usable: a few minutes for each hour of speech on a recent computer, longer on an older one.
-3. The captions are saved beside the file as `….whisper.srt`, so players show them, and the video becomes searchable (see above).
+3. The captions are saved beside the file as `….whisper-<language>.srt` (like `….whisper-es.srt` for Spanish), so players show them, and the video becomes searchable (see above).
+5. When the speech is in another language, the download also gets **English captions**: whisper translates it into English and saves `….whisper-en.srt` beside the others, for videos in a language you don't speak.
 4. To caption everything new, turn on **Make captions for new downloads** (under Local captions): each download that finishes without subtitles from then on, including ones from watched channels, gets captions by itself. Downloads already in the Library keep the **Make captions** button, so turning it on doesn't start hours of work at once.
 
 The language is detected by itself. The model is whisper's "base" model: good for clear speech, weaker with music, strong accents, or several people talking at once. Captions for languages with less training data, such as Amharic, are less accurate.

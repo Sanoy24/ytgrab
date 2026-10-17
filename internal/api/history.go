@@ -214,7 +214,9 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 				continue
 			}
 			if info, err := os.Stat(*job.OutputPath); err == nil && info.Mode().IsRegular() {
-				files[job.ID] = libraryFile{Bytes: info.Size(), Subtitles: library.HasSubtitles(job)}
+				file := libraryFile{Bytes: info.Size(), Subtitles: library.HasSubtitles(job)}
+				file.CaptionsLanguage, file.English = library.CaptionsInfo(job)
+				files[job.ID] = file
 			} else {
 				files[job.ID] = libraryFile{Missing: true}
 			}
@@ -342,6 +344,10 @@ type libraryFile struct {
 	Bytes     int64 `json:"bytes"`
 	Missing   bool  `json:"missing,omitempty"`
 	Subtitles bool  `json:"subtitles,omitempty"` // a subtitle file is saved beside it
+	// CaptionsLanguage is the language local captions found ("es"); English reports
+	// English subtitles of any kind, so a translation isn't offered twice.
+	CaptionsLanguage string `json:"captions_language,omitempty"`
+	English          bool   `json:"english,omitempty"`
 }
 
 // clearResult reports a clear that also deleted files. Kept counts finished downloads

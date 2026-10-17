@@ -91,6 +91,27 @@ func indexStamp(job domain.Job, subtitles []string) string {
 // HasSubtitles reports whether a subtitle file is saved beside a finished download.
 func HasSubtitles(job domain.Job) bool { return len(subtitleFiles(job)) > 0 }
 
+// captionsLanguage reads the language from a local captions file's name: ".whisper-es.srt".
+var captionsLanguage = regexp.MustCompile(`\.whisper-([a-z]{2,3})\.srt$`)
+
+// englishSubtitles matches English subtitle files: YouTube's (".en.srt", ".en-US.vtt") and
+// local captions or translations (".whisper-en.srt").
+var englishSubtitles = regexp.MustCompile(`\.(en(-[A-Za-z]{2,4})?|whisper-en)\.(srt|vtt)$`)
+
+// CaptionsInfo reports the language of a download's local captions ("" when it has none, or
+// they're from before languages were recorded), and whether it has English subtitles.
+func CaptionsInfo(job domain.Job) (language string, english bool) {
+	for _, path := range subtitleFiles(job) {
+		name := filepath.Base(path)
+		// The video's own language wins over an English translation of it.
+		if m := captionsLanguage.FindStringSubmatch(name); m != nil && (language == "" || language == "en") {
+			language = m[1]
+		}
+		english = english || englishSubtitles.MatchString(name)
+	}
+	return language, english
+}
+
 // subtitleFile matches what yt-dlp saves beside a download: "Title [id] 720p.en.srt".
 var subtitleFile = regexp.MustCompile(`^(\.[A-Za-z0-9_-]{1,20})?\.(srt|vtt)$`)
 

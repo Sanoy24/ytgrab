@@ -3,7 +3,7 @@ import { formatDuration, groupFormats, matchPreset, readSection } from './format
 import { looksLikeSearch, parseLinks, validateUrl, videoIdOf } from './links.js';
 import { clearSearch, initSearch, runSearch } from './search.js';
 import { $, el, formatBytes, formatEta, formatWhen, ICONS, setThumbnail, skeleton, stateBlock, toast } from './ui.js';
-import { applyCaptionSettings, captionAction, initCaptions, requestCaptions } from './captions.js';
+import { applyCaptionSettings, captionActions, initCaptions, requestCaptions } from './captions.js';
 import { initPhone } from './phone.js';
 import { initWatching, loadWatches, onWatchAction, onWatchSubmit } from './watching.js';
 
@@ -72,7 +72,7 @@ function rowKey(job) {
     formatWhen(job.updated_at), pending.has(job.id), confirmingRemove.has(job.id),
     JSON.stringify(libraryFiles.get(job.id) || null),
     // The captions button follows whether captions are installed and on their way.
-    JSON.stringify(captionAction(job, libraryFiles.get(job.id))),
+    JSON.stringify(captionActions(job, libraryFiles.get(job.id))),
     // Move to top depends on the other waiting downloads.
     job.state === 'queued' || job.state === 'paused' ? firstWaiting(job) : '',
   ].join('|');
@@ -219,8 +219,7 @@ function renderActions(box, job) {
   } else if (job.state === 'completed') {
     if (job.output_path && client.onPhone) want.push(['play', 'Play', ''], ['save', 'Save to phone', '']);
     else if (job.output_path) want.push(['open', 'Play', ''], ['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
-    const captions = captionAction(job, libraryFiles?.get(job.id));
-    if (captions) want.push(captions);
+    want.push(...captionActions(job, libraryFiles?.get(job.id)));
     want.push(['again', 'Download again', '']);
     want.push(['remove', 'Remove', '']);
   }
@@ -1120,8 +1119,8 @@ async function runAction(id, action) {
     }
     return;
   }
-  if (action === 'captions') {
-    await requestCaptions(id);
+  if (action === 'captions' || action === 'translate') {
+    await requestCaptions(id, action === 'translate');
     return;
   }
   if (action === 'captions-busy') {

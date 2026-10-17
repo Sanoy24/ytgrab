@@ -99,3 +99,29 @@ func TestIndexingTheLibrary(t *testing.T) {
 		t.Errorf("still found after removal: %+v", hits)
 	}
 }
+
+func TestCaptionsInfo(t *testing.T) {
+	dir := t.TempDir()
+	video := filepath.Join(dir, "Talk [jNQXAC9IVRw] 720p.mp4")
+	write(t, video, "video")
+	path := video
+	job := domain.Job{VideoID: "jNQXAC9IVRw", State: domain.Completed, OutputPath: &path}
+	if lang, english := CaptionsInfo(job); lang != "" || english {
+		t.Fatalf("no subtitles = %q %v", lang, english)
+	}
+	write(t, strings.TrimSuffix(video, ".mp4")+".whisper-es.srt", "1\n")
+	if lang, english := CaptionsInfo(job); lang != "es" || english {
+		t.Fatalf("Spanish captions = %q %v", lang, english)
+	}
+	write(t, strings.TrimSuffix(video, ".mp4")+".whisper-en.srt", "1\n")
+	if lang, english := CaptionsInfo(job); lang != "es" || !english {
+		t.Errorf("with the translation = %q %v, want es with English", lang, english)
+	}
+	other := filepath.Join(dir, "Other [aqz-KE-bpKQ].mp4")
+	write(t, other, "video")
+	write(t, strings.TrimSuffix(other, ".mp4")+".en-US.vtt", "WEBVTT\n")
+	job2 := domain.Job{VideoID: "aqz-KE-bpKQ", State: domain.Completed, OutputPath: &other}
+	if lang, english := CaptionsInfo(job2); lang != "" || !english {
+		t.Errorf("YouTube's English subtitles = %q %v", lang, english)
+	}
+}

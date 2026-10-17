@@ -240,10 +240,13 @@ class FixtureClient {
     return structuredClone(this.captions);
   }
 
-  async requestCaptions(id) {
+  async requestCaptions(id, translate = false) {
     await this.captionsStatus();
     if (!this.captions.installed) throw new ApiError('captions_unavailable', 'Install local captions in Settings first.');
-    this.captions.jobs[id] = { state: 'queued' };
+    this.captions.jobs[translate ? `${id}/en` : id] = { state: 'queued' };
+    // The sample's captions come out Spanish, so English captions are offered next.
+    if (!translate) this.captionLanguages = { ...this.captionLanguages, [id]: 'es' };
+    else this.captionEnglish = { ...this.captionEnglish, [id]: true };
     return structuredClone(this.captions);
   }
 
@@ -279,6 +282,8 @@ class FixtureClient {
       // Sample sizes that stay the same between calls; one sample file has gone missing.
       const seed = [...job.id].reduce((n, c) => n * 31 + c.charCodeAt(0), 7) % 900;
       files[job.id] = job.output_path.includes('Gone') ? { bytes: 0, missing: true } : { bytes: (seed + 20) * 1_048_576 };
+      const language = this.captionLanguages?.[job.id];
+      if (language) Object.assign(files[job.id], { subtitles: true, captions_language: language, english: !!this.captionEnglish?.[job.id] });
     }
     return { files };
   }
@@ -717,8 +722,9 @@ class HttpClient {
   installCaptions() {
     return this.request('POST', '/api/captions/install');
   }
-  requestCaptions(id) {
-    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/captions`);
+  // With translate, English captions of speech in another language.
+  requestCaptions(id, translate = false) {
+    return this.request('POST', `/api/jobs/${encodeURIComponent(id)}/captions${translate ? '?translate=1' : ''}`);
   }
   // Words in titles and saved subtitles: { results: [{ job_id, title, matches: [{ start, snippet }] }] }.
   searchLibrary(q) {

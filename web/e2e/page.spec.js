@@ -743,4 +743,8 @@ test('installs local captions and makes them for a download', async ({ page }) =
   await done.getByRole('button', { name: /^Make captions/ }).click();
   await expect(page.locator('#toast')).toContainText('Captions ready', { timeout: 10000 });
   await expect(done.getByRole('button', { name: /^Make captions/ })).toHaveCount(0);
+  // The sample's speech turned out Spanish: English captions are offered, once.
+  await done.getByRole('button', { name: /^English captions/ }).click();
+  await expect(page.locator('#toast')).toContainText('English captions ready', { timeout: 10000 });
+  await expect(done.getByRole('button', { name: /^English captions/ })).toHaveCount(0);
 });
