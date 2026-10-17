@@ -146,6 +146,9 @@ type Job struct {
 	// AudioLanguage, when set, picks that audio track of a video with several (dubbed
 	// versions); otherwise yt-dlp picks the original. A language code like "es-US".
 	AudioLanguage string `json:"audio_language,omitempty"`
+	// Evidence keeps the files as the site served them, with a capture record and checksums
+	// ("<name>.evidence.json"), for journalists and researchers.
+	Evidence bool `json:"evidence,omitempty"`
 	// WatchID is the watch that queued this download, if one did; a watch that keeps only
 	// its newest videos deletes only its own downloads.
 	WatchID   string    `json:"watch_id,omitempty"`

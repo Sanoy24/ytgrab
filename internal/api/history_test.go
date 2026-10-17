@@ -377,3 +377,22 @@ func TestLibraryArchiveExport(t *testing.T) {
 		t.Fatalf("archive = %d %q", response.Code, response.Body.String())
 	}
 }
+
+func TestDeletingAnEvidenceCopyTakesItsStreamsAndRecord(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "Talk [jNQXAC9IVRw] 720p.mp4")
+	for _, name := range []string{"Talk [jNQXAC9IVRw] 720p.mp4", "Talk [jNQXAC9IVRw] 720p.f398.mp4", "Talk [jNQXAC9IVRw] 720p.f251-20.webm", "Talk [jNQXAC9IVRw] 720p.evidence.json", "Talk [jNQXAC9IVRw] 1080p.f399.mp4"} {
+		_ = os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o600)
+	}
+	if _, err := removeOutput(domain.Job{VideoID: "jNQXAC9IVRw", State: domain.Completed}, file); err != nil {
+		t.Fatal(err)
+	}
+	entries, _ := os.ReadDir(dir)
+	if len(entries) != 1 || entries[0].Name() != "Talk [jNQXAC9IVRw] 1080p.f399.mp4" {
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Errorf("left %v, want only the other download's stream", names)
+	}
+}
