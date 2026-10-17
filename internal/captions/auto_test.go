@@ -67,3 +67,13 @@ func TestAutomaticCaptionsOnlyNewDownloadsWithoutSubtitles(t *testing.T) {
 		t.Error("a failed download was queued again")
 	}
 }
+
+func TestDetectedLanguage(t *testing.T) {
+	log := "whisper_init_from_file: loading model\nwhisper_full_with_state: auto-detected language: es (p = 0.979516)\n"
+	if m := detectedLanguage.FindStringSubmatch(log); m == nil || m[1] != "es" {
+		t.Errorf("detected = %v", m)
+	}
+	if detectedLanguage.MatchString("language: auto") {
+		t.Error("matched a line without a detected language")
+	}
+}

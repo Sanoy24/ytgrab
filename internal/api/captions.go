@@ -13,7 +13,7 @@ import (
 type Captioner interface {
 	Status() captions.Status
 	Install() error
-	Request(context.Context, string) error
+	Request(ctx context.Context, jobID string, translate bool) error
 }
 
 // captionsProvider is optionally implemented by the settings value; Captions returns nil
@@ -34,7 +34,8 @@ func addCaptionRoutes(mux *http.ServeMux, captioner Captioner) {
 		writeJSON(w, http.StatusAccepted, captioner.Status())
 	})
 	mux.HandleFunc("POST /api/jobs/{id}/captions", func(w http.ResponseWriter, r *http.Request) {
-		err := captioner.Request(r.Context(), r.PathValue("id"))
+		// ?translate=1 makes English captions of speech in another language.
+		err := captioner.Request(r.Context(), r.PathValue("id"), r.URL.Query().Get("translate") == "1")
 		switch {
 		case err == nil:
 			writeJSON(w, http.StatusAccepted, captioner.Status())

@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **English captions.** When local captions find speech in another language, the download also offers **English captions**: whisper translates the speech and saves `.whisper-en.srt` beside it. Local captions now name their language (`.whisper-es.srt`).
+
 ## [1.22.0] - 2026-10-17
 
 Local captions: subtitles made on your computer, for videos that have none.

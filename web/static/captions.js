@@ -31,7 +31,8 @@ async function load() {
   for (const [id, job] of Object.entries(status.jobs || {})) {
     if (job.state === before[id]?.state) continue;
     if (job.state === 'done' && before[id]) {
-      toast(`Captions ready for ${hooks.titleOf(id)}. They're searchable now.`);
+      const [jobId, english] = id.split('/');
+      toast(english ? `English captions ready for ${hooks.titleOf(jobId)}.` : `Captions ready for ${hooks.titleOf(jobId)}. They're searchable now.`);
       hooks.refreshFiles();
     } else if (job.state === 'failed' && before[id]) {
       toast(`Couldn't make captions: ${job.error}`, true);
@@ -99,21 +100,27 @@ async function install(e) {
   }
 }
 
-// The Library button for a download: "captions" to make them, "captions-busy" while they
-// are on the way, or null when there's nothing to offer.
-export function captionAction(job, file) {
-  if (!status?.installed || job.state !== 'completed' || !job.output_path || !file || file.missing) return null;
+// The Library buttons for a download: "captions" to make them, "translate" for English
+// captions of speech in another language, "captions-busy" while either is on the way.
+export function captionActions(job, file) {
+  if (!status?.installed || job.state !== 'completed' || !job.output_path || !file || file.missing) return [];
   const state = status.jobs?.[job.id]?.state;
-  if (state === 'queued') return ['captions-busy', 'Captions queued', ''];
-  if (state === 'making') return ['captions-busy', 'Making captions…', ''];
-  if (file.subtitles || state === 'done') return null;
-  return ['captions', 'Make captions', ''];
+  const english = status.jobs?.[`${job.id}/en`]?.state;
+  if (state === 'queued') return [['captions-busy', 'Captions queued', '']];
+  if (state === 'making') return [['captions-busy', 'Making captions…', '']];
+  if (english === 'queued') return [['captions-busy', 'English captions queued', '']];
+  if (english === 'making') return [['captions-busy', 'Making English captions…', '']];
+  if (!file.subtitles && state !== 'done') return [['captions', 'Make captions', '']];
+  // Local captions found another language: offer them in English too.
+  const language = file.captions_language;
+  if (language && language !== 'en' && !file.english && english !== 'done') return [['translate', 'English captions', '']];
+  return [];
 }
 
-export async function requestCaptions(id) {
+export async function requestCaptions(id, translate = false) {
   try {
-    status = await client.requestCaptions(id);
-    toast('Making captions on this computer. It takes a few minutes for each hour of speech.');
+    status = await client.requestCaptions(id, translate);
+    toast(translate ? 'Making English captions on this computer.' : 'Making captions on this computer. It takes a few minutes for each hour of speech.');
     hooks.render();
     clearTimeout(pollTimer);
     pollTimer = setTimeout(load, 2000);

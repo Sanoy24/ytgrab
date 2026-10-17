@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -24,8 +25,15 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/process"
 )
 
-// Suffix is what captions add to a download's name, before ".srt".
+// Captions are saved as "<name>.whisper-<language>.srt", like "Talk [id].whisper-es.srt";
+// English translations as "<name>.whisper-en.srt".
 const Suffix = ".whisper"
+
+// Translated marks the state of a download's English translation: "<job id>/en".
+const Translated = "/en"
+
+// detectedLanguage is how whisper reports the language it heard.
+var detectedLanguage = regexp.MustCompile(`auto-detected language: ([a-z]{2,3})\b`)
 
 // Job states as the page shows them.
 const (
@@ -143,8 +151,9 @@ func (s *Service) modelReady() bool {
 	return err == nil && info.Size() == model.size
 }
 
-// Request queues captions for a finished download that has no subtitles yet.
-func (s *Service) Request(ctx context.Context, jobID string) error {
+// Request queues captions for a finished download that has no subtitles yet, or with
+// translate, English captions of its speech in another language.
+func (s *Service) Request(ctx context.Context, jobID string, translate bool) error {
 	if !s.Status().Installed {
 		return ErrNotInstalled
 	}
@@ -155,14 +164,18 @@ func (s *Service) Request(ctx context.Context, jobID string) error {
 	if _, owned := library.Owned(job); !owned {
 		return ErrNoFile
 	}
+	key := jobID
+	if translate {
+		key += Translated
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if state := s.states[jobID].State; state == Queued || state == Making {
+	if state := s.states[key].State; state == Queued || state == Making {
 		return nil
 	}
 	select {
-	case s.queue <- jobID:
-		s.states[jobID] = JobState{State: Queued}
+	case s.queue <- key:
+		s.states[key] = JobState{State: Queued}
 		return nil
 	default:
 		return ErrBusy
@@ -203,7 +216,7 @@ func (s *Service) queueNew(ctx context.Context) {
 		_, tried := s.states[job.ID]
 		s.mu.Unlock()
 		if !tried {
-			_ = s.Request(ctx, job.ID)
+			_ = s.Request(ctx, job.ID, false)
 		}
 	}
 }
@@ -219,16 +232,17 @@ func (s *Service) Run(ctx context.Context) {
 			return
 		case <-ticker.C:
 			s.queueNew(ctx)
-		case id := <-s.queue:
-			s.set(id, JobState{State: Making})
-			if err := s.make(ctx, id); err != nil {
+		case key := <-s.queue:
+			s.set(key, JobState{State: Making})
+			id, translate := strings.CutSuffix(key, Translated)
+			if err := s.make(ctx, id, translate); err != nil {
 				if ctx.Err() != nil {
 					return
 				}
-				s.set(id, JobState{State: Failed, Error: err.Error()})
+				s.set(key, JobState{State: Failed, Error: err.Error()})
 				continue
 			}
-			s.set(id, JobState{State: Done})
+			s.set(key, JobState{State: Done})
 			if s.done != nil {
 				s.done()
 			}
@@ -243,8 +257,9 @@ func (s *Service) set(id string, state JobState) {
 }
 
 // make turns a download's sound into 16 kHz mono WAV, which whisper reads, and has whisper
-// write "<name>.whisper.srt" beside it. The language is detected.
-func (s *Service) make(ctx context.Context, jobID string) error {
+// write "<name>.whisper-<language>.srt" beside it, in the language it detects; with
+// translate, "<name>.whisper-en.srt" in English.
+func (s *Service) make(ctx context.Context, jobID string, translate bool) error {
 	job, err := s.job(ctx, jobID)
 	if err != nil {
 		return errors.New("The download is no longer in the Library.")
@@ -267,7 +282,7 @@ func (s *Service) make(ctx context.Context, jobID string) error {
 	}
 	defer os.RemoveAll(work)
 	wav := filepath.Join(work, "audio.wav")
-	if err := s.run(ctx, ffmpeg, nil, "-nostdin", "-v", "error", "-y", "-i", video, "-vn", "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", wav); err != nil {
+	if _, err := s.run(ctx, ffmpeg, nil, "-nostdin", "-v", "error", "-y", "-i", video, "-vn", "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", wav); err != nil {
 		return fmt.Errorf("Couldn't read the sound of this download: %w", err)
 	}
 	// whisper writes <of>.srt; keep it in the work folder until it is complete.
@@ -276,10 +291,26 @@ func (s *Service) make(ctx context.Context, jobID string) error {
 	if s.goos == "linux" {
 		env = append(os.Environ(), "LD_LIBRARY_PATH="+filepath.Dir(whisper)) // its libraries sit beside it
 	}
-	if err := s.run(ctx, whisper, env, "-m", s.modelPath(), "-f", wav, "-l", "auto", "-osrt", "-of", out, "-t", fmt.Sprint(threads()), "-np"); err != nil {
+	args := []string{"-m", s.modelPath(), "-f", wav, "-l", "auto", "-osrt", "-of", out, "-t", fmt.Sprint(threads())}
+	if translate {
+		args = append(args, "-tr")
+	}
+	log, err := s.run(ctx, whisper, env, args...)
+	if err != nil {
 		return fmt.Errorf("whisper couldn't make captions: %w", err)
 	}
-	target := strings.TrimSuffix(video, filepath.Ext(video)) + Suffix + ".srt"
+	language := "en"
+	if !translate {
+		language = ""
+		if m := detectedLanguage.FindStringSubmatch(log); m != nil {
+			language = m[1]
+		}
+	}
+	target := strings.TrimSuffix(video, filepath.Ext(video)) + Suffix
+	if language != "" {
+		target += "-" + language
+	}
+	target += ".srt"
 	data, err := os.ReadFile(out + ".srt")
 	if err != nil {
 		return errors.New("whisper finished without writing captions.")
@@ -292,28 +323,30 @@ func threads() int {
 	return max(2, min(8, runtime.NumCPU()/2))
 }
 
-func (s *Service) run(ctx context.Context, program string, env []string, args ...string) error {
+// run runs a tool and returns what it logged (the first 256 KB), or its last line as the
+// error when it fails.
+func (s *Service) run(ctx context.Context, program string, env []string, args ...string) (string, error) {
 	cmd := exec.Command(program, args...)
 	cmd.Dir = filepath.Dir(program)
 	cmd.Env = env
 	var stderr strings.Builder
-	cmd.Stderr = &limited{&stderr, 4096}
+	cmd.Stderr = &limited{&stderr, 256 << 10}
 	stop, err := process.Start(ctx, cmd)
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = cmd.Wait()
 	stop()
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return "", ctx.Err()
 	}
 	if err != nil {
 		if last := lastLine(stderr.String()); last != "" {
-			return errors.New(last)
+			return "", errors.New(last)
 		}
-		return err
+		return "", err
 	}
-	return nil
+	return stderr.String(), nil
 }
 
 type limited struct {
