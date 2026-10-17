@@ -11,6 +11,7 @@ export function initCaptions(apiClient, callbacks) {
   client = apiClient;
   hooks = callbacks;
   $('#captions-install')?.addEventListener('click', install);
+  $('#pref-auto-captions')?.addEventListener('change', setAutomatic);
   load();
 }
 
@@ -43,10 +44,31 @@ async function load() {
   if (busy) pollTimer = setTimeout(load, 2000);
 }
 
+// Called with the settings as they load or change: { auto_captions }.
+export function applyCaptionSettings(settings) {
+  const box = $('#pref-auto-captions');
+  if (box && typeof settings?.auto_captions === 'boolean') box.checked = settings.auto_captions;
+}
+
+async function setAutomatic(e) {
+  const box = e.currentTarget;
+  box.disabled = true;
+  try {
+    await client.setPreferences({ auto_captions: box.checked });
+    toast(box.checked ? 'New downloads without subtitles will get captions by themselves.' : 'Automatic captions are off.');
+  } catch (err) {
+    box.checked = !box.checked;
+    toast(err.message, true);
+  } finally {
+    box.disabled = false;
+  }
+}
+
 function renderSetting() {
   const row = $('#captions-row');
   if (!row) return;
   row.hidden = !status.supported;
+  $('#captions-auto-row').hidden = !status.installed;
   const button = $('#captions-install');
   const note = $('#captions-state');
   if (status.installed) {

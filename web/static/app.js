@@ -3,7 +3,7 @@ import { formatDuration, groupFormats, matchPreset, readSection } from './format
 import { looksLikeSearch, parseLinks, validateUrl, videoIdOf } from './links.js';
 import { clearSearch, initSearch, runSearch } from './search.js';
 import { $, el, formatBytes, formatEta, formatWhen, ICONS, setThumbnail, skeleton, stateBlock, toast } from './ui.js';
-import { captionAction, initCaptions, requestCaptions } from './captions.js';
+import { applyCaptionSettings, captionAction, initCaptions, requestCaptions } from './captions.js';
 import { initPhone } from './phone.js';
 import { initWatching, loadWatches, onWatchAction, onWatchSubmit } from './watching.js';
 
@@ -1823,6 +1823,7 @@ let settings = null;
 
 function applySettings(next) {
   settings = next;
+  applyCaptionSettings(next);
   const configured = next.configured !== false;
   $('#setup-folder').hidden = configured;
   $('#setup-pick').hidden = !next.can_pick;

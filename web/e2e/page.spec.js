@@ -734,6 +734,10 @@ test('installs local captions and makes them for a download', async ({ page }) =
   await expect(install).toHaveText('Install (about 160 MB)');
   await install.click();
   await expect(page.locator('#captions-state')).toContainText('Installed', { timeout: 8000 });
+  const auto = page.getByLabel('Make captions for new downloads');
+  await expect(auto).not.toBeChecked();
+  await auto.check();
+  await expect(page.locator('#toast')).toContainText('get captions by themselves');
   await page.locator('.nav-item[data-view=library]').click();
   const done = page.locator('#history .job', { hasText: 'Lecture 1' });
   await done.getByRole('button', { name: /^Make captions/ }).click();

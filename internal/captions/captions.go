@@ -68,6 +68,10 @@ type Service struct {
 	states     map[string]JobState
 	queue      chan string
 
+	// Automatic captions: whether they're on and since when, and the finished downloads.
+	auto      func() (bool, time.Time)
+	completed func(context.Context) ([]domain.Job, error)
+
 	// Replaced in tests.
 	goos, goarch string
 	lookPath     func(string) (string, error)
@@ -171,12 +175,50 @@ var (
 	ErrBusy         = errors.New("Too many captions are waiting; try again later.")
 )
 
-// Run makes queued captions one at a time until ctx ends.
+// Automatic makes captions by itself for downloads that finish without subtitles while
+// on() reports it on; completed lists the finished downloads.
+func (s *Service) Automatic(on func() (bool, time.Time), completed func(context.Context) ([]domain.Job, error)) {
+	s.auto, s.completed = on, completed
+}
+
+// queueNew queues captions for downloads finished since automatic captions were turned
+// on that have no subtitles and haven't been tried yet.
+func (s *Service) queueNew(ctx context.Context) {
+	if s.auto == nil || s.completed == nil {
+		return
+	}
+	on, since := s.auto()
+	if !on || !s.Status().Installed {
+		return
+	}
+	jobs, err := s.completed(ctx)
+	if err != nil {
+		return
+	}
+	for _, job := range jobs {
+		if job.UpdatedAt.Before(since) || library.HasSubtitles(job) {
+			continue
+		}
+		s.mu.Lock()
+		_, tried := s.states[job.ID]
+		s.mu.Unlock()
+		if !tried {
+			_ = s.Request(ctx, job.ID)
+		}
+	}
+}
+
+// Run makes queued captions one at a time until ctx ends, and looks for new downloads to
+// caption every minute while automatic captions are on.
 func (s *Service) Run(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-ticker.C:
+			s.queueNew(ctx)
 		case id := <-s.queue:
 			s.set(id, JobState{State: Making})
 			if err := s.make(ctx, id); err != nil {
