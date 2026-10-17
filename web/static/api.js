@@ -387,7 +387,7 @@ class FixtureClient {
     return { jobs: structuredClone(created), skipped };
   }
 
-  async createJob({ url, preset, format, section, split_chapters }) {
+  async createJob({ url, preset, format, section, split_chapters, evidence }) {
     await delay(400);
     if (this.scenario === 'error')
       throw new ApiError('unreachable', 'Could not reach the local server.');
@@ -419,6 +419,7 @@ class FixtureClient {
       updated_at: at,
       ...(section ? { section } : {}),
       ...(split_chapters ? { split_chapters } : {}),
+      ...(evidence ? { evidence } : {}),
     };
     this.jobs.unshift(job);
     this.emit();

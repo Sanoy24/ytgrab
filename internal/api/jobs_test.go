@@ -156,6 +156,12 @@ func TestJobAudioLanguage(t *testing.T) {
 	if err := json.Unmarshal(created.Body.Bytes(), &job); err != nil || created.Code != http.StatusCreated || job.AudioLanguage != "es-US" || *job.Preset != domain.VideoCompat {
 		t.Fatalf("created = %d %s", created.Code, created.Body.String())
 	}
+	if got := post(`{"url":"https://youtu.be/aqz-KE-bpKQ","preset":"video-best","evidence":true,"section":{"start":1,"end":5}}`); got.Code != http.StatusBadRequest {
+		t.Errorf("an evidence clip = %d", got.Code)
+	}
+	if got := post(`{"url":"https://youtu.be/aqz-KE-bpKQ","preset":"video-best","evidence":true}`); got.Code != http.StatusCreated || !strings.Contains(got.Body.String(), `"evidence":true`) {
+		t.Errorf("an evidence copy = %d %s", got.Code, got.Body.String())
+	}
 	if stored, _ := store.Get(context.Background(), job.ID); stored.AudioLanguage != "es-US" {
 		t.Errorf("stored language = %q", stored.AudioLanguage)
 	}

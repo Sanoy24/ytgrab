@@ -129,6 +129,17 @@ Each watch has a podcast feed of what it downloaded, so new episodes show up in 
 - **Export all podcast feeds (OPML)** in Watching saves every watch's feed in one file, which apps like AntennaPod import at once (on the phone, open Watching there and save it).
 - Each address carries a secret key. If one got out, **Settings → Phone → Make new feed addresses** retires all of them; copy the new ones into your apps. If the computer gets a new address on your Wi-Fi, the feed addresses change too.
 
+## Evidence copies
+
+For journalists, researchers, and anyone documenting something that may disappear, tick **Evidence copy** below the formats. YTGrab then:
+
+- keeps the video and audio streams exactly as the site served them (`….f398.mp4`, `….f251.webm`), beside the usual file, which joins them without re-encoding;
+- writes nothing into the files: no title or cover art, no sponsor cuts, no loudness changes, subtitles only as separate files;
+- saves the site's own record of the video (`….info.json`), its description, and its thumbnail as served;
+- writes a capture record, `….evidence.json`: the link, the video's ID, title, channel and upload date, when it was captured (UTC), the versions of YTGrab, yt-dlp, and FFmpeg, and the size and SHA-256 checksum of every file.
+
+Anyone can later check that a file is unchanged by computing its SHA-256 (for example `certutil -hashfile <file> SHA256` on Windows, `shasum -a 256 <file>` on macOS) and comparing it with the record. This follows the practice of the Berkeley Protocol on Digital Open Source Investigations. An evidence copy is always the whole video: it can't be a clip or split into chapters. Deleting it deletes the streams and the record too.
+
 ## Split a video into chapters
 
 When the video's creator marked chapters, the Download page says how many and offers **Also save each of the N chapters as its own file**. YTGrab then saves the whole video as usual, plus a folder of the same name with one file per chapter, numbered and titled (`01 Intro.m4a`, `02 Docs.m4a`, …). It works for video and audio formats; it can't be combined with **Only part of the video**. Deleting the download's file (from its menu or with **Clear**) also deletes its chapter files, and the folder unless you put other files in it.

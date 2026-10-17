@@ -259,6 +259,11 @@ func Version(ctx context.Context, path string) (string, error) {
 	return getVersion(ctx, path, "--version")
 }
 
+// FFmpegVersion runs ffmpeg -version (FFmpeg's own spelling), with the same cache.
+func FFmpegVersion(ctx context.Context, path string) (string, error) {
+	return getVersion(ctx, path, "-version")
+}
+
 // versionTimeout allows for the Windows yt-dlp.exe, which unpacks itself on every run
 // and takes about three seconds, longer on a first run while antivirus scans it.
 const versionTimeout = 15 * time.Second

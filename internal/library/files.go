@@ -58,8 +58,9 @@ func Remove(job domain.Job, path string) (removed bool, err error) {
 }
 
 // sidecarFile matches what yt-dlp writes beside a download, after its name: metadata,
-// the thumbnail, and subtitles ("Title [id] 720p.en.srt").
-var sidecarFile = regexp.MustCompile(`^(-thumb\.(jpg|jpeg|webp|png)|\.(nfo|info\.json|description|jpg|jpeg|webp|png|([A-Za-z0-9_-]{1,20}\.)?(srt|vtt|ass|lrc)))$`)
+// the thumbnail, subtitles ("Title [id] 720p.en.srt"), and for evidence copies the streams
+// as served ("Title [id] 720p.f398.mp4") and the capture record.
+var sidecarFile = regexp.MustCompile(`^(-thumb\.(jpg|jpeg|webp|png)|\.(nfo|info\.json|evidence\.json|description|jpg|jpeg|webp|png|([A-Za-z0-9_-]{1,20}\.)?(srt|vtt|ass|lrc))|\.f[0-9A-Za-z_-]{1,20}\.[A-Za-z0-9]{2,5})$`)
 
 // removeSidecars deletes the files yt-dlp wrote beside a deleted download: only those named
 // exactly like it, followed by one of sidecarFile's endings.
