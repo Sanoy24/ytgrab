@@ -223,6 +223,18 @@ class FixtureClient {
     return { added: ok.length, already: 0, skipped: lines.length - ok.length };
   }
 
+  async setNotify(body) {
+    await delay(150);
+    if (body.kind === 'ntfy' && !/^https?:\/\/[^/]+\/[^/]+/.test(body.url)) throw new ApiError('invalid_notify', 'Add your topic to the ntfy address, like https://ntfy.sh/your-topic');
+    this.notify = body.kind ? body : { kind: '', url: '', events: 'all' };
+    return structuredClone(this.notify);
+  }
+
+  async testNotify(body) {
+    await delay(300);
+    if (!body.url) throw new ApiError('invalid_notify', 'Enter the full address, starting with https://');
+  }
+
   async captionsStatus() {
     await delay(100);
     this.captions ??= { supported: true, installed: this.scenario === 'captions', size: 'about 160 MB', jobs: {} };
@@ -714,6 +726,13 @@ class HttpClient {
       if (!response.ok) throw new ApiError(body.error?.code || 'import_failed', body.error?.message || 'The archive could not be imported.');
       return body;
     });
+  }
+  // Where finished and failed downloads are announced: { kind, url, events }.
+  setNotify(body) {
+    return this.request('PUT', '/api/settings/notify', body);
+  }
+  testNotify(body) {
+    return this.request('POST', '/api/settings/notify/test', body);
   }
   // Local captions: { supported, installed, installing, progress, error, how_to, size, jobs }.
   captionsStatus() {

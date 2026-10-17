@@ -363,6 +363,7 @@
               <button type="button" class="settings-link" data-section="set-browser"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 6.5h.01M10 6.5h.01"/></svg><span>Browser</span></button>
               <button type="button" class="settings-link" data-section="set-computer"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><span>This computer</span></button>
               <button type="button" class="settings-link" data-section="set-phone"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span>Phone</span></button>
+              <button type="button" class="settings-link" data-section="set-notify"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span>Notifications</span></button>
               <button type="button" class="settings-link" data-section="set-backup"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Z"/><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span>Backup</span></button>
               <button type="button" class="settings-link" data-section="about"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>About</span></button>
             </nav>
@@ -667,6 +668,48 @@
                     </div>
                   </div>
                 </div>
+              </section>
+
+              <section class="set-group" id="set-notify" aria-labelledby="set-notify-title">
+                <h3 class="set-title" id="set-notify-title">Notifications</h3>
+                <p class="set-desc">Hear about finished and failed downloads on your phone, even away from home.</p>
+                <form class="set-card" id="notify-form" novalidate>
+                  <div class="set-row">
+                    <div class="set-text">
+                      <label for="notify-kind">Send to</label>
+                      <p class="set-hint" id="notify-help">Off: nothing is sent anywhere.</p>
+                      <p class="set-hint">Notifications carry the video's title and any error message to that service, and nothing else.</p>
+                    </div>
+                    <div class="set-control">
+                      <select id="notify-kind">
+                        <option value="">Off</option>
+                        <option value="ntfy">ntfy (phone app)</option>
+                        <option value="discord">Discord</option>
+                        <option value="webhook">A webhook</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="set-row" id="notify-url-row" hidden>
+                    <div class="set-text"><label for="notify-url">Address</label></div>
+                    <div class="set-control"><input type="url" id="notify-url" autocomplete="off" spellcheck="false" maxlength="500" /></div>
+                  </div>
+                  <div class="set-row" id="notify-events-row" hidden>
+                    <div class="set-text"><label for="notify-events">Tell me about</label></div>
+                    <div class="set-control">
+                      <select id="notify-events">
+                        <option value="all">Finished and failed downloads</option>
+                        <option value="failed">Failed downloads only</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="set-row">
+                    <div class="set-text"></div>
+                    <div class="set-control set-buttons">
+                      <button type="button" class="btn btn-small" id="notify-test" hidden>Send a test</button>
+                      <button type="submit" class="btn btn-small" id="notify-save">Save</button>
+                    </div>
+                  </div>
+                </form>
               </section>
 
               <section class="set-group" id="set-backup" aria-labelledby="set-backup-title">

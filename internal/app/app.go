@@ -21,6 +21,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/downloader/ytdlp"
 	"github.com/Sanoy24/ytgrab/internal/library"
+	"github.com/Sanoy24/ytgrab/internal/notify"
 	"github.com/Sanoy24/ytgrab/internal/phone"
 	"github.com/Sanoy24/ytgrab/internal/picker"
 	"github.com/Sanoy24/ytgrab/internal/queue"
@@ -80,10 +81,23 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	appSettings.OnWindowChange(jobQueue.Wake)
 	jobQueue.Start(ctx)
 	defer jobQueue.Stop()
+	list := func(ctx context.Context) ([]domain.Job, error) { return store.List(ctx, 200) }
 	if cfg.Activity != nil {
-		list := func(ctx context.Context) ([]domain.Job, error) { return store.List(ctx, 200) }
 		go activity.Watch(ctx, 2*time.Second, list, api.PageOpen, cfg.Activity)
 	}
+	// Phone and chat notifications, when set up: unlike the desktop's, they come even while
+	// the page is open, since the phone may be elsewhere.
+	go activity.Watch(ctx, 5*time.Second, list, func() bool { return false }, func(summary activity.Summary) {
+		settings := appSettings.Notify(ctx)
+		if settings.Kind == "" {
+			return
+		}
+		for _, message := range notify.Messages(summary, settings.Events) {
+			if err := notify.Send(ctx, settings, message); err != nil {
+				_, _ = fmt.Fprintf(output, "Couldn't send a notification: %v\n", err)
+			}
+		}
+	})
 	latest := newLatestYtdlp(appSettings.YtdlpChannel)
 	latest.Get() // look up the newest yt-dlp now, so the first page load can show it
 	updater := &ytdlpUpdater{cfg: cfg, running: jobQueue.Running, latest: latest, channel: appSettings.YtdlpChannel}

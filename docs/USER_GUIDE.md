@@ -254,6 +254,16 @@ Coming from yt-dlp scripts or another tool? **Import a yt-dlp archive** (Setting
 
 For other tools, **Save a yt-dlp archive** saves your finished YouTube and Vimeo downloads in yt-dlp's `--download-archive` format (one `youtube <id>` line each), so a yt-dlp script given that file skips videos you already have. X, Reddit, and Instagram downloads aren't included: YTGrab knows them by the post's ID, not the one yt-dlp records.
 
+### Notifications
+
+**Settings → Notifications** sends finished and failed downloads to your phone or chat, even when you're away from home (unlike phone access, which needs the same Wi-Fi). Choose where:
+
+- **ntfy**: install the free [ntfy](https://ntfy.sh) app, subscribe to a topic name only you know (anyone who knows it can read it, so make it hard to guess), and enter `https://ntfy.sh/<your topic>`. A self-hosted ntfy server works too.
+- **Discord**: in a channel's settings, **Integrations → Webhooks → New webhook → Copy Webhook URL**, and paste it.
+- **A webhook**: any address that accepts a JSON POST with `app`, `event` (`finished`, `failed`, or `test`), `title`, and `message`.
+
+Choose **Finished and failed downloads** or **Failed downloads only**, press **Save**, and **Send a test** to see one arrive. Several downloads finishing together come as one notification. Only the titles and error messages are sent, and only to the service you chose.
+
 ### Search inside your videos
 
 The Library's search box finds titles and also **what's said in your videos**: under **Inside your videos**, each match shows the moment it starts (like `12:31`) with the words around it, and clicking the time plays the downloaded file from there in your browser, on the computer or a paired phone.
