@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-10-17
+
+Local captions: subtitles made on your computer, for videos that have none.
+
 ### Added
 
 - **Local captions.** Downloads without subtitles can get them, made on your computer by whisper.cpp: install it once in Settings → Audio & video (about 160 MB, checked against pinned checksums), then **Make captions** in the Library. The captions are saved beside the file as `.whisper.srt`, play in your player, and make the video searchable. The sound never leaves your computer. **Make captions for new downloads** captions every download that finishes without subtitles from then on, including watched channels'.
@@ -288,6 +292,7 @@ YTGrab now downloads from X (Twitter) too.
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.22.0]: https://github.com/Sanoy24/ytgrab/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/Sanoy24/ytgrab/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/Sanoy24/ytgrab/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/Sanoy24/ytgrab/compare/v1.18.0...v1.19.0
