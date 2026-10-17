@@ -727,3 +727,16 @@ test('searches inside videos and links to the moment', async ({ page }) => {
   await page.locator('#history-search').fill('giraffes');
   await expect(hits).toBeHidden();
 });
+
+test('installs local captions and makes them for a download', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  const install = page.locator('#captions-install');
+  await expect(install).toHaveText('Install (about 160 MB)');
+  await install.click();
+  await expect(page.locator('#captions-state')).toContainText('Installed', { timeout: 8000 });
+  await page.locator('.nav-item[data-view=library]').click();
+  const done = page.locator('#history .job', { hasText: 'Lecture 1' });
+  await done.getByRole('button', { name: /^Make captions/ }).click();
+  await expect(page.locator('#toast')).toContainText('Captions ready', { timeout: 10000 });
+  await expect(done.getByRole('button', { name: /^Make captions/ })).toHaveCount(0);
+});

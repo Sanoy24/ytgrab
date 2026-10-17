@@ -68,6 +68,9 @@ Write requests from another site, and any request whose `Host` is not a loopback
 | `PUT` | `/api/watches/{id}` also accepts `keep_latest` and `keep_days` | Keep the watch's newest N downloads, or those from the last N days (0 keeps everything); older ones the watch queued are deleted with their files. `POST /api/watches` takes them too |
 | `GET` | `/api/watches/{id}/feed` | The watch's podcast feed address: `{ "url" (for phones, when phone access is on), "local_url", "reason" (why `url` is missing) }` |
 | `GET` | `/api/library/search?q=` | Titles and saved subtitles: `{ "results": [{ "job_id", "title", "video_id", "in_title", "matches": [{ "start" (seconds), "snippet" (matched words between  and ) }] }] }`, up to 30 downloads and 3 matches each. Every word must appear; the last may be unfinished |
+| `GET` | `/api/captions` | Local captions: `{ "supported", "installed", "installing", "progress", "error", "how_to", "size", "jobs": { id: { "state": "queued" \| "making" \| "done" \| "failed", "error" } } }` |
+| `POST` | `/api/captions/install` | Downloads whisper.cpp (not on macOS) and the model in the background (`202`) |
+| `POST` | `/api/jobs/{id}/captions` | Queues captions for a finished download (`409` until installed, or when its file is gone). `GET /api/library/files` reports `"subtitles": true` for downloads that have a subtitle file |
 | `GET` | `/api/feeds/opml` | Every watch's feed as OPML 2.0 (`409` while phone access is off) |
 | `POST` | `/api/library/archive` | Imports a yt-dlp download archive (plain text, `youtube <id>` / `vimeo <id>` lines, up to 8 MB): `{ "added", "already", "skipped" }`. `GET /api/playlist` entries then carry `"have": true` for videos already downloaded or imported, and watches skip them |
 | `POST` | `/api/feeds/reset` | Makes a new feed key, retiring every feed address |

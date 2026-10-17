@@ -88,6 +88,9 @@ func indexStamp(job domain.Job, subtitles []string) string {
 	return strings.Join(parts, "|")
 }
 
+// HasSubtitles reports whether a subtitle file is saved beside a finished download.
+func HasSubtitles(job domain.Job) bool { return len(subtitleFiles(job)) > 0 }
+
 // subtitleFile matches what yt-dlp saves beside a download: "Title [id] 720p.en.srt".
 var subtitleFile = regexp.MustCompile(`^(\.[A-Za-z0-9_-]{1,20})?\.(srt|vtt)$`)
 

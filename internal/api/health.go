@@ -78,6 +78,11 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 				}
 			}
 		}
+		if provider, ok := settings[0].(captionsProvider); ok {
+			if captioner := provider.Captions(); captioner != nil {
+				addCaptionRoutes(mux, captioner)
+			}
+		}
 		if provider, ok := settings[0].(watchProvider); ok {
 			if watches := provider.Watches(); watches != nil {
 				addWatchRoutes(mux, watches)

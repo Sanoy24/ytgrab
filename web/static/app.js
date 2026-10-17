@@ -3,6 +3,7 @@ import { formatDuration, groupFormats, matchPreset, readSection } from './format
 import { looksLikeSearch, parseLinks, validateUrl, videoIdOf } from './links.js';
 import { clearSearch, initSearch, runSearch } from './search.js';
 import { $, el, formatBytes, formatEta, formatWhen, ICONS, setThumbnail, skeleton, stateBlock, toast } from './ui.js';
+import { captionAction, initCaptions, requestCaptions } from './captions.js';
 import { initPhone } from './phone.js';
 import { initWatching, loadWatches, onWatchAction, onWatchSubmit } from './watching.js';
 
@@ -70,6 +71,8 @@ function rowKey(job) {
     JSON.stringify(job.progress), job.priority || 0,
     formatWhen(job.updated_at), pending.has(job.id), confirmingRemove.has(job.id),
     JSON.stringify(libraryFiles.get(job.id) || null),
+    // The captions button follows whether captions are installed and on their way.
+    JSON.stringify(captionAction(job, libraryFiles.get(job.id))),
     // Move to top depends on the other waiting downloads.
     job.state === 'queued' || job.state === 'paused' ? firstWaiting(job) : '',
   ].join('|');
@@ -216,6 +219,8 @@ function renderActions(box, job) {
   } else if (job.state === 'completed') {
     if (job.output_path && client.onPhone) want.push(['play', 'Play', ''], ['save', 'Save to phone', '']);
     else if (job.output_path) want.push(['open', 'Play', ''], ['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
+    const captions = captionAction(job, libraryFiles?.get(job.id));
+    if (captions) want.push(captions);
     want.push(['again', 'Download again', '']);
     want.push(['remove', 'Remove', '']);
   }
@@ -1113,6 +1118,14 @@ async function runAction(id, action) {
     } catch {
       toast("Couldn't copy. Select the path text and copy it manually.", true);
     }
+    return;
+  }
+  if (action === 'captions') {
+    await requestCaptions(id);
+    return;
+  }
+  if (action === 'captions-busy') {
+    toast('Captions are on the way; YTGrab makes them one at a time.');
     return;
   }
   if (action === 'play') {
@@ -2515,6 +2528,11 @@ function init() {
   setupSettingsNav();
   // Settings stay on the computer; a phone gets downloads, the Library, and Watching.
   document.body.classList.toggle('on-phone', !!client.onPhone);
+  initCaptions(client, {
+    render: () => render(),
+    refreshFiles: () => refreshLibraryFiles(),
+    titleOf: (id) => jobTitle(jobs.find((j) => j.id === id) || { video_id: 'this download' }),
+  });
   if (!client.onPhone)
     initPhone(client, () => {
       showView('settings');

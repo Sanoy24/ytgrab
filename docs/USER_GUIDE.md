@@ -262,6 +262,16 @@ The Library's search box finds titles and also **what's said in your videos**: u
 - Everything stays on your computer: YTGrab keeps a search index in its database and updates it as downloads finish.
 - Browsers play MP4 and WebM files; MKV plays in most. If one doesn't, use **Plays everywhere** for videos you'll search often.
 
+### Local captions
+
+For downloads with no subtitles, YTGrab can make them on your computer with [whisper.cpp](https://github.com/ggml-org/whisper.cpp), a speech-recognition program. The sound never leaves your computer.
+
+1. **Settings → Audio & video → Local captions → Install** downloads whisper.cpp and its speech model (about 160 MB, once), each checked against a checksum built into YTGrab. On a Mac, install whisper first with `brew install whisper-cpp`; YTGrab then downloads only the model.
+2. In the Library, a finished download without subtitles gets **Make captions**. YTGrab makes them in the background, one download at a time, using half the processor so the computer stays usable: a few minutes for each hour of speech on a recent computer, longer on an older one.
+3. The captions are saved beside the file as `….whisper.srt`, so players show them, and the video becomes searchable (see above).
+
+The language is detected by itself. The model is whisper's "base" model: good for clear speech, weaker with music, strong accents, or several people talking at once. Captions for languages with less training data, such as Amharic, are less accurate.
+
 ### Metadata files
 
 **Save metadata files** (Settings → Downloads) keeps three files beside each new download, named like it: `.info.json` (everything yt-dlp knows about the video), `.description`, and the thumbnail as `.jpg`. Archives and media servers such as Jellyfin read them. Deleting the download with its file deletes them too, along with any subtitle files.

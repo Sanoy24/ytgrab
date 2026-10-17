@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **Local captions.** Downloads without subtitles can get them, made on your computer by whisper.cpp: install it once in Settings → Audio & video (about 160 MB, checked against pinned checksums), then **Make captions** in the Library. The captions are saved beside the file as `.whisper.srt`, play in your player, and make the video searchable. The sound never leaves your computer.
+
 ## [1.21.0] - 2026-10-17
 
 Search inside your videos.
