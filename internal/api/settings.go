@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/notify"
 	"github.com/Sanoy24/ytgrab/internal/picker"
 	settingspkg "github.com/Sanoy24/ytgrab/internal/settings"
 )
@@ -53,6 +54,12 @@ type preferenceSettings interface {
 type metadataSettings interface {
 	SaveMetadata() bool
 	SetSaveMetadata(context.Context, bool) error
+}
+
+// notifySettings announce finished and failed downloads through ntfy, Discord, or a webhook.
+type notifySettings interface {
+	Notify(context.Context) notify.Settings
+	SetNotify(context.Context, notify.Settings) error
 }
 
 // autoCaptionSettings make local captions for new downloads without subtitles.
@@ -163,6 +170,9 @@ func settingsBody(settings Settings) map[string]any {
 	}
 	if metadata, ok := settings.(metadataSettings); ok {
 		body["save_metadata"] = metadata.SaveMetadata()
+	}
+	if notifier, ok := settings.(notifySettings); ok {
+		body["notify"] = notifier.Notify(context.Background())
 	}
 	if auto, ok := settings.(autoCaptionSettings); ok {
 		body["auto_captions"], _ = auto.AutoCaptions()

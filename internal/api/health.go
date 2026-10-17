@@ -78,6 +78,9 @@ func NewHandlerWithInspector(check func(context.Context) deps.Report, jobs JobSt
 				}
 			}
 		}
+		if notifier, ok := settings[0].(notifySettings); ok {
+			addNotifyRoutes(mux, notifier)
+		}
 		if provider, ok := settings[0].(captionsProvider); ok {
 			if captioner := provider.Captions(); captioner != nil {
 				addCaptionRoutes(mux, captioner)

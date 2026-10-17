@@ -748,3 +748,19 @@ test('installs local captions and makes them for a download', async ({ page }) =
   await expect(page.locator('#toast')).toContainText('English captions ready', { timeout: 10000 });
   await expect(done.getByRole('button', { name: /^English captions/ })).toHaveCount(0);
 });
+
+test('sends notifications to ntfy after checking the address', async ({ page }) => {
+  await page.goto('/?fixture=default#settings');
+  await expect(page.locator('#notify-url-row')).toBeHidden();
+  await page.getByLabel('Send to').selectOption('ntfy');
+  await expect(page.locator('#notify-help')).toContainText('ntfy app');
+  await page.getByLabel('Address').fill('https://ntfy.sh/');
+  await page.locator('#notify-save').click();
+  await expect(page.locator('#toast')).toContainText('Add your topic');
+  await page.getByLabel('Address').fill('https://ntfy.sh/my-ytgrab-7f3a');
+  await page.getByLabel('Tell me about').selectOption('failed');
+  await page.locator('#notify-save').click();
+  await expect(page.locator('#toast')).toContainText('Notifications saved');
+  await page.getByRole('button', { name: 'Send a test' }).click();
+  await expect(page.locator('#toast')).toContainText('Test sent');
+});

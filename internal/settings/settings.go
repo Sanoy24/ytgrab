@@ -2,6 +2,7 @@ package settings
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/domain"
+	"github.com/Sanoy24/ytgrab/internal/notify"
 )
 
 const (
@@ -30,6 +32,7 @@ const (
 	normalizeKey     = "normalize_audio"
 	ytdlpChannelKey  = "ytdlp_channel"
 	metadataKey      = "save_metadata"
+	notifyKey        = "notify"        // JSON notify.Settings
 	autoCaptionsKey  = "auto_captions" // when it was turned on (RFC 3339), or empty
 )
 
@@ -174,6 +177,32 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 		normalize = saved == "1"
 	}
 	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, window: window, normalize: normalize, ytdlpChannel: ytdlpChannel, saveMetadata: saveMetadata, autoCaptions: autoCaptions, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// Notify says where finished and failed downloads are announced (Kind "" is off).
+func (manager *Manager) Notify(ctx context.Context) notify.Settings {
+	var settings notify.Settings
+	if saved, ok, err := manager.store.GetSetting(ctx, notifyKey); err == nil && ok {
+		_ = json.Unmarshal([]byte(saved), &settings)
+	}
+	if settings.Valid() != nil {
+		return notify.Settings{}
+	}
+	return settings
+}
+
+func (manager *Manager) SetNotify(ctx context.Context, settings notify.Settings) error {
+	if err := settings.Valid(); err != nil {
+		return err
+	}
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return err
+	}
+	if err := manager.store.PutSetting(ctx, notifyKey, string(data)); err != nil {
+		return fmt.Errorf("save notifications: %w", err)
+	}
+	return nil
 }
 
 // AutoCaptions reports whether new downloads without subtitles get local captions, and
