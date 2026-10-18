@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-10-18
+
+English captions, notifications on your phone, and evidence copies.
+
 ### Added
 
 - **Evidence copies.** For journalists and researchers: tick **Evidence copy** and YTGrab keeps the streams exactly as served, writes nothing into the files, saves the site's own metadata, and writes a capture record (`.evidence.json`) with the source, capture time, tool versions, and every file's SHA-256 checksum.
@@ -300,6 +304,7 @@ YTGrab now downloads from X (Twitter) too.
 
 First release: video and audio downloads with quick presets or exact formats, playlists of up to 50 videos with a review step, live progress, cancel/retry/resume, a native folder picker, `ytgrab setup` and `ytgrab doctor`, and builds for Windows, macOS, and Linux.
 
+[1.23.0]: https://github.com/Sanoy24/ytgrab/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/Sanoy24/ytgrab/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/Sanoy24/ytgrab/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/Sanoy24/ytgrab/compare/v1.19.0...v1.20.0
