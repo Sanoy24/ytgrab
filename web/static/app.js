@@ -104,6 +104,7 @@ function renderJob(job) {
   if (SITE_NAMES[job.site]) meta.unshift(SITE_NAMES[job.site]);
   if (job.section) meta.splice(1, 0, `${formatDuration(job.section.start)}–${formatDuration(job.section.end)}`);
   if (job.split_chapters) meta.splice(1, 0, 'split into chapters');
+  if (job.evidence) meta.splice(1, 0, 'evidence copy');
   if (job.attempt > 1) meta.push(`attempt ${job.attempt}`);
   const file = job.state === 'completed' ? libraryFiles.get(job.id) : null;
   if (file && !file.missing) meta.splice(meta.indexOf(when), 0, formatBytes(file.bytes)); // before the time
@@ -1301,6 +1302,13 @@ async function onSubmit(e) {
   }
   if (section) body.section = section;
   else if ($('#split-chapters').checked) body.split_chapters = true;
+  if ($('#evidence').checked) {
+    if (section || body.split_chapters) {
+      setClipError('An evidence copy keeps the whole video as served: no clips or chapter files.');
+      return;
+    }
+    body.evidence = true;
+  }
   const language = chosenAudioLanguage();
   if (language) body.audio_language = language;
   const button = $('#submit');
@@ -1325,6 +1333,7 @@ async function onSubmit(e) {
     }
     if (!client.isFixture) jobs = await client.listJobs();
     input.value = '';
+    $('#evidence').checked = false;
     resetFormats();
     resetClip();
     updateClipVisibility();

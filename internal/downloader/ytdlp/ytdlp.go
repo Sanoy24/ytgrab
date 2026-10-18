@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/app/deps"
 	"github.com/Sanoy24/ytgrab/internal/config"
@@ -99,6 +100,9 @@ func (downloader Downloader) Download(ctx context.Context, job domain.Job, onEve
 	}
 	if downloader.SaveMetadata != nil {
 		cfg.SaveMetadata = downloader.SaveMetadata()
+	}
+	if job.Evidence {
+		cfg = evidenceConfig(cfg)
 	}
 	if job.Site != domain.SiteYouTube {
 		return downloader.signedIn(ctx, job, onEvent, cfg)
@@ -235,6 +239,11 @@ func (downloader Downloader) run(ctx context.Context, job domain.Job, onEvent fu
 	if cfg.FileNames == MediaServerStyle && result.Meta != nil && isVideo(job) {
 		_ = writeNFOs(confirmed, *result.Meta, job.Site) // the video is saved either way
 	}
+	if job.Evidence {
+		if err := writeEvidence(ctx, cfg, job, confirmed, time.Now()); err != nil {
+			return Result{}, &Error{Code: "evidence_failed", Message: "The download finished, but its capture record couldn't be written: " + err.Error()}
+		}
+	}
 	return result, nil
 }
 
@@ -274,16 +283,23 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 	if cfg.SpeedLimitKBps > 0 {
 		args = append(args, "--limit-rate", strconv.Itoa(cfg.SpeedLimitKBps)+"K")
 	}
-	// Title, artist, date, and chapters go into the file; cover art only into formats that
-	// hold it (M4A, MP3, Opus, FLAC), since a failed embed would fail the whole job.
-	args = append(args, "--embed-metadata", "--embed-chapters")
-	if cfg.SaveMetadata {
+	if job.Evidence {
+		// The streams as served are kept beside the file (-k), and nothing is written into
+		// them; the metadata goes into separate files instead.
+		args = append(args, "-k", "--write-info-json", "--write-description", "--write-thumbnail")
+	} else {
+		// Title, artist, date, and chapters go into the file; cover art only into formats that
+		// hold it (M4A, MP3, Opus, FLAC), since a failed embed would fail the whole job.
+		args = append(args, "--embed-metadata", "--embed-chapters")
+	}
+	if cfg.SaveMetadata && !job.Evidence {
 		// Kept beside the file, named like it: Title [id].info.json, .description, .jpg.
 		args = append(args, "--write-info-json", "--write-description", "--write-thumbnail")
 	}
-	if embedsCoverArt(job) {
+	// An evidence copy keeps the thumbnail as served too.
+	if embedsCoverArt(job) && !job.Evidence {
 		args = append(args, "--embed-thumbnail", "--convert-thumbnails", "jpg")
-	} else if cfg.SaveMetadata && job.Site != domain.SiteReddit {
+	} else if cfg.SaveMetadata && !job.Evidence && job.Site != domain.SiteReddit {
 		args = append(args, "--convert-thumbnails", "jpg") // media servers read JPEG posters
 	}
 	if isVideo(job) && job.Site == domain.SiteYouTube {

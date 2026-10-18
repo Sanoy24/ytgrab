@@ -71,6 +71,7 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 			Section       *domain.Section `json:"section"`
 			SplitChapters bool            `json:"split_chapters"`
 			AudioLanguage string          `json:"audio_language"`
+			Evidence      bool            `json:"evidence"`
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		decoder := json.NewDecoder(r.Body)
@@ -89,6 +90,10 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 		}
 		if input.Section != nil && input.SplitChapters {
 			writeError(w, http.StatusBadRequest, "invalid_request", "Choose either part of the video or splitting it into chapters, not both.")
+			return
+		}
+		if input.Evidence && (input.Section != nil || input.SplitChapters) {
+			writeError(w, http.StatusBadRequest, "invalid_request", "An evidence copy keeps the whole video as served: it can't be a clip or split into chapters.")
 			return
 		}
 		if input.AudioLanguage != "" && !domain.ValidLanguage(input.AudioLanguage) {
@@ -145,6 +150,7 @@ func addJobRoutes(mux *http.ServeMux, store JobStore, controller JobController, 
 		job.Section = input.Section
 		job.SplitChapters = input.SplitChapters
 		job.AudioLanguage = input.AudioLanguage
+		job.Evidence = input.Evidence
 		applyCachedTitle(inspector, &job)
 		if err := store.Create(r.Context(), job); err != nil {
 			if errors.Is(err, sqlitestore.ErrDuplicate) {

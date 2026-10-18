@@ -6,6 +6,8 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ### Added
 
+- **Evidence copies.** For journalists and researchers: tick **Evidence copy** and YTGrab keeps the streams exactly as served, writes nothing into the files, saves the site's own metadata, and writes a capture record (`.evidence.json`) with the source, capture time, tool versions, and every file's SHA-256 checksum.
+
 - **Notifications.** Settings → Notifications sends finished and failed downloads to your phone through ntfy, to a Discord channel, or to any webhook, even away from home. Several at once come as one message, there's a test button, and only titles and error messages are sent.
 
 - **English captions.** When local captions find speech in another language, the download also offers **English captions**: whisper translates the speech and saves `.whisper-en.srt` beside it. Local captions now name their language (`.whisper-es.srt`).

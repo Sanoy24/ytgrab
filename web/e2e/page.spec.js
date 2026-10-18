@@ -764,3 +764,13 @@ test('sends notifications to ntfy after checking the address', async ({ page }) 
   await page.getByRole('button', { name: 'Send a test' }).click();
   await expect(page.locator('#toast')).toContainText('Test sent');
 });
+
+test('adds an evidence copy', async ({ page }) => {
+  await page.goto('/?fixture=empty');
+  await page.locator('#url').fill('https://youtu.be/aBcDeFgHiJk');
+  await expect(page.locator('#video-formats .preset').first()).toBeVisible();
+  await page.locator('#evidence').check();
+  await page.locator('#submit').click();
+  await expect(page.locator('#queue .job-meta').first()).toContainText('evidence copy');
+  await expect(page.locator('#evidence')).not.toBeChecked();
+});
