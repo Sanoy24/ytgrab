@@ -133,7 +133,11 @@ Only download videos you have the right to save — for example your own uploads
 
 ## Acknowledgements
 
-YTGrab stands on [yt-dlp](https://github.com/yt-dlp/yt-dlp), which does the hard work of talking to YouTube, and [FFmpeg](https://ffmpeg.org/). The job store uses [modernc.org/sqlite](https://gitlab.com/cznic/sqlite).
+YTGrab stands on [yt-dlp](https://github.com/yt-dlp/yt-dlp), which does the hard work of talking to YouTube, and [FFmpeg](https://ffmpeg.org/). Local captions use [whisper.cpp](https://github.com/ggml-org/whisper.cpp). The job store uses [modernc.org/sqlite](https://gitlab.com/cznic/sqlite).
+
+YTGrab's code is part of the [XERJ Corpus Hub](https://hub.xerj.org/contributors/Sanoy24.html), a collection of open-source examples for AI coding tools:
+
+[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/Sanoy24/badge.svg)](https://hub.xerj.org/contributors/Sanoy24.html)
 
 ## License
 
