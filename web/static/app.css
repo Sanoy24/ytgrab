@@ -718,6 +718,7 @@ input[aria-invalid="true"] { border-color: var(--err); }
 .hit-text { min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
 .hit-text mark { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--text); border-radius: 3px; padding: 0 1px; }
 .job-gone { color: var(--err); font-weight: 600; }
+.cc-note { color: var(--ok, inherit); font-weight: 600; }
 .have-badge { margin-left: 8px; padding: 1px 6px; border-radius: 999px; font-size: 0.72rem; background: var(--surface); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
 .audio-language { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .audio-language label { font-weight: 600; font-size: 0.9rem; }

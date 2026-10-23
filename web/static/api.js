@@ -35,6 +35,8 @@ class FixtureClient {
   constructor(scenario) {
     this.scenario = scenario;
     this.jobs = scenario === 'empty' ? [] : structuredClone(fx.jobs);
+    // One finished sample is Creative Commons.
+    for (const job of this.jobs) if (job.id === 'job_5') Object.assign(job, { license: 'Creative Commons Attribution license (reuse allowed)', channel: 'Google for Developers' });
     if (scenario === 'big-library') this.jobs.push(...bigLibrary(400));
     this.nextId = 100;
     this.downloadsDir = String.raw`C:\Users\me\Downloads\ytgrab`;
@@ -332,6 +334,7 @@ class FixtureClient {
       throw new ApiError('video_unavailable', 'This video is unavailable or private.');
     if (url.includes('x.com/i/status/1600649710662213632')) return structuredClone(fx.xPost); // two videos
     if (url.includes('Txzj3pNt20o')) return structuredClone(fx.dubbed); // dubbed audio
+    if (url.includes('aqz-KE-bpKQ')) return structuredClone(fx.creativeCommons);
     return structuredClone(fx.inspection);
   }
 

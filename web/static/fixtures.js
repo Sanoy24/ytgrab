@@ -251,6 +251,9 @@ export const xPost = {
 // A video dubbed into other languages: YouTube lists the dubbed tracks first and marks the
 // original with a language_preference of 10.
 const track = (id, ext, codec, abr, mb, language, original) => ({ ...a(id, ext, codec, abr, mb), language, language_preference: original ? 10 : -1 });
+// Big Buck Bunny: its creators marked it Creative Commons.
+export const creativeCommons = { ...inspection, video_id: 'aqz-KE-bpKQ', title: 'Big Buck Bunny', license: 'Creative Commons Attribution license (reuse allowed)', channel: 'Blender' };
+
 export const dubbed = {
   ...inspection,
   video_id: 'Txzj3pNt20o',

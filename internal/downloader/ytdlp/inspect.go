@@ -46,6 +46,10 @@ type Inspection struct {
 	Title           string   `json:"title"`
 	DurationSeconds *float64 `json:"duration_seconds"`
 	Chapters        int      `json:"chapters"` // how many chapters the creator marked
+	// License is the licence the site reports (empty for its standard terms); Channel is who
+	// published the video.
+	License string `json:"license,omitempty"`
+	Channel string `json:"channel,omitempty"`
 	// Site is "" for YouTube or "x"; X posts also carry their preview image.
 	Site      string `json:"site,omitempty"`
 	Thumbnail string `json:"thumbnail,omitempty"`
@@ -73,6 +77,9 @@ type rawVideo struct {
 	Duration  *float64   `json:"duration"`
 	Chapters  []struct{} `json:"chapters"`
 	Formats   []Format   `json:"formats"`
+	License   string     `json:"license"`
+	Channel   string     `json:"channel"`
+	Uploader  string     `json:"uploader"`
 }
 
 type cachedInspection struct {
@@ -328,7 +335,10 @@ func parseInspection(data []byte, expectedID, site string) (Inspection, error) {
 	if raw.ID != expectedID {
 		return Inspection{}, &Error{Code: "video_unavailable", Message: "The inspected video did not match the requested link."}
 	}
-	result := Inspection{VideoID: raw.ID, Title: raw.Title, DurationSeconds: raw.Duration, Chapters: len(raw.Chapters), Video: []Format{}, Audio: []Format{}}
+	result := Inspection{VideoID: raw.ID, Title: raw.Title, DurationSeconds: raw.Duration, Chapters: len(raw.Chapters), License: raw.License, Channel: raw.Channel, Video: []Format{}, Audio: []Format{}}
+	if result.Channel == "" {
+		result.Channel = raw.Uploader
+	}
 	for _, format := range raw.Formats {
 		if !(domain.FormatSelection{Kind: "video", ID: format.ID}).Valid() {
 			continue

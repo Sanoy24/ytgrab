@@ -129,6 +129,14 @@ Each watch has a podcast feed of what it downloaded, so new episodes show up in 
 - **Export all podcast feeds (OPML)** in Watching saves every watch's feed in one file, which apps like AntennaPod import at once (on the phone, open Watching there and save it).
 - Each address carries a secret key. If one got out, **Settings → Phone → Make new feed addresses** retires all of them; copy the new ones into your apps. If the computer gets a new address on your Wi-Fi, the feed addresses change too.
 
+## Creative Commons videos
+
+Some creators let anyone reuse their videos, as long as they're credited: YouTube calls this the *Creative Commons Attribution license (reuse allowed)*. YTGrab shows it when it checks a link (**Creative Commons: free to reuse with credit**), marks those downloads **Creative Commons** in the Library, and lists them with the **Creative Commons** filter. **Copy credit** copies the credit the licence asks for, ready to paste under a lesson, a post, or a video of your own:
+
+> "Big Buck Bunny" by Blender (https://youtu.be/aqz-KE-bpKQ), licensed under CC BY 3.0: https://creativecommons.org/licenses/by/3.0/
+
+Videos without that mark are under YouTube's standard licence: you may keep them for yourself, but not reuse them without the creator's permission. YTGrab learns the licence from YouTube when a video downloads, so downloads from before this version don't show it.
+
 ## Evidence copies
 
 For journalists, researchers, and anyone documenting something that may disappear, tick **Evidence copy** below the formats. YTGrab then:

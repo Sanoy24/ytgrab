@@ -50,3 +50,14 @@ func TestAudioLanguageAndPlaysEverywhereReachYtdlp(t *testing.T) {
 		t.Error("plays everywhere isn't treated as video")
 	}
 }
+
+func TestLicenceIsPrintedAndRead(t *testing.T) {
+	job, _ := domain.NewJob("https://youtu.be/aqz-KE-bpKQ", domain.AudioM4A)
+	if joined := strings.Join(buildArgs(job, config.Config{}), " "); !strings.Contains(joined, "after_move:"+aboutPrefix+aboutFields) {
+		t.Errorf("args = %s", joined)
+	}
+	event, ok := parseEvent(aboutPrefix + `{"license":"Creative Commons Attribution license (reuse allowed)","channel":"Blender","uploader":"Blender"}`)
+	if !ok || event.About == nil || event.About.Channel != "Blender" || !strings.Contains(event.About.License, "Creative Commons") {
+		t.Errorf("event = %+v %v", event, ok)
+	}
+}

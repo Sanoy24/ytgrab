@@ -356,6 +356,13 @@ func (queue *Queue) runJob(job domain.Job) {
 		current.Title = &result.Title
 	}
 	current.OutputPath = &result.OutputPath
+	if about := result.About; about != nil {
+		current.License = about.License
+		current.Channel = about.Channel
+		if current.Channel == "" {
+			current.Channel = about.Uploader
+		}
+	}
 	if err := current.Transition(domain.Completed); err == nil {
 		_ = queue.store.Update(queue.ctx, current, previous)
 	}

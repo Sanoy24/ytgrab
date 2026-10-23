@@ -146,6 +146,11 @@ type Job struct {
 	// AudioLanguage, when set, picks that audio track of a video with several (dubbed
 	// versions); otherwise yt-dlp picks the original. A language code like "es-US".
 	AudioLanguage string `json:"audio_language,omitempty"`
+	// License is the licence the site reports, such as YouTube's "Creative Commons
+	// Attribution license (reuse allowed)"; empty for the site's standard terms. Channel is
+	// who published it, for credit lines.
+	License string `json:"license,omitempty"`
+	Channel string `json:"channel,omitempty"`
 	// Evidence keeps the files as the site served them, with a capture record and checksums
 	// ("<name>.evidence.json"), for journalists and researchers.
 	Evidence bool `json:"evidence,omitempty"`
@@ -207,6 +212,11 @@ var languagePattern = regexp.MustCompile(`^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}
 
 // ValidLanguage reports whether code looks like a language code yt-dlp reports ("en", "pt-BR").
 func ValidLanguage(code string) bool { return languagePattern.MatchString(code) }
+
+// CreativeCommons reports whether the site marked a video as free to reuse with credit.
+func (job Job) CreativeCommons() bool {
+	return strings.Contains(strings.ToLower(job.License), "creative commons")
+}
 
 func (preset Preset) Valid() bool {
 	switch preset {

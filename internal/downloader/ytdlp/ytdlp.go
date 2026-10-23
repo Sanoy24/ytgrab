@@ -33,12 +33,14 @@ type Event struct {
 	Progress   *domain.Progress
 	Title      string
 	OutputPath string
+	About      *About    // licence and channel, printed for every download
 	Meta       *Metadata // printed in the media-server style
 }
 
 type Result struct {
 	Title      string
 	OutputPath string
+	About      *About
 	Meta       *Metadata
 }
 
@@ -183,6 +185,10 @@ func (downloader Downloader) run(ctx context.Context, job domain.Job, onEvent fu
 			result.Meta = event.Meta
 			return true // nothing for the page
 		}
+		if event.About != nil {
+			result.About = event.About
+			return true
+		}
 		if callbackErr == nil && onEvent != nil {
 			if err := onEvent(event); err != nil {
 				callbackErr = err
@@ -267,6 +273,8 @@ func buildArgs(job domain.Job, cfg config.Config) []string {
 		args = append(args, "--write-thumbnail", "--convert-thumbnails", "jpg", "-o", "thumbnail:"+thumb,
 			"--print", "after_move:"+metaPrefix+metaFields)
 	}
+	// The licence and channel go into the Library, for Creative Commons credit lines.
+	args = append(args, "--print", "after_move:"+aboutPrefix+aboutFields)
 	args = append(args, cookieArgs(cfg.CookiesBrowser)...)
 	switch job.Site {
 	case domain.SiteYouTube:
@@ -428,6 +436,18 @@ func withLanguage(selector, language string) string {
 		return selector
 	}
 	return strings.Join(preferred, "/") + "/" + selector
+}
+
+// aboutPrefix marks the line yt-dlp prints with a download's licence and channel.
+const aboutPrefix = "YTGRAB_ABOUT:"
+
+const aboutFields = "%(.{license,channel,uploader})j"
+
+// About is who published a download and under which licence.
+type About struct {
+	License  string `json:"license"`
+	Channel  string `json:"channel"`
+	Uploader string `json:"uploader"`
 }
 
 // xTitleCleanup decodes the HTML entities X leaves in post text, so file names and tags
@@ -727,6 +747,12 @@ func parseEvent(line string) (Event, bool) {
 			return Event{}, false
 		}
 		return Event{Title: title}, true
+	case strings.HasPrefix(line, aboutPrefix):
+		var about About
+		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, aboutPrefix)), &about); err != nil {
+			return Event{}, false
+		}
+		return Event{About: &about}, true
 	case strings.HasPrefix(line, metaPrefix):
 		var meta Metadata
 		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, metaPrefix)), &meta); err != nil {

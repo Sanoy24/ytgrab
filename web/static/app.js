@@ -105,6 +105,7 @@ function renderJob(job) {
   if (job.section) meta.splice(1, 0, `${formatDuration(job.section.start)}–${formatDuration(job.section.end)}`);
   if (job.split_chapters) meta.splice(1, 0, 'split into chapters');
   if (job.evidence) meta.splice(1, 0, 'evidence copy');
+  if (creativeCommons(job)) meta.splice(1, 0, 'Creative Commons');
   if (job.attempt > 1) meta.push(`attempt ${job.attempt}`);
   const file = job.state === 'completed' ? libraryFiles.get(job.id) : null;
   if (file && !file.missing) meta.splice(meta.indexOf(when), 0, formatBytes(file.bytes)); // before the time
@@ -229,6 +230,7 @@ function renderActions(box, job) {
     if (job.output_path && client.onPhone) want.push(['play', 'Play', ''], ['save', 'Save to phone', '']);
     else if (job.output_path) want.push(['open', 'Play', ''], ['reveal', 'Show in folder', ''], ['copy', 'Copy path', '']);
     want.push(...captionActions(job, libraryFiles?.get(job.id)));
+    if (creativeCommons(job)) want.push(['credit', 'Copy credit', '']);
     want.push(['again', 'Download again', '']);
     want.push(['remove', 'Remove', '']);
   }
@@ -546,7 +548,9 @@ function render() {
           ? j.state === 'completed'
           : historyFilter === 'gone'
             ? !!libraryFiles.get(j.id)?.gone_since
-            : j.state !== 'completed') &&
+            : historyFilter === 'cc'
+              ? creativeCommons(j)
+              : j.state !== 'completed') &&
       (!historyQuery || jobTitle(j).toLowerCase().includes(historyQuery)),
   );
   const failed = history.filter(retryable);
@@ -591,6 +595,8 @@ function render() {
       'No downloads yet',
       'Finished, failed, and cancelled downloads are listed here.',
     );
+  else if (historyFilter === 'cc')
+    historyEmpty = stateBlock('empty', 'No Creative Commons videos', 'Videos their creators marked free to reuse with credit appear here.');
   else if (historyFilter === 'gone')
     historyEmpty = stateBlock('empty', 'Nothing gone', 'Every video YTGrab has checked is still online.');
   else if (historyFilter === 'completed')
@@ -649,6 +655,7 @@ async function refreshLibraryFiles() {
     const { files } = await client.libraryFiles();
     libraryFiles = new Map(Object.entries(files || {}));
     $('#filter-gone').hidden = ![...libraryFiles.values()].some((f) => f.gone_since);
+    $('#filter-cc').hidden = !jobs.some(creativeCommons);
     render();
   } catch {
     // Sizes are extra: the Library works without them.
@@ -664,6 +671,21 @@ function plural(n, one, many) {
 // Restores a backup file the user picked, then reloads what it may have changed.
 // Videos in a yt-dlp archive count as already downloaded: playlist reviews leave them
 // unticked and watches skip them.
+// ---------- licences ----------
+
+// Whether the creator marked a video free to reuse with credit (YouTube's "Creative Commons
+// Attribution license (reuse allowed)").
+function creativeCommons(job) {
+  return /creative commons/i.test(job.license || '');
+}
+
+// The credit a Creative Commons licence asks for: title, creator, source, and licence.
+// YouTube's Creative Commons option is CC BY 3.0.
+function creditLine(job) {
+  const by = job.channel ? ` by ${job.channel}` : '';
+  return `"${jobTitle(job)}"${by} (${job.url}), licensed under CC BY 3.0: https://creativecommons.org/licenses/by/3.0/`;
+}
+
 // ---------- search inside videos ----------
 
 let librarySearchTimer;
@@ -1128,6 +1150,15 @@ async function runAction(id, action) {
     await copyReport(diagnosticReport(job), 'Report copied. Paste it into a bug report or message.');
     return;
   }
+  if (action === 'credit') {
+    try {
+      await navigator.clipboard.writeText(creditLine(job));
+      toast('Credit copied. Paste it wherever you reuse the video.');
+    } catch {
+      toast(creditLine(job));
+    }
+    return;
+  }
   if (action === 'copy') {
     try {
       await navigator.clipboard.writeText(job.output_path);
@@ -1488,6 +1519,7 @@ async function inspect(url) {
     const grouped = {
       ...groupFormats(info),
       info, // kept to list another audio language's formats
+      license: info.license || '',
       title: info.title,
       duration: info.duration_seconds,
       chapters: info.chapters || 0,
@@ -1628,6 +1660,9 @@ function showFormats(grouped, previous) {
     el('strong', { className: 'inspect-title', textContent: grouped.title || 'Video' }),
     el('small', { textContent: meta }),
   ];
+  if (/creative commons/i.test(grouped.license || '')) {
+    parts.push(el('br'), el('small', { className: 'cc-note', textContent: 'Creative Commons: free to reuse with credit' }));
+  }
   const { url, playlistUrl } = validateUrl($('#url').value);
   if (playlistUrl) {
     const whole = el('button', { type: 'button', className: 'btn-link', textContent: 'Download the whole playlist instead' });

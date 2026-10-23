@@ -170,3 +170,36 @@ func TestPausedJobIsNotFailedAndResumes(t *testing.T) {
 		t.Fatal("resumed job was not started again")
 	}
 }
+
+type licensedDownloader struct{}
+
+func (licensedDownloader) Download(_ context.Context, _ domain.Job, _ func(ytdlp.Event) error) (ytdlp.Result, error) {
+	return ytdlp.Result{OutputPath: "verified-by-fake", About: &ytdlp.About{License: "Creative Commons Attribution license (reuse allowed)", Uploader: "Blender"}}, nil
+}
+
+func TestQueueKeepsTheLicenceAndChannel(t *testing.T) {
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	store, err := sqlitestore.Open(ctx, filepath.Join(t.TempDir(), "jobs.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	job, _ := domain.NewJob("https://youtu.be/aqz-KE-bpKQ", domain.VideoBest)
+	_ = store.Create(ctx, job)
+	queue := New(store, licensedDownloader{}, 1)
+	queue.Start(ctx)
+	defer queue.Stop()
+	queue.Wake()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if done, _ := store.Get(ctx, job.ID); done.State == domain.Completed {
+			if !done.CreativeCommons() || done.Channel != "Blender" {
+				t.Fatalf("completed job = license %q channel %q", done.License, done.Channel)
+			}
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("the job didn't complete")
+}

@@ -156,7 +156,10 @@ test('saves a playlist into its own folder by default', async ({ page }) => {
   await expect(page.locator('#playlist-folder-label')).toHaveText('Save in a folder named “A very long series”');
   await expect(folder).toBeChecked();
   const boxes = page.locator('#playlist-items input');
-  for (let i = 2; i < 50; i++) await boxes.nth(i).uncheck();
+  // Untick all, then pick two: unticking 48 one by one is slow when every test runs at once.
+  await page.locator('#playlist-all').uncheck();
+  await boxes.nth(0).check();
+  await boxes.nth(1).check();
   await page.locator('#submit').click();
   await expect(page.locator('#toast')).toContainText('Saving into the “A very long series” folder.');
   // Turned off, it stays off next time.
@@ -726,6 +729,21 @@ test('searches inside videos and links to the moment', async ({ page }) => {
   await expect(hits.locator('mark').first()).toHaveText('binary');
   await page.locator('#history-search').fill('giraffes');
   await expect(hits).toBeHidden();
+});
+
+test('shows Creative Commons videos and copies their credit', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/?fixture=default');
+  await page.locator('#url').fill('https://youtu.be/aqz-KE-bpKQ');
+  await expect(page.locator('.cc-note')).toHaveText('Creative Commons: free to reuse with credit');
+  await page.goto('/?fixture=default#library');
+  await page.getByRole('button', { name: 'Creative Commons' }).click();
+  await expect(page.locator('#history .job')).toHaveCount(1);
+  const job = page.locator('#history .job').first();
+  await job.getByRole('button', { name: /^Copy credit/ }).click();
+  const credit = await page.evaluate(() => navigator.clipboard.readText());
+  expect(credit).toContain('by Google for Developers');
+  expect(credit).toContain('CC BY 3.0');
 });
 
 test('marks videos gone from YouTube and filters them', async ({ page }) => {
