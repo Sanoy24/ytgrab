@@ -110,6 +110,13 @@ function renderJob(job) {
   if (file && !file.missing) meta.splice(meta.indexOf(when), 0, formatBytes(file.bytes)); // before the time
   const metaEl = el.querySelector('.job-meta');
   metaEl.textContent = meta.join(' · ');
+  if (file?.gone_since) {
+    const gone = document.createElement('span');
+    gone.className = 'job-gone';
+    gone.textContent = `gone from ${job.site === 'vimeo' ? 'Vimeo' : 'YouTube'}`;
+    gone.title = `Deleted or removed by the site; found ${new Date(file.gone_since).toLocaleDateString()}. Your copy may be the only one left.`;
+    metaEl.append(' · ', gone);
+  }
   if (file?.missing) {
     const note = document.createElement('span'); // `el` is this row here, not the helper
     note.className = 'job-missing';
@@ -533,7 +540,13 @@ function render() {
   renderLibrarySummary(history);
   const shown = history.filter(
     (j) =>
-      (historyFilter === 'all' ? true : historyFilter === 'completed' ? j.state === 'completed' : j.state !== 'completed') &&
+      (historyFilter === 'all'
+        ? true
+        : historyFilter === 'completed'
+          ? j.state === 'completed'
+          : historyFilter === 'gone'
+            ? !!libraryFiles.get(j.id)?.gone_since
+            : j.state !== 'completed') &&
       (!historyQuery || jobTitle(j).toLowerCase().includes(historyQuery)),
   );
   const failed = history.filter(retryable);
@@ -578,6 +591,8 @@ function render() {
       'No downloads yet',
       'Finished, failed, and cancelled downloads are listed here.',
     );
+  else if (historyFilter === 'gone')
+    historyEmpty = stateBlock('empty', 'Nothing gone', 'Every video YTGrab has checked is still online.');
   else if (historyFilter === 'completed')
     historyEmpty = stateBlock(
       'empty',
@@ -633,6 +648,7 @@ async function refreshLibraryFiles() {
   try {
     const { files } = await client.libraryFiles();
     libraryFiles = new Map(Object.entries(files || {}));
+    $('#filter-gone').hidden = ![...libraryFiles.values()].some((f) => f.gone_since);
     render();
   } catch {
     // Sizes are extra: the Library works without them.
@@ -2076,6 +2092,7 @@ function renderPreferences(next) {
   $('#pref-metadata').checked = Boolean(next.save_metadata);
   if (next.ytdlp_channel) $('#pref-channel').value = next.ytdlp_channel;
   $('#pref-autoupdate').checked = Boolean(next.auto_update_ytdlp);
+  $('#pref-check-online').checked = Boolean(next.check_online);
   renderSubtitles(next);
   renderSpeed(next);
   // Only sent where YTGrab can start at sign-in (Windows).
@@ -2621,6 +2638,10 @@ function init() {
         : 'Switching back to Stable yt-dlp builds. The stable build installs in the background, between downloads.',
     );
     setTimeout(loadHealth, 20000); // show the installed version once it's in
+  });
+  $('#pref-check-online').addEventListener('change', (e) => {
+    const on = e.currentTarget.checked;
+    savePreference(e.currentTarget, { check_online: on }, on ? 'YTGrab will check now and then whether your videos are still online.' : "YTGrab won't check whether your videos are still online.");
   });
   $('#pref-autoupdate').addEventListener('change', (e) => {
     const on = e.currentTarget.checked;

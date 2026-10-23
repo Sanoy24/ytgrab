@@ -294,6 +294,8 @@ class FixtureClient {
       // Sample sizes that stay the same between calls; one sample file has gone missing.
       const seed = [...job.id].reduce((n, c) => n * 31 + c.charCodeAt(0), 7) % 900;
       files[job.id] = job.output_path.includes('Gone') ? { bytes: 0, missing: true } : { bytes: (seed + 20) * 1_048_576 };
+      // One sample video has since been deleted from YouTube.
+      if (job.title?.startsWith('Lecture 1')) files[job.id].gone_since = '2026-10-20T09:00:00Z';
       const language = this.captionLanguages?.[job.id];
       if (language) Object.assign(files[job.id], { subtitles: true, captions_language: language, english: !!this.captionEnglish?.[job.id] });
     }

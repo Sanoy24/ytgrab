@@ -4,6 +4,10 @@ All notable changes to YTGrab. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+### Added
+
+- **Watch for deleted videos.** Settings → Backup can check now and then whether the videos you saved are still on YouTube and Vimeo. Videos that were deleted or removed are marked **gone from YouTube** in the Library, with a filter to list them, and a notification if notifications are set up: your copy may be the only one left. Off by default.
+
 ## [1.23.0] - 2026-10-18
 
 English captions, notifications on your phone, and evidence copies.

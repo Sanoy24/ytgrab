@@ -250,6 +250,7 @@
               <button type="button" class="chip" data-filter="all" aria-pressed="true">All</button>
               <button type="button" class="chip" data-filter="completed" aria-pressed="false">Completed</button>
               <button type="button" class="chip" data-filter="problems" aria-pressed="false">Failed / cancelled</button>
+              <button type="button" class="chip" data-filter="gone" aria-pressed="false" id="filter-gone" hidden>Gone from YouTube</button>
             </div>
             <label class="history-sort">
               <span class="visually-hidden">Sort the library</span>
@@ -720,6 +721,13 @@
                 <h3 class="set-title" id="set-backup-title">Backup</h3>
                 <p class="set-desc">Your settings, watched channels, and Library in one file, for reinstalling or another computer.</p>
                 <div class="set-card">
+                  <div class="set-row">
+                    <div class="set-text">
+                      <label for="pref-check-online">Watch for deleted videos</label>
+                      <p class="set-hint">About once a week YTGrab asks YouTube and Vimeo whether each video you saved is still there, a few at a time, and marks the ones that were deleted or removed: your copy may be the only one left. This tells those sites which videos you have.</p>
+                    </div>
+                    <div class="set-control"><input type="checkbox" class="pref-check" id="pref-check-online" /></div>
+                  </div>
                   <div class="set-row">
                     <div class="set-text">
                       <span class="set-label">Back up and restore</span>

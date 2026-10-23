@@ -96,6 +96,15 @@ func Messages(summary activity.Summary, events string) []Message {
 	return messages
 }
 
+// Gone is the notification for downloads whose video has disappeared from its site.
+func Gone(titles []string) Message {
+	title := "A video you saved is gone from YouTube"
+	if len(titles) > 1 {
+		title = fmt.Sprintf("%d videos you saved are gone from their site", len(titles))
+	}
+	return Message{Event: "gone", Title: title, Body: list(titles) + "\nYour copies in YTGrab may be the only ones left."}
+}
+
 // list keeps a message short: the first five, then how many more.
 func list(items []string) string {
 	if len(items) <= 5 {

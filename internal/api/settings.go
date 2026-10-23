@@ -56,6 +56,12 @@ type metadataSettings interface {
 	SetSaveMetadata(context.Context, bool) error
 }
 
+// checkOnlineSettings notice downloaded videos that disappear from YouTube or Vimeo.
+type checkOnlineSettings interface {
+	CheckOnline() bool
+	SetCheckOnline(context.Context, bool) error
+}
+
 // notifySettings announce finished and failed downloads through ntfy, Discord, or a webhook.
 type notifySettings interface {
 	Notify(context.Context) notify.Settings
@@ -174,6 +180,9 @@ func settingsBody(settings Settings) map[string]any {
 	if notifier, ok := settings.(notifySettings); ok {
 		body["notify"] = notifier.Notify(context.Background())
 	}
+	if online, ok := settings.(checkOnlineSettings); ok {
+		body["check_online"] = online.CheckOnline()
+	}
 	if auto, ok := settings.(autoCaptionSettings); ok {
 		body["auto_captions"], _ = auto.AutoCaptions()
 	}
@@ -242,6 +251,7 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 				YtdlpChannel  *string        `json:"ytdlp_channel"`
 				SaveMetadata  *bool          `json:"save_metadata"`
 				AutoCaptions  *bool          `json:"auto_captions"`
+				CheckOnline   *bool          `json:"check_online"`
 			}
 			r.Body = http.MaxBytesReader(w, r.Body, 1024)
 			decoder := json.NewDecoder(r.Body)
@@ -304,6 +314,14 @@ func addSettingsRoutes(mux *http.ServeMux, settings Settings) {
 					return
 				}
 				err = normalize.SetNormalizeAudio(r.Context(), *input.Normalize)
+			}
+			if err == nil && input.CheckOnline != nil {
+				online, ok := settings.(checkOnlineSettings)
+				if !ok {
+					writeError(w, http.StatusBadRequest, "invalid_preference", "This server can't check videos online.")
+					return
+				}
+				err = online.SetCheckOnline(r.Context(), *input.CheckOnline)
 			}
 			if err == nil && input.AutoCaptions != nil {
 				auto, ok := settings.(autoCaptionSettings)

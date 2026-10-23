@@ -34,6 +34,7 @@ const (
 	metadataKey      = "save_metadata"
 	notifyKey        = "notify"        // JSON notify.Settings
 	autoCaptionsKey  = "auto_captions" // when it was turned on (RFC 3339), or empty
+	checkOnlineKey   = "check_online"
 )
 
 // SponsorBlockModes: leave sponsor segments alone, mark them as chapters, or cut them out.
@@ -177,6 +178,23 @@ func New(ctx context.Context, store Store, defaultDirectory string, explicit boo
 		normalize = saved == "1"
 	}
 	return &Manager{store: store, downloadsDir: directory, cookies: cookies, maxDownloads: maxDownloads, preset: preset, subtitles: subtitles, subtitleLang: subtitleLang, speedLimit: speedLimit, autoUpdate: autoUpdate, fileNames: fileNames, sponsorBlock: sponsorBlock, window: window, normalize: normalize, ytdlpChannel: ytdlpChannel, saveMetadata: saveMetadata, autoCaptions: autoCaptions, defaultDir: defaultDirectory, configured: found || explicit}, nil
+}
+
+// CheckOnline reports whether YTGrab checks that downloaded videos are still online.
+func (manager *Manager) CheckOnline() bool {
+	saved, ok, err := manager.store.GetSetting(context.Background(), checkOnlineKey)
+	return err == nil && ok && saved == "1"
+}
+
+func (manager *Manager) SetCheckOnline(ctx context.Context, on bool) error {
+	value := "0"
+	if on {
+		value = "1"
+	}
+	if err := manager.store.PutSetting(ctx, checkOnlineKey, value); err != nil {
+		return fmt.Errorf("save the online check setting: %w", err)
+	}
+	return nil
 }
 
 // Notify says where finished and failed downloads are announced (Kind "" is off).
