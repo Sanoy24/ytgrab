@@ -728,6 +728,17 @@ test('searches inside videos and links to the moment', async ({ page }) => {
   await expect(hits).toBeHidden();
 });
 
+test('marks videos gone from YouTube and filters them', async ({ page }) => {
+  await page.goto('/?fixture=default#library');
+  const gone = page.locator('#history .job', { hasText: 'Lecture 1' });
+  await expect(gone.locator('.job-gone')).toHaveText('gone from YouTube');
+  await page.getByRole('button', { name: 'Gone from YouTube' }).click();
+  await expect(page.locator('#history .job')).toHaveCount(1);
+  await page.goto('/?fixture=default#settings');
+  await page.getByLabel('Watch for deleted videos').check();
+  await expect(page.locator('#toast')).toContainText('still online');
+});
+
 test('installs local captions and makes them for a download', async ({ page }) => {
   await page.goto('/?fixture=default#settings');
   const install = page.locator('#captions-install');

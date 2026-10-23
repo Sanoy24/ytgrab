@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/Sanoy24/ytgrab/internal/queue"
 	"github.com/Sanoy24/ytgrab/internal/settings"
 	sqlitestore "github.com/Sanoy24/ytgrab/internal/store/sqlite"
+	"github.com/Sanoy24/ytgrab/internal/upstream"
 	"github.com/Sanoy24/ytgrab/internal/watch"
 )
 
@@ -85,6 +87,14 @@ func Run(ctx context.Context, cfg config.Config, output io.Writer) error {
 	if cfg.Activity != nil {
 		go activity.Watch(ctx, 2*time.Second, list, api.PageOpen, cfg.Activity)
 	}
+	// Videos that disappear from YouTube or Vimeo, when the user asked to be told.
+	checker := upstream.New(store, appSettings.CheckOnline, func(titles []string) {
+		_, _ = fmt.Fprintf(output, "No longer online: %s\n", strings.Join(titles, ", "))
+		if settings := appSettings.Notify(ctx); settings.Kind != "" {
+			_ = notify.Send(ctx, settings, notify.Gone(titles))
+		}
+	})
+	go checker.Run(ctx)
 	// Phone and chat notifications, when set up: unlike the desktop's, they come even while
 	// the page is open, since the phone may be elsewhere.
 	go activity.Watch(ctx, 5*time.Second, list, func() bool { return false }, func(summary activity.Summary) {

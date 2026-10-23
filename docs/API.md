@@ -73,6 +73,7 @@ Write requests from another site, and any request whose `Host` is not a loopback
 | `PUT` | `/api/settings/preferences` also accepts `auto_captions` | `true` makes local captions for downloads that finish without subtitles from then on (`GET /api/settings` reports it) |
 | `POST` | `/api/jobs/{id}/captions?translate=1` | Queues English captions (a translation) of the download's speech; its state is under `"<id>/en"` in `GET /api/captions`. `GET /api/library/files` reports `"captions_language"` (what local captions found) and `"english"` (English subtitles of any kind) |
 | `POST` | `/api/jobs/{id}/captions` | Queues captions for a finished download (`409` until installed, or when its file is gone). `GET /api/library/files` reports `"subtitles": true` for downloads that have a subtitle file |
+| `PUT` | `/api/settings/preferences` also accepts `check_online` | `true` checks about weekly whether downloaded YouTube and Vimeo videos are still online; `GET /api/library/files` then reports `"gone_since"` for videos found deleted or removed |
 | `PUT` | `/api/settings/notify` | `{ "kind": "" \| "ntfy" \| "discord" \| "webhook", "url", "events": "all" \| "failed" }`; `GET /api/settings` includes `notify` |
 | `POST` | `/api/settings/notify/test` | Sends a test notification with the given settings (`204`, or `502` with why it didn't arrive) |
 | `GET` | `/api/feeds/opml` | Every watch's feed as OPML 2.0 (`409` while phone access is off) |

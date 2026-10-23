@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Sanoy24/ytgrab/internal/domain"
 	"github.com/Sanoy24/ytgrab/internal/library"
@@ -208,6 +209,12 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 			writeError(w, http.StatusInternalServerError, "storage", "Could not read the library.")
 			return
 		}
+		var gone map[string]time.Time
+		if online, ok := store.(interface {
+			GoneSince(context.Context) (map[string]time.Time, error)
+		}); ok {
+			gone, _ = online.GoneSince(r.Context())
+		}
 		files := map[string]libraryFile{}
 		for _, job := range jobs {
 			if job.State != domain.Completed || job.OutputPath == nil {
@@ -216,6 +223,9 @@ func addHistoryRoutes(mux *http.ServeMux, store JobStore) {
 			if info, err := os.Stat(*job.OutputPath); err == nil && info.Mode().IsRegular() {
 				file := libraryFile{Bytes: info.Size(), Subtitles: library.HasSubtitles(job)}
 				file.CaptionsLanguage, file.English = library.CaptionsInfo(job)
+				if since, ok := gone[job.Site+":"+job.VideoID]; ok {
+					file.GoneSince = &since
+				}
 				files[job.ID] = file
 			} else {
 				files[job.ID] = libraryFile{Missing: true}
@@ -348,6 +358,8 @@ type libraryFile struct {
 	// English subtitles of any kind, so a translation isn't offered twice.
 	CaptionsLanguage string `json:"captions_language,omitempty"`
 	English          bool   `json:"english,omitempty"`
+	// GoneSince is when the video was found deleted or removed from its site.
+	GoneSince *time.Time `json:"gone_since,omitempty"`
 }
 
 // clearResult reports a clear that also deleted files. Kept counts finished downloads
